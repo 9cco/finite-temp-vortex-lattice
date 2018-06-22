@@ -1,0 +1,35 @@
+\section{Derivation of discretized free energy}
+
+The dimensionless Ginzburg-Landau (GL) free energy density for a two-component $p_x\pm ip_y$ order parameter used in \cite{AsleGaraud16} is given by
+\begin{equation}
+  \begin{split}
+	\mathcal{F} = &|\v{\nabla}\times\v{A}|^2 + |\v{D}\eta^+|^2 + |\v{D}\eta^-|^2\\
+	&+ (\nu+1)\Re\big[(D_x\eta^+)^\ast D_x\eta^- - (D_y\eta^+)^\ast D_y\eta^-\big]\\
+	& + (\nu-1)\Im\big[(D_x\eta^+)^\ast D_y\eta^- + (D_y\eta^+)^\ast D_x\eta^-\big]\\
+	&+ 2|\eta^+\eta^-|^2 + \nu\Re\big( (\eta^+)^{\ast 2}(\eta^-)^2 \big) + \sum_{h=\pm}\Big[-|\eta^h|^2 + \frac{1}{2}|\eta^h|^4\Big],
+  \end{split}
+  \label{eq:disc:FreeEn:initial}
+\end{equation}
+where $\eta^\pm=\rho_\pm e^{i\theta^\pm}$ are the components of the superconducting order parameter. The lengths are given in terms of $\xi = [\alpha_0(T-T_c)]^{-1/2}$,
+the magnetic field $\v{B} = \v{\nabla}\times\v{A}$ is given in units of $\sqrt{2}B_C = \Phi_0/(2\pi\lambda\xi)$. The dimensionless gauge
+coupling used in the covariant derivatives $\v{D} = \v{\nabla} + ig\v{A}$ is used to parametrize the ratio of two length scales 
+$g^{-1} = \kappa = \lambda/\xi$.
+
+\subsection{London approximation}
+
+Assuming that the amplitude of the GL order parameters are constant (London approxiamtion),
+such that $\eta^h(\v{r}) = \rho_he^{i\theta^h(\v{r})}$ and inserting that the components of the
+covariant derivative is given by $D_\mu = \partial_\mu + igA_\mu$, the free energy based on the density $\mathcal{F}$ in Eq.~\eqref{eq:disc:FreeEn:initial} becomes
+\begin{equation}
+  \begin{split}
+	&F^\text{lon} = \int\!\!\mathrm{d}^2r\,\Big\{|\v{\nabla}\times\v{A}|^2 + \sum_{\mu,h}\rho_h^2\big(\partial_\mu\theta^h + gA_\mu\big)^2\\
+	&+\rho_+\rho_-(\nu+1)\cos(\theta^+-\theta^-)\Big[\big(\partial_x\theta^+ + gA_x\big)\big(\partial_x\theta^- + gA_x\big) - \big(\partial_y\theta^+ + gA_y\big)\big(\partial_y\theta^- + gA_y\big)\Big]\\
+	&+\rho_+\rho_-(\nu-1)\sin(\theta^--\theta^+)\Big[\big(\partial_x\theta^- + gA_x\big)\big(\partial_y\theta^+ + gA_y\big) + \big(\partial_y\theta^+ + gA_y\big)\big(\partial_x\theta^+ + gA_x\big)\Big]\\
+  & + \nu\rho_+^2\rho_-^2\cos 2(\theta^+-\theta^-)\Big\} + \mathcal{V}\Big\{\sum_h\Big[-\rho_h^2 + \frac{1}{2}\rho_h^4\Big] + 2\rho_+\rho_-\Big\}.
+  \end{split}
+  \label{eq:disc:FreeEn:London}
+\end{equation}
+In the sums in this equation, $h\in\{\pm\}$ while $\mu\in\{x,y\}$. $\mathcal{V}$ denotes the volume of the system. The terms proportional to $\mathcal{V}$ are usually ignored, but since
+we will consider globally varying $\rho_\pm$ in the Monte-Carlo simulation, we have included them here for completness.
+
+\subsection{Lattice regularization}

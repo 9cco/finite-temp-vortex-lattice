@@ -1,0 +1,198 @@
+
+% Include various packages
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage[utf8]{inputenc}
+\usepackage{enumerate}
+\usepackage{tabularx}
+\usepackage[margin=2.5cm, bottom=0.75in, a4paper]{geometry}
+\usepackage{changepage}
+\usepackage{listings}	% For including source-code.
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}	% For Compact lists.
+\usepackage{caption}	% For table captions.
+\usepackage{amsthm}	% For theorems.
+\usepackage{todonotes}	% For TODO notes.
+%\usepackage{multicol}	% For multiplie columns.
+\usepackage{marginnote}	% To make todonotes and multicols work together.
+\usepackage{framed}	% For Tip box
+\usepackage{siunitx}	% For SI units.
+\usepackage{slashed}	% For Feynman Slash notation
+\usepackage{mathrsfs}	% For fancy script font.
+\usepackage{makecell}	% For having bold horizontal lines in tables
+%\usepackage{hyperref}	% For Urls in references and stuff.
+\usepackage{tikz}
+\usetikzlibrary{arrows,shapes,trees,decorations.markings, calc,tikzmark}
+\usepackage[compat=1.1.0]{tikz-feynman}
+\usepackage{mathtools}
+%\usepackage[square,numbers,sort]{natbib}
+%\usepackage{authblk}	% For having more than one author and afffilliation
+
+\let\marginpar\marginnote	% For todo notes and multiple columns.
+
+% Making the Tips box
+\newcounter{tipcount}
+\setcounter{tipcount}{0}
+\newenvironment{tip}
+{\par\bigskip\refstepcounter{tipcount}
+\par\medskip
+\noindent\large\textit{Tip} \arabic{tipcount}:\hspace{1mm}\footnotesize 
+   }
+  { 
+\medskip\par }
+
+% Configuring space above and below theorems
+\makeatletter
+\def\thm@space@setup{%
+  \thm@preskip=0.5in plus 0.1in minus 0.2in
+  \thm@postskip=\topsep % or whatever, if you don't want them to be equal
+}
+\makeatother
+
+\renewcommand{\theenumi}{(\alph{enumi})}
+\renewcommand{\labelenumi}{\theenumi} % Labeling in lists.
+% For slanted fractions.
+\newcommand*\sfrac[2]{{}^{#1}\!/_{#2}}
+% For derivatives.
+\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}} 
+\newcommand{\pdd}[2]{\frac{\partial^2 #1}{\partial #2^2}}
+\newcommand{\pddt}[3]{\frac{\partial^2 #1}{\partial #2\,\partial #3}}
+\newcommand{\fd}[1]{\frac{\delta}{\delta #1}}	% Functional derivative
+\let\underdot=\d % rename builtin command \d{} to \underdot{}
+\renewcommand{\d}[2]{\frac{\mathrm{d} #1}{\mathrm{d} #2}} % for derivatives
+\let\vaccent=\v % rename builtin command \v{} to \vaccent{}
+\renewcommand{\v}[1]{{\ensuremath{\boldsymbol{\mathbf{#1}}}}} % for vectors
+\newcommand{\vv}[1]{\ensuremath{\overrightarrow{\boldsymbol{\mathbf{#1}}}}} % for vectors with arrow
+\newcommand{\gv}[1]{\ensuremath{\mbox{\boldmath$ #1 $}}} 
+% for vectors of Greek letters
+\newcommand{\uv}[1]{\ensuremath{\mathbf{\hat{#1}}}} % for unit vector
+\newcommand{\norm}[1]{{\left\|#1\right\|}}
+\newcommand{\ket}[1]{\left| #1 \right>} % for Dirac kets 
+\newcommand{\ketp}[1]{\left| #1 \right)} % for kets with )
+\newcommand{\ketb}[1]{\left| #1 \right\}} % for kets with }
+\newcommand{\bra}[1]{\left< #1 \right|} % for Dirac bras
+\newcommand{\brap}[1]{\left( #1 \right|}
+\newcommand{\brab}[1]{\left\{ #1 \right|}
+\newcommand{\braket}[2]{\left< #1 \vphantom{#2} \right|
+ \left. \!\!#2 \vphantom{#1} \right>} % for Dirac brackets
+\newcommand{\brakep}[2]{\left( #1 \vphantom{#2} \right|
+ \left. \!\!#2 \vphantom{#1} \right)} % for Dirac brackets with ()
+\newcommand{\brakeb}[2]{\left\{ #1 \vphantom{#2} \right|
+\left. \!\!#2 \vphantom{#1} \right\}} % for Dirac brackets with {}
+
+\newcommand{\avg}[1]{\left< #1 \right>} % for average
+\newcommand{\opavg}[1]{\big< #1 \big>} % not so large average
+\newcommand{\abs}[1]{\left| #1 \right|} % for absolute value
+\newcommand{\dd}[2]{\frac{d^2 #1}{d #2^2}} % for double derivatives
+\newcommand{\ip}[2]{{\langle #1,#2\rangle}}  % for inner products
+\newcommand{\ten}[3]{#1_{#2}^{\phantom{#2}#3}} % for down-up tensors.
+\DeclareMathOperator{\Tr}{Tr} % Trace operator
+\DeclareMathOperator{\tr}{tr}
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+\newcommand{\Ham}{\mathscr{H}}	% Hamiltonian operator
+\newcommand{\Hamop}{\hat{\mathcal{H}}} 	% Hamiltonian operator
+\newcommand{\Id}{\mathbb{I}}	% Identity operator
+\newcommand{\alphav}{\gv{\alpha}}	% Dirac alpha vector
+\newcommand{\pauliv}{\gv{\sigma}}	% Pauli matrix vector
+\newcommand{\piv}{\gv{\pi}}		% Effective momentum in minimal coupling
+\newcommand{\inte}[1]{\int\!\!\mathrm{d}#1\,}	% Integral with measure in front
+\newcommand{\dint}[2]{\int\!\!\mathrm{d}#1\mathrm{d}#2\,}	% Double integral with measure in front.
+\newcommand{\up}{\uparrow}
+\newcommand{\down}{\downarrow}
+\newcommand{\pathint}[1]{\int\!\mathcal{D}[#1]\,}	% Path integral
+\newcommand{\pathintlim}[2]{\int\limits_{\mathrlap{#1}}\!\mathcal{D}[#2]\,} % For providing a lower limit in a path-integral that extends towards the right. Btw there are also functions mathclap,
+																		% which centers the content, and mathllap which right justifies it
+\newcommand{\ferm}[1]{n_\text{F}(#1)}				% Shorthand for the symbol of the fermi-distribution-function.
+\newcommand{\diag}[1]{\mathrm{diag}\left(#1\right)}
+\newcommand{\rep}[1]{\hat{D}(#1)}					% Operator represention of group element #1
+\newcommand{\bos}[1]{\boldsymbol{#1}}
+\newcommand*\circled{\:\tikz[baseline=(char.base)]{
+            (0,0) \node[shape=circle,draw,inner sep=-3.4pt](char){$\sum$};}\:}
+\newcommand{\rom}[1]{%
+  \textup{\uppercase\expandafter{\romannumeral#1}}  % For roman numerals
+}
+\newcommand*\chem[1]{\ensuremath{\mathrm{#1}}}
+
+% AMS-LaTeX
+%\usepackage{amsmath}
+%\usepackage{amsfonts}
+%\usepackage{amssymb}
+
+\DeclareMathOperator{\clos}{clos}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\Span}{span}
+\DeclareMathOperator{\ran}{ran}
+\DeclareMathOperator*{\Res}{Res}
+\DeclareMathOperator{\Pf}{Pf}
+
+% Set various options, like unnumbered sections
+%\setcounter{secnumdepth}{0}
+
+%\pagestyle{empty}	% Turn of page numbers.
+
+% Compact lists
+\setitemize{noitemsep}
+%\setenumerate{noitemsep}
+
+% For compact references.
+\let\OLDthebibliography\thebibliography
+\renewcommand\thebibliography[1]{
+  \OLDthebibliography{#1}
+  \setlength{\parskip}{0pt}
+\setlength{\itemsep}{0pt plus 0.3ex}
+}
+
+\lstset{literate=
+  {á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+  {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+  {à}{{\`a}}1 {è}{{\'e}}1 {ì}{{\`i}}1 {ò}{{\`o}}1 {ò}{{\`u}}1
+  {À}{{\`A}}1 {È}{{\'E}}1 {Ì}{{\`I}}1 {Ò}{{\`O}}1 {Ò}{{\`U}}1
+  {ä}{{\"a}}1 {ë}{{\"e}}1 {ï}{{\"i}}1 {ö}{{\"o}}1 {ü}{{\"u}}1
+  {Ä}{{\"A}}1 {Ë}{{\"E}}1 {Ï}{{\"I}}1 {Ö}{{\"O}}1 {Ü}{{\"U}}1
+  {â}{{\^a}}1 {ê}{{\^e}}1 {î}{{\^i}}1 {ô}{{\^o}}1 {û}{{\^u}}1
+  {Â}{{\^A}}1 {Ê}{{\^E}}1 {Î}{{\^I}}1 {Ô}{{\^O}}1 {Û}{{\^U}}1
+  {œ}{{\oe}}1 {Œ}{{\OE}}1 {æ}{{\ae}}1 {Æ}{{\AE}}1 {ß}{{\ss}}1
+  {ç}{{\c c}}1 {Ç}{{\c C}}1 {ø}{{\o}}1 {å}{{\r a}}1 {Å}{{\r A}}1
+  {€}{{\EUR}}1 {£}{{\pounds}}1
+}
+% When using the listings environment we format this as follows.
+\lstset{
+  inputencoding=utf8,
+  breaklines=true,
+  frame=single,
+  basicstyle=\footnotesize,
+  tabsize=2
+}
+
+% Changing header of table of content to Table of Content
+%\renewcommand{\contentsname}{Table of Contents}
+
+% Theorems
+\theoremstyle{plain}
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{corr}[thm]{Corollary}
+\newtheorem{prop}[thm]{Proposition}
+\newtheorem{lem}[thm]{Lemma}
+\theoremstyle{definition}
+\newtheorem{dfn}{Definition}
+\newtheorem{ex}[dfn]{Example}
+\theoremstyle{remark}
+\newtheorem*{rmk}{Remark}
+
+% Use a filled qed symbol for the end of proofs
+\renewcommand{\qedsymbol}{$\blacksquare$}
+
+% Changing the symbols used in first level of lists
+%\renewcommand{\labelitemi}{$\cdot$}
+
+% Editing title formatting
+%\makeatletter
+%\renewcommand{\maketitle}
+%{ \begingroup \vskip 10pt \begin{center} \Large {\bf \@title}
+%	\vskip 10pt \large \@author \hskip 20pt \@date \end{center}
+%  \vskip 10pt \endgroup \setcounter{footnote}{0} }
+%\makeatother
+
+
