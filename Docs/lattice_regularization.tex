@@ -13,11 +13,22 @@ The dimensionless Ginzburg-Landau (GL) free energy density for a two-component $
 where $\eta^\pm=\rho_\pm e^{i\theta^\pm}$ are the components of the superconducting order parameter. The lengths are given in terms of $\xi = [\alpha_0(T-T_c)]^{-1/2}$,
 the magnetic field $\v{B} = \v{\nabla}\times\v{A}$ is given in units of $\sqrt{2}B_C = \Phi_0/(2\pi\lambda\xi)$. The dimensionless gauge
 coupling used in the covariant derivatives $\v{D} = \v{\nabla} + ig\v{A}$ is used to parametrize the ratio of two length scales 
-$g^{-1} = \kappa = \lambda/\xi$.
+$g^{-1} = \kappa = \lambda/\xi$. On the first line of the equation, we see the Maxwell term as well as the normal kinetic terms associated with the order parameter components. The second
+and third line shows what we call mixed gradient terms (MGT).
+
+Note that the theory is gauge invariant under the local gauge transformation
+\begin{subequations}
+  \begin{align}
+	\eta^h &\mapsto e^{i\lambda}\eta^h \label{eq:disc:Gauge:continuous:eta}\\
+	\v{A} &\mapsto \v{A} - \frac{1}{g}\v{\nabla}\lambda.
+	\label{eq:disc:Gauge:continuous:A}
+  \end{align}
+  \label{eq:Gauge:continuous}
+\end{subequations}
 
 \subsection{London approximation}
 
-Assuming that the amplitude of the GL order parameters are constant (London approxiamtion),
+Assuming that the amplitude of the GL order parameters are constant (London approximation),
 such that $\eta^h(\v{r}) = \rho_he^{i\theta^h(\v{r})}$ and inserting that the components of the
 covariant derivative is given by $D_\mu = \partial_\mu + igA_\mu$, the free energy based on the density $\mathcal{F}$ in Eq.~\eqref{eq:disc:FreeEn:initial} becomes
 \begin{equation}
@@ -33,3 +44,98 @@ In the sums in this equation, $h\in\{\pm\}$ while $\mu\in\{x,y\}$. $\mathcal{V}$
 we will consider globally varying $\rho_\pm$ in the Monte-Carlo simulation, we have included them here for completness.
 
 \subsection{Lattice regularization}
+
+The discretization of the continuum models above onto a two-dimensional lattice is done through a number of mappings \cite{troels14,peder16,shimizu12}. Integrals over space are mapped to a sum over lattice positions $\v{r}$ by
+\begin{equation}
+  \int\!\!\mathrm{d}^Dx\, \mapsto a^D\sum_\v{r},\\
+  \label{eq:disc:map:int}
+\end{equation}
+where $a$ is the length between lattice sites. Since the numerical lattice has square symmetry, only one length parameter is necessary. The $6$ degrees of freedom go from being continuous variables
+$\eta^\pm,\,\eta^{\pm\;\ast}, \v{A}$, to begin discretized variables where the superconducting order parameter gets an associated variable at each lattice site $\eta^\pm_{\v{r}}, \eta^{\pm\;\ast}_\v{r}$,
+while the vector potential $\v{A}$ is discretized by link variables $A_{\v{r},\mu}$ between the lattice site at $\v{r}$ and the nearest neighbor in direction $\hat{\mu}$. Covariant derivatives are replaced by
+\begin{equation}
+  D_\mu\eta^h = (\partial_\mu + igA_\mu)\eta^h \mapsto a^{-1}\big(\eta^h_{\v{r}+\hat{\mu}}e^{igA_{\v{r},\mu}}-\eta^h_\v{r}\big).
+  \label{eq:disc:map:covarDer}
+\end{equation}
+Note the abuse of vector notation in $\eta^h_{\v{r}+\hat{\mu}}$ which is a shorthand for the nearest neighbor of the lattice site $\v{r}$ in the $\hat{\mu}$ direction. In this notation, the definition
+of the difference operator $\Delta_\mu$ becomes
+\begin{equation}
+  \Delta_\mu A_{\v{r},\nu} = A_{\v{r}+\hat{\mu},\nu} - A_{\v{r},\nu}.
+  \label{eq:disc:difference}
+\end{equation}
+Finally the continuous version of the Maxwell term which is responsible for the free energy of the electromagnetic field, is replaced by a sum over all plaquettes of the lattice
+\begin{equation}
+  \begin{split}
+	\int\!\!\mathrm{d}^Dr\,(\v{\nabla}\times\v{A})^2 \mapsto a^{D-2}\sum_\Box(\v{\Delta}\times\v{A})^2 &= a^{D-2}\sum_{\Box,\mu}(\epsilon_{\mu\nu\lambda}\Delta_\nu A_{\v{r},\lambda})^2 \\
+  &= a^{D-2}\sum_{\Box,\mu>\nu}(\Delta_\mu A_{\v{r},\nu} - \Delta_\nu A_{\v{r},\mu})^2.
+  \end{split}
+  \label{eq:disc:Maxwell:noncompact}
+\end{equation}
+This is the noncompact way of discretizing the vector potential, i.e. $A_{\v{r},\mu}\in(-\infty,\infty)$. In the compact version, the link variables $A_{\v{r},\mu}$ have $2\pi$ periodicity and generally
+allows topologically nontrivial excitations such as magnetic monopoles \cite{shimizu12} for large fluctuations of the vector potential.
+
+Applying this procedure to the free energy density in Eq.~\eqref{eq:disc:FreeEn:initial} yields the free energy $F$, which we divide into terms
+\begin{equation}
+  F^\text{disc} = F_K + F_\text{MGT} + F_V + F_A.
+  \label{eq:disc:FreeEn:disc}
+\end{equation}
+The potential term is given by
+\begin{equation}
+  F_V = a^2\sum_\v{r}\Big\{\sum_h\big[-|\eta^h_\v{r}|^2 + \frac{1}{2}|\eta^h_\v{r}|^4\big] + 2|\eta^+_\v{r}\eta^-_\v{r}|^2 + \nu\Re\big[(\eta^+_\v{r})^{\ast\,2}(\eta_\v{r}^-)^2\big]\Big\},
+  \label{eq:disc:FreeEn:disc:potential}
+\end{equation}
+while the Maxwell term $F_A$ is given by the expression to the right in Eq.~\eqref{eq:disc:Maxwell:noncompact}. The variables on the numerical lattice is assumed to be periodic - 
+when e.g. $\eta_{\v{r}+\hat{\mu}}^h$ is evaluated at a lattice site $\v{r} + \hat{\mu}$ outside the lattice, we wrap around. Utilizing this assumption, the regularized representation of the normal
+kinetic terms without mixed gradients becomes
+\begin{equation}
+  F_K = \sum_{\v{r},\mu,h}\Big\{2|\eta^h_\v{r}|^2 - \big[(\eta^h_{\v{r}+\hat{\mu}})^\ast\eta^h_\v{r}e^{-igaA_{\v{r},\mu}} + \text{c.c.}\big]\Big\}.
+  \label{eq:disc:FreeEn:disc:kin}
+\end{equation}
+The mixed gradient terms of $\mathcal{F}$ in Eq.~\eqref{eq:disc:FreeEn:initial} forms the regularized free energy
+\begin{equation}
+  \begin{split}
+	F_\text{MGT} = \sum_\v{r}\Big\{&(\nu+1)\Re\Big[\eta^{-\;\ast}_\v{r}\big(\eta^+_{\v{r}+\hat{y}}e^{igaA_{\v{r},y}}-\eta^+_{\v{r}+\hat{x}}e^{igaA_{\v{r},x}}\big)
+	+ \eta^+_\v{r}\big(\eta^{-\;\ast}_{\v{r}+\hat{y}}e^{-igaA_{\v{r},y}} - \eta^{-\;\ast}_{\v{r}+\hat{x}}e^{-igaA_{\v{r},x}}\big)\Big]\\
+	+&(\nu-1)\Im\Big[\big(\eta^{+\;\ast}_{\v{r}+\hat{y}}\eta^-_{\v{r}+\hat{x}} - \eta^{-\;\ast}_{\v{r}+\hat{y}}\eta^+_{\v{r}+\hat{x}}\big)e^{iga(A_{\v{r},x}-A_{\v{r},y})} + 2\eta^{+\;\ast}_\v{r}\eta^-_\v{r}\\
+	  &\qquad\quad\;\;\;+\big(\eta^{-\;\ast}_\v{r}\eta^+_{\v{r}+\hat{x}} - \eta^{+\;\ast}_\v{r}\eta^-_{\v{r}+\hat{x}}\big)e^{igaA_{\v{r},x}}
+	+ \big(\eta^{-\;\ast}_{\v{r}+\hat{y}}\eta^+_\v{r} - \eta^{+\;\ast}_{\v{r}+\hat{y}}\eta^-_\v{r}\big)e^{-igaA_{\v{r},y}}\Big]\Big\}.
+  \end{split}
+  \label{eq:disc:FreeEn:disc:MGT}
+\end{equation}
+
+The regularized free energy is invariant under the gauge-transformation
+\begin{subequations}
+  \begin{align}
+	\eta^h_\v{r}&\mapsto e^{i\lambda_\v{r}}\eta^h_\v{r} \label{eq:disc:Gauge:disc:A}\\
+	A_{\v{r},\mu} &\mapsto A_{\v{r},\mu} - \frac{\Delta_\mu\lambda_\v{r}}{ga}.
+	\label{eq:disc:Gauge:disc:A}
+  \end{align}
+  \label{eq:disc:Gauge:disc}
+\end{subequations}
+
+\subsection{Lattice regularization + London approximation}
+
+Similarly to what we did for Eq.~\eqref{eq:disc:FreeEn:London}, we assume that the amplitude of the components of the order-parameter are constant such that $\eta^h_\v{r} = \rho_he^{i\theta^h_\v{r}}$.
+Inserting this assumption into the different terms of the free energy $F$ in Eq.~\eqref{eq:disc:FreeEn:disc} yields the normal kinetic free energy
+\begin{equation}
+  F^\text{lon}_K = 2\sum_{\v{r},\mu,h}\rho_h^2\Big\{1-\cos\big(\Delta_\mu\theta^h_\v{r}+gaA_{\v{r},\mu}\big)\Big\},
+  \label{eq:disc:FreeEn:lonDis:K}
+\end{equation}
+the free energy given by the potential terms
+\begin{equation}
+  F^\text{lon}_V = a^2\mathcal{N}\Big\{\sum_h\big[-\rho_h^2 + \frac{1}{2}\rho_h^4\big] + (2-\nu)\rho_+^2\rho_-^2\Big\} + 2\rho_+^2\rho_-^2a^2\nu\sum_\v{r}\cos^2\big(\theta^+_\v{r}-\theta^-_\v{r}\big),
+  \label{eq:disc:freeEn:lonDis:V}
+\end{equation}
+as well as the MGT free energy
+\begin{equation}
+  \begin{split}
+	&F^\text{lon}_\text{MGT} = \rho_+\rho_-\sum_\v{r}\Big\{(\nu+1)\Big[\cos\big(\theta^+_{\v{r}+\hat{y}} - \theta^-_\v{r} + gaA_{\v{r},y}\big) - \cos\big(\theta^+_{\v{r}+\hat{x}}-\theta^-_\v{r} + gaA_{\v{r},x}\big)\\
+	&\qquad\qquad+ \cos\big(\theta^-_{\v{r}+\hat{y}} - \theta^+_\v{r} + gaA_{\v{r},y}\big) - \cos\big(\theta^-_{\v{r}+\hat{x}} - \theta^+_\v{r} + gaA_{\v{r},x}\big)\Big]\\
+	&+(\nu-1)\Big[\sin\big(\theta^-_{\v{r}+\hat{x}} - \theta^+_{\v{r}+\hat{y}} + ga(A_{\v{r},x} - A_{\v{r},y})\big) + \sin\big(\theta^-_{\v{r}+\hat{y}} - \theta^+_{\v{r}+\hat{x}} + ga(A_{\v{r},y} - A_{\v{r},x})\big)\\
+	  &\qquad\qquad+ 2\sin\big(\theta^-_\v{r}-\theta^+_\v{r}\big) + \sin\big(\theta^+_{\v{r}+\hat{x}} - \theta^-_\v{r}+gaA_{\v{r},x}\big) - \sin\big(\theta^-_{\v{r}+\hat{x}} - \theta^+_\v{r} +gaA_{\v{r},x}\big)\\
+	&\qquad\qquad-\sin\big(\theta^-_{\v{r}+\hat{y}} - \theta^+_\v{r} + gaA_{\v{r},y}\big) + \sin\big(\theta^+_{\v{r}+\hat{y}} - \theta^-_\v{r} + gaA_{\v{r},y}\big)\Big]\Big\}.
+  \end{split}
+  \label{eq:disc:freeEn:longDis:MGT}
+\end{equation}
+The big question is what justification this assumption is based on. In \cite{shimizu12} they also have a two-component $p$-wave order parameter, but they rather assume that
+$\sum_h|\eta^h|^2 = \text{const.}$ in what they call the London-approximation. Choosing units such that this constant is $1$, then $\eta^h$ is a complex projective field.
