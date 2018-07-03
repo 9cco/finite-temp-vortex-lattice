@@ -54,7 +54,7 @@ where $a$ is the length between lattice sites. Since the numerical lattice has s
 $\eta^\pm,\,\eta^{\pm\;\ast}, \v{A}$, to begin discretized variables where the superconducting order parameter gets an associated variable at each lattice site $\eta^\pm_{\v{r}}, \eta^{\pm\;\ast}_\v{r}$,
 while the vector potential $\v{A}$ is discretized by link variables $A_{\v{r},\mu}$ between the lattice site at $\v{r}$ and the nearest neighbor in direction $\hat{\mu}$. Covariant derivatives are replaced by
 \begin{equation}
-  D_\mu\eta^h = (\partial_\mu + igA_\mu)\eta^h \mapsto a^{-1}\big(\eta^h_{\v{r}+\hat{\mu}}e^{igA_{\v{r},\mu}}-\eta^h_\v{r}\big).
+  D_\mu\eta^h = (\partial_\mu + igA_\mu)\eta^h \mapsto a^{-1}\big(\eta^h_{\v{r}+\hat{\mu}}e^{igaA_{\v{r},\mu}}-\eta^h_\v{r}\big).
   \label{eq:disc:map:covarDer}
 \end{equation}
 Note the abuse of vector notation in $\eta^h_{\v{r}+\hat{\mu}}$ which is a shorthand for the nearest neighbor of the lattice site $\v{r}$ in the $\hat{\mu}$ direction. In this notation, the definition
@@ -66,13 +66,40 @@ of the difference operator $\Delta_\mu$ becomes
 Finally the continuous version of the Maxwell term which is responsible for the free energy of the electromagnetic field, is replaced by a sum over all plaquettes of the lattice
 \begin{equation}
   \begin{split}
-	\int\!\!\mathrm{d}^Dr\,(\v{\nabla}\times\v{A})^2 \mapsto a^{D-2}\sum_\Box(\v{\Delta}\times\v{A})^2 &= a^{D-2}\sum_{\Box,\mu}(\epsilon_{\mu\nu\lambda}\Delta_\nu A_{\v{r},\lambda})^2 \\
-  &= a^{D-2}\sum_{\Box,\mu>\nu}(\Delta_\mu A_{\v{r},\nu} - \Delta_\nu A_{\v{r},\mu})^2.
+	\int\!\!\mathrm{d}^Dr\,(\v{\nabla}\times\v{A})^2 \mapsto a^{D-2}\sum_\v{r}(\v{\Delta}\times\v{A}_\v{r})^2 &= a^{D-2}\sum_{\v{r},\mu}(\epsilon_{\mu\nu\lambda}\Delta_\nu A_{\v{r},\lambda})^2 \\
+	&= a^{D-2}\sum_{\v{r},\mu>\nu}(\Delta_\mu A_{\v{r},\nu} - \Delta_\nu A_{\v{r},\mu})^2.
   \end{split}
   \label{eq:disc:Maxwell:noncompact}
 \end{equation}
 This is the noncompact way of discretizing the vector potential, i.e. $A_{\v{r},\mu}\in(-\infty,\infty)$. In the compact version, the link variables $A_{\v{r},\mu}$ have $2\pi$ periodicity and generally
 allows topologically nontrivial excitations such as magnetic monopoles \cite{shimizu12} for large fluctuations of the vector potential.
+
+To ensure proper boundary conditions of the vector potential we will split it in a constant and fluctuating field such that $\v{A}_\v{r} = \v{A}_\v{r}^0 + \v{A}_\v{r}^f$, where 
+$\v{A}^0_\v{r} = (0, 2\pi f r_x, 0)^\mathrm{T}$. Here $f$ is the magnetic filling fraction while $r_x$ is the $x$ position of lattice site $\v{r}$. Letting the fluctuating field $A_\v{r}^f$ have
+periodic boundary conditions hence ensures that there will be a constant external magnetic field $\v{B} = (0,0, 2\pi f)$ penetrating the lattice \cite{Smorgrav05}. The Maxwell term then is divided in
+three terms
+\begin{equation}
+  F_A = a^{D-2}\sum_\v{r}\Big[(\v{\Delta}\times\v{A}_\v{r}^0)^2 + (\v{\Delta}\times\v{A}_\v{r}^f)^2 + 2(\v{\Delta}\times\v{A}_\v{r}^0)\cdot(\v{\Delta}\times\v{A}_\v{r}^f)\Big],
+  \label{eq:disc:Maxwell:noncompact:split}
+\end{equation}
+where the first one is constant and hence it can be neglected. Since the model under concideration is of a $2D$ lattice, the link variables $A_{\v{r},z}$ out of the plane are neglected as well as any
+difference in the $z$-direction $\Delta_zA_{\v{r},\mu}$. This simplifies the expression for $\v{\Delta}\times\v{A}_\v{r}$ in Eq.~\eqref{eq:disc:Maxwell:noncompact} to only the $z$-component
+$\v{\Delta}\times\v{A}_\v{r} = \hat{z}\big(\Delta_xA_{\v{r},y} - \Delta_yA_{\v{r},x}\big)$. Denoting the $z$-component of the discretized curl of the fluctuating field
+\begin{equation}
+  A^f_{\Box,\v{r}} \equiv \Delta_xA^f_{\v{r},y} - \Delta_yA^f_{\v{r},x} = A^f_{\v{r},x} + A^f_{\v{r}+\hat{x},y} - A^f_{\v{r}+\hat{y},x} - A^f_{\v{r},y},
+  \label{eq:disc:plaquetteSum}
+\end{equation}
+this can be interpreted as the sum of the fluctuating vector potential over the plaquette $\Box$ at the lattice site $\v{r}$. With this definition, the Maxwell term 
+in Eq.~\eqref{eq:disc:Maxwell:noncompact:split} can be written
+\begin{equation}
+  \begin{split}
+	F_A &= \sum_\v{r}\Big\{\big(A^f_{\Box,\v{r}}\big)^2 + 2\big(\Delta_xA^0_{\v{r},y} - \Delta_yA^0_{\v{r},x}\big)A^f_{\Box,\v{r}}\Big\}\\
+	&= \sum_\v{r}\big(A^f_{\Box,\v{r}}\big)^2 + 2\cdot2\pi fa\sum_{\v{r}}A^f_{\Box,\v{r}} = \sum_\v{r}\big(A^f_{\Box,\v{r}}\big)^2.
+  \end{split}
+  \label{eq:disc:Maxwell:plaquetteSum}
+\end{equation}
+In the second line we have evaluated the specific expression for the constant vector potential. In the third, we realize that the sum over $A^f_{\Box,\v{r}}$ vanishes
+by shifting lattice indices.
 
 Applying this procedure to the free energy density in Eq.~\eqref{eq:disc:FreeEn:initial} yields the free energy $F$, which we divide into terms
 \begin{equation}
@@ -84,7 +111,7 @@ The potential term is given by
   F_V = a^2\sum_\v{r}\Big\{\sum_h\big[-|\eta^h_\v{r}|^2 + \frac{1}{2}|\eta^h_\v{r}|^4\big] + 2|\eta^+_\v{r}\eta^-_\v{r}|^2 + \nu\Re\big[(\eta^+_\v{r})^{\ast\,2}(\eta_\v{r}^-)^2\big]\Big\},
   \label{eq:disc:FreeEn:disc:potential}
 \end{equation}
-while the Maxwell term $F_A$ is given by the expression to the right in Eq.~\eqref{eq:disc:Maxwell:noncompact}. The variables on the numerical lattice is assumed to be periodic - 
+while the Maxwell term $F_A$ is given by the expression to the right in Eq.~\eqref{eq:disc:Maxwell:plaquetteSum}. The variables on the numerical lattice is assumed to be periodic - 
 when e.g. $\eta_{\v{r}+\hat{\mu}}^h$ is evaluated at a lattice site $\v{r} + \hat{\mu}$ outside the lattice, we wrap around. Utilizing this assumption, the regularized representation of the normal
 kinetic terms without mixed gradients becomes
 \begin{equation}
@@ -139,3 +166,50 @@ as well as the MGT free energy
 \end{equation}
 The big question is what justification this assumption is based on. In \cite{shimizu12} they also have a two-component $p$-wave order parameter, but they rather assume that
 $\sum_h|\eta^h|^2 = \text{const.}$ in what they call the London-approximation. Choosing units such that this constant is $1$, then $\eta^h$ is a complex projective field.
+
+\subsection{London approximation by a $\mathbb{CP}^1$-field}
+
+Instead of fixing the amplitude of each field as in the London approximation, a less strict approximation is to say that
+\begin{equation}
+  |\eta^+_\v{r}|^2 + |\eta^-_\v{r}|^2 = \gamma^2,
+  \label{eq:disc:cp1:squareSum}
+\end{equation}
+for a constant $\gamma>0$, i.e. the sum of squares of the amplitudes of the components together is constant. This makes it possible that condensate from one component can flow into the other
+and vice versa. Defining two new fields
+\begin{equation}
+  z^h_\v{r} \equiv \frac{1}{\gamma}\eta^h_\v{r} = \frac{1}{\gamma}\rho^h_\v{r}e^{i\theta^h_\v{r}} \equiv u^h_\v{r}e^{i\theta^h_\v{r}},
+  \label{eq:disc:cp1:zFields}
+\end{equation}
+the constraint on $\eta^h_\v{r}$ in Eq.~\eqref{eq:disc:cp1:squareSum} becomes the $\mathbb{CP}^1$ constraint
+\begin{equation}
+  |z^+_\v{r}|^2 + |z^-_\v{r}|^2 = 1
+  \label{eq:disc:cp1:cp1Constraint}
+\end{equation}
+when written in terms of the new fields. This constraint reduces the real degrees of freedom in the fields from $4$ to $3$. Choosing the amplitude $u^+_\v{r}$ as the free degree of freedom,
+the constraint implies that $u^-_\v{r}= \sqrt{1-(u^+_\v{r})^2}$. Rewriting the free energy in Eq.~\eqref{eq:disc:FreeEn:disc} in terms of these new degrees of freedom and ignoring constant terms yields
+\begin{equation}
+  F_K = -2\gamma^2\sum_{\v{r},\mu,h}u^h_{\v{r}+\hat{\mu}}u^h_\v{r}\cos\big(\theta^h_{\v{r}+\hat{\mu}} - \theta^h_\v{r} + gaA_{\v{r},\mu}\big),
+  \label{eq:disc:cp1:FK}
+\end{equation}
+for the normal kinetic term in Eq.~\eqref{eq:disc:FreeEn:disc:kin},
+\begin{equation}
+  F_V = a^2\gamma^4\sum_\v{r}u^{+\,2}_\v{r}u^{-\,2}_\v{r}\big[1+\nu\cos 2\big(\theta^+_\v{r}-\theta^-_\v{r}\big)\big]
+  \label{eq:disc:cp1:FV}
+\end{equation}
+for the potential term in Eq.~\eqref{eq:disc:FreeEn:disc:potential} and
+\begin{equation}
+  \begin{split}
+	F_\text{MGT} = \gamma^2\sum_\v{r}\Big\{&(\nu+1)\Big[u^-_\v{r}u^+_{\v{r}+\hat{y}}\cos\big(\theta^+_{\v{r}+\hat{y}} - \theta^-_\v{r} + agA_{\v{r},y}\big)
++ u^+_\v{r}u^-_{\v{r}+\hat{y}}\cos\big(\theta^-_{\v{r} + \hat{y}} - \theta^+_\v{r} + agA_{\v{r},y}\big)\\
+&\phantom{(\nu+}\;-\Big( u^-_\v{r}u^+_{\v{r}+\hat{x}}\cos\big(\theta^+_{\v{r}+\hat{x}} - \theta^-_\v{r} + agA_{\v{r},x}\big)
++ u^+_\v{r}u^-_{\v{r}+\hat{x}}\cos\big(\theta^-_{\v{r} + \hat{x}} - \theta^+_\v{r} + agA_{\v{r},x}\big)\Big)\Big]\\
++&(\nu-1)\Big[u^+_{\v{r}+\hat{y}}u^-_{\v{r}+\hat{x}}\sin\big(\theta^-_{\v{r}+\hat{x}} - \theta^+_{\v{r}+\hat{y}} + ga(A_{\v{r},x} - A_{\v{r},y})\big)\\
+  &\phantom{(\nu+}\;\,-u^-_{\v{r}+\hat{y}}u^+_{\v{r}+\hat{x}}\sin\big(\theta^+_{\v{r}+\hat{x}} - \theta^-_{\v{r}+\hat{y}} + ga(A_{\v{r},x} - A_{\v{r},y})\big) + 2u^+_\v{r}u^-_\v{r}\sin\big(\theta^-_\v{r}-\theta^+_\v{r}\big)\\
+  &\phantom{(\nu0}\;\,+u^-_\v{r}u^+_{\v{r}+\hat{x}}\sin\big(\theta^+_{\v{r}+\hat{x}} - \theta^-_\v{r}+gaA_{\v{r},x}\big)
+  -u^+_\v{r}u^-_{\v{r}+\hat{x}}\sin\big(\theta^-_{\v{r}+\hat{x}} - \theta^+_\v{r}+gaA_{\v{r},x}\big)\\
+  &\phantom{(\nu0}-\Big(u^-_\v{r}u^+_{\v{r}+\hat{y}}\sin\big(\theta^+_{\v{r}+\hat{y}} - \theta^-_\v{r}+gaA_{\v{r},y}\big)
+-u^+_\v{r}u^-_{\v{r}+\hat{y}}\sin\big(\theta^-_{\v{r}+\hat{y}} - \theta^+_\v{r}+gaA_{\v{r},y}\big)\Big)\Big]\Big\},
+  \end{split}
+  \label{eq:disc:cp1:MGT}
+\end{equation}
+for the mixed gradient terms in Eq.~\eqref{eq:disc:FreeEn:disc:MGT}. The Maxwell term is unchanged from its form in Eq.~\eqref{eq:disc:Maxwell:plaquetteSum}.
