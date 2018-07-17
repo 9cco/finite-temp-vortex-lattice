@@ -188,12 +188,21 @@ the constraint on $\eta^h_\v{r}$ in Eq.~\eqref{eq:disc:cp1:squareSum} becomes th
 when written in terms of the new fields. This constraint reduces the real degrees of freedom in the fields from $4$ to $3$. Choosing the amplitude $u^+_\v{r}$ as the free degree of freedom,
 the constraint implies that $u^-_\v{r}= \sqrt{1-(u^+_\v{r})^2}$. Rewriting the free energy in Eq.~\eqref{eq:disc:FreeEn:disc} in terms of these new degrees of freedom and ignoring constant terms yields
 \begin{equation}
-  F_K = -2\gamma^2\sum_{\v{r},\mu,h}u^h_{\v{r}+\hat{\mu}}u^h_\v{r}\cos\big(\theta^h_{\v{r}+\hat{\mu}} - \theta^h_\v{r} + gaA_{\v{r},\mu}\big),
+  \begin{split}
+	F_K &= \gamma^2\sum_{\v{r},\mu,h}\Big[2|u^h_\v{r}|^2 - \Big(u^h_{\v{r}+\hat{\mu}}u^h_\v{r}e^{-i(\theta^h_{\v{r}+\hat{\mu}}-\theta^h_\v{r} + gaA_{\v{r},\mu})} + \text{c.c.}\Big)\Big]\\
+  &= 2\gamma^2\sum_{\v{r},\mu} - 2\gamma^2\sum_{\v{r},\mu,h}u^h_{\v{r}+\hat{\mu}}u^h_\v{r}\cos\big(\theta^h_{\v{r}+\hat{\mu}}-\theta^h_\v{r} + gaA_{\v{r},\mu}\big)\\
+	&\sim -2\gamma^2\sum_{\v{r},\mu,h}u^h_{\v{r}+\hat{\mu}}u^h_\v{r}\cos\big(\theta^h_{\v{r}+\hat{\mu}} - \theta^h_\v{r} + gaA_{\v{r},\mu}\big),
+  \end{split}
   \label{eq:disc:cp1:FK}
 \end{equation}
 for the normal kinetic term in Eq.~\eqref{eq:disc:FreeEn:disc:kin},
 \begin{equation}
-  F_V = a^2\gamma^4\sum_\v{r}u^{+\,2}_\v{r}u^{-\,2}_\v{r}\big[1+\nu\cos 2\big(\theta^+_\v{r}-\theta^-_\v{r}\big)\big]
+  \begin{split}
+	F_V &= a^2\sum_\v{r}\Big\{\sum_h\Big[-\gamma^2u^{h\,2}_\v{r} + \frac{\gamma^4}{2}u^{h\,4}_\v{r}\Big] + 2\gamma^4(u^+_\v{r}u^-_\v{r})^2 + \nu\gamma^4(u^+_\v{r}u^-_\v{r})^2\Re e^{2i(\theta^-_\v{r}-\theta^+_\v{r})}\Big\}\\
+	&= a^2\sum_\v{r}\Big\{-\gamma^2 + \frac{1}{2}\gamma^4\big(u^{+\,4}_\v{r} + 1 - 2u^{+\,2}_\v{r} + u^{+\,4}_\v{r}\big) + \gamma^4u^{+\,2}_\v{r}u^{-\,2}_\v{r}\Big[2+\nu\cos 2\big(\theta^+_\v{r}-\theta^-_\v{r}\big)\Big]\Big\}\\
+	&= a^2\big(-\gamma^2 + \gamma^4/2\big)\sum_\v{r} + a^2\sum_\v{r}\Big\{\gamma^4u^{+\,2}_\v{r}\big( u^{+\,2}_\v{r}-1\big) + \gamma^4u^{+\,2}_\v{r}u^{-\,2}_\v{r}\Big[2+\nu\cos 2\big(\theta^+_\v{r}-\theta^-_\v{r}\big)\Big]\Big\}\\
+	&\sim a^2\gamma^4\sum_\v{r}u^{+\,2}_\v{r}u^{-\,2}_\v{r}\big[1+\nu\cos 2\big(\theta^+_\v{r}-\theta^-_\v{r}\big)\big]
+  \end{split}
   \label{eq:disc:cp1:FV}
 \end{equation}
 for the potential term in Eq.~\eqref{eq:disc:FreeEn:disc:potential} and
