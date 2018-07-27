@@ -1,0 +1,88 @@
+\section{Observables}
+
+\subsection{Local vorticity}
+
+We are interested in investigating the vortex structure of the phase $\theta^h(\v{r})$ of the
+superconducting condensate components. A vortex of this kind can be imagined if we picture
+$\theta^h$ as the angle of a vector in the plane.
+Having a vector at each position in a flat plane, we now
+follow the vector as we walk in a circle in the plane. If the vector makes a single rotation,
+like the hand in a watch, as we go around the circle clockwise,
+we have a vortex with a single topological charge \cite{Smorgrav052}.
+This procedure of going in a closed orbit around the vortex  and measuring how the vector rotates as we move in the
+trajectory can be formalized by integrating the gradient $\v{\nabla}\theta^h$ around the path.
+Since we end up where we started, the vector must have rotated an integer number of times 
+($n\in\mathbb{Z}$), and thus we get
+\begin{equation}
+  \oint_\mathcal{C}\v{\nabla}\theta^h\cdot\mathrm{d}\v{l} = 2\pi n
+  \label{eq:obs:plan:closedPhaseIntegral}
+\end{equation}
+The integer $n$ is then the topological charge of the vortex \cite{AltlandSimons10},
+it is a winding number
+of the phase as it counts the number of times the phase winds around $2\pi$. It is also related to
+the number of quanta of magnetic flux the vortex admits --- 
+\textit{that which we call a rose by any other name would smell as sweet}.
+
+Let's say that all vortices in our sample has a single charge, i.e. $n=1$ for all vortices. The
+number of vortices $N_\text{vor}$ can then be counted by extending the closed path $\mathcal{C}$
+to encompass our entire sample and dividing by $2\pi$. By Stoke's theorem then
+\begin{equation}
+  N_\text{vor} = \frac{1}{2\pi}\iint_\mathcal{S}
+  \big(\v{\nabla}\times\v{\nabla}\theta^h\big)\cdot\hat{n}\;\mathrm{d}^2r,
+  \label{eq:obs:plan:numberOfVortices}
+\end{equation}
+where $\mathcal{S}$ is the surface enclosed by $\mathcal{C}$ and $\hat{n}$ is a unit vector pointing
+out from this surface according to the right hand rule. From this it is natural to define the
+local vorticity vector as
+\begin{equation}
+  \tilde{\v{n}}^{(h)}(\v{r}) \equiv \frac{1}{2\pi}\v{\nabla}\times\v{\nabla}\theta^h(\v{r}).
+  \label{eq:obs:plan:vortexDensityDef}
+\end{equation}
+Normally $\v{\nabla}\times\v{\nabla}f(\v{r}) = \v{0}$ for an analytic function $f(\v{r})$ so you
+might be worried that $\v{n}^h = \v{0}$, but fear not: $\theta^h$ is only defined up to 
+modulo $2\pi$ and is thus not analytic. A vortex is in this sense a singularity in 
+$\v{\nabla}\theta^h$.
+
+There is however a problem with Eq.~\eqref{eq:obs:plan:vortexDensityDef} for using it as an
+observable in our system, which is that by a local gauge transformation we can make it take on
+any value we choose. This can be amended by using the vector potential $\v{A}$ to redefine
+$\tilde{\v{n}}^{(h)}$ into the gauge invariant local vorticity \cite{Smorgrav05}
+\begin{equation}
+  \v{n}^{(h)}(\v{r}) \equiv \frac{1}{2\pi}\v{\nabla}\times\big[\v{\nabla}\theta^h + g\v{A}\big].
+  \label{eq:obs:plan:gaugeInvariantLocalVorticity}
+\end{equation}
+
+\subsection{Lattice regularization of $\v{n}^{(h)}(\v{r})$}
+
+We have so far in this section worked in the continuum, however when doing Monte-Carlo
+$\theta^h(\v{r}) \mapsto \theta^h_\v{r}$ and thus only takes on discrete values. 
+We therefore need to lattice regularize our observable $\v{n}^{(h)}$. When regularizing
+the Maxwell term in the free energy in Eq.~\eqref{eq:disc:Maxwell:noncompact} we used the general
+procedure
+\begin{equation}
+  \partial_\mu f(\v{r}) \mapsto \frac{1}{a}\Delta_\mu f_\v{r}
+  \label{eq:obs:latt:gradientRegularization}
+\end{equation}
+for a general field $f(\v{r})$.
+Using this regularization and remembering that $\theta^h(\v{r})$ is a phase field such that 
+$(\v{\nabla}\theta^h + g\v{A})$ has to be interpreted modulo $2\pi$, the lattice regularization of $n_z^{(h)}(\v{r})$ becomes
+\begin{equation}
+  \begin{split}
+	n_z^{(h)}(\v{r}) \mapsto \frac{1}{2\pi a}\Big\{&\Mod\big(\frac{1}{a}\Delta_x\theta^h_\v{r} + gA_{\v{r},x}\big) + \Mod\big(\frac{1}{a}\Delta_y\theta_{\v{r}+\hat{x}} + gA_{\v{r}+\hat{x},y}\big)\\
+	-&\Mod\big(\frac{1}{a}\Delta_x\theta^h_{\v{r}+\hat{y}} + gA_{\v{r}+\hat{y},x}\big) - \Mod\big(\frac{1}{a}\Delta_y\theta^h_\v{r} + gA_{\v{r},y}\big)\Big\},
+  \end{split}
+  \label{eq:obs:latt:regularizedLocalVorticity}
+\end{equation}
+where we have used the notation $\Mod(x) = x\mod2\pi$. This quantity has also been called the gauge invariant vortex density \cite{shimizu12}.
+Looking at Eq.~\eqref{eq:obs:latt:regularizedLocalVorticity} we realize that it has the same form as $A^f_{\Box,\v{r}}$ in Eq.~\eqref{eq:disc:plaquetteSum}
+and can likewise be written as a plaquette sum. Defining the plaquette sum of a discrete vector field $v_{\v{r},\mu}$, which both has a position $\v{r}$ and components $\mu\in\{x,y\}$, as
+\begin{equation}
+  \sum_{\Box_\v{r}}v_{\v{r},\mu} \equiv v_{\v{r},x} + v_{\v{r}+\hat{x},y} - v_{\v{r}+\hat{y},x} - v_{\v{r},y},
+  \label{eq:obs:latt:plaquetteSum}
+\end{equation}
+then the local vorticity $n_z^{(h)}$ can be written
+\begin{equation}
+  n_z^{(h)}(\v{r}) = \frac{1}{2\pi a}\sum_{\Box_\v{r}}\Mod\big(\frac{1}{a}\Delta_\mu\theta^h_\v{r} + gA_{\v{r},\mu}\big),
+  \label{eq:obs:latt:shortNotationLocalVorticity}
+\end{equation}
+which is the form used in \cite{Kragset08}. Notice that the lattice regularization of a curl is a plaquette sum.
