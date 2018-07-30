@@ -86,3 +86,15 @@ then the local vorticity $n_z^{(h)}$ can be written
   \label{eq:obs:latt:shortNotationLocalVorticity}
 \end{equation}
 which is the form used in \cite{Kragset08}. Notice that the lattice regularization of a curl is a plaquette sum.
+
+\subsection{Planar structure function}
+
+To estimate the lattice structure of the vorticies in our system, we take the Fourier transform of the local vorticity
+which is normalized by the net flux in the system $fL^2$.
+Taking the absolute square and averaging over thermal fluctuations yields the planar structure function \cite{Smorgrav05}
+\begin{equation}
+  S^{(h)}(\v{k}_\perp) = \frac{1}{(fL^2)^2}\Big\langle\Big|\sum_\v{r}n_z^{(h)}(\v{r})e^{i\v{k}_\perp\cdot\v{r}}\Big|^2\Big\rangle,
+  \label{eq:obs:plan:planarStructFunc}
+\end{equation}
+where $\v{r}$ runs over all the positions of the numerical lattice and $\v{k}_\perp$ is a vector in the $xy$-plane, i.e. a vector
+perpendicular to the axis of rotation.
