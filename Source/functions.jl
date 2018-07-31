@@ -235,7 +235,7 @@ function mcSweep!(ψ::State, β::Float64)
     const ϕᵣ₋₂ = ψ.lattice[2,L]
     const ϕᵣ₋₁₊₂ = ψ.lattice[L,L-1]
     const ϕᵣ₋₂₊₁ = ψ.lattice[2,1]
-    metropolisHastingUpdate!(ψ, [L,L], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, β)
+    metropolisHastingUpdate!(ψ, [1,L], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, β)
     
     # Updating boundary paralell to y-axis
     # except for the upper and lower right corner.
@@ -321,4 +321,149 @@ function mcSweep!(ψ::State, β::Float64)
         ϕᵣ₋₂₊₁ = ψ.lattice[y+1,x+1]
         metropolisHastingUpdate!(ψ, [y,x], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, β)
     end
+end
+
+####################################################################################################################
+#                            Planar Structure function
+#
+####################################################################################################################
+
+# -----------------------------------------------------------------------------------------------------------
+# Returns the local vorticity by preforming a plaquette sum using the gauge-invariant difference of the θ field.
+function n⁺(ψ::State, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, x::Int64)
+    return (mod(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺ + ψ.g*ϕ.A[1],two_pi) + mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₁.θ⁺ + ψ.g*(ϕᵣ₊₁.A[2] + two_pi*ψ.f*x), two_pi) 
+        - mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₂.θ⁺ + ψ.g*ϕᵣ₊₂.A[1], two_pi) 
+        - mod(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺ + ψ.g*(ϕ.A[2] + two_pi*ψ.f*(x-1)), two_pi))/two_pi
+end
+function n⁻(ψ::State, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, x::Int64)
+    return (mod(ϕᵣ₊₁.θ⁻ - ϕ.θ⁻ + ψ.g*ϕ.A[1],two_pi) + mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₁.θ⁻ + ψ.g*(ϕᵣ₊₁.A[2] + two_pi*ψ.f*x), two_pi) 
+        - mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₂.θ⁻ + ψ.g*ϕᵣ₊₂.A[1], two_pi) 
+        - mod(ϕᵣ₊₂.θ⁻ - ϕ.θ⁻ + ψ.g*(ϕ.A[2] + two_pi*ψ.f*(x-1)), two_pi))/two_pi
+end
+
+# -----------------------------------------------------------------------------------------------------------
+function structureFunctionPluss(k::Array{Int64,1}, ψ::State)
+    sum = Complex(0)
+    L = size(ψ.lattice, 2)
+    
+    # Sum over the corners
+    # Upper left corner
+     r = [0, L-1] # For r we assume origo is in position [L,1] of the lattice. 
+                  # Note that r is the same as pos (found previously) with y-axis flipped and -1 in each direction.
+                  # Additionally we define it such that we get the usual r = [x,y] order of dimensions.
+     ϕ = ψ.lattice[1,1]
+     ϕᵣ₊₁ = ψ.lattice[1,2]
+     ϕᵣ₊₂ = ψ.lattice[L,1]
+     ϕᵣ₊₁₊₂ = ψ.lattice[L,2]
+    sum += n⁺(ψ, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
+    
+    # Lower left corner
+     r = [0,0]
+     ϕ = ψ.lattice[L,1]
+     ϕᵣ₊₁ = ψ.lattice[L,2]
+     ϕᵣ₊₂ = ψ.lattice[L-1,1]
+     ϕᵣ₊₁₊₂ = ψ.lattice[L-1,2]
+    sum += n⁺(ψ, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
+    
+    # Lower right corner
+     r = [L-1,0]
+     ϕ = ψ.lattice[L,L]
+     ϕᵣ₊₁ = ψ.lattice[L,1]
+     ϕᵣ₊₂ = ψ.lattice[L-1,L]
+     ϕᵣ₊₁₊₂ = ψ.lattice[L-1,1]
+    sum += n⁺(ψ, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
+    
+    # Upper right corner
+     r = [L-1,L-1]
+     ϕ = ψ.lattice[1,L]
+     ϕᵣ₊₁ = ψ.lattice[1,1]
+     ϕᵣ₊₂ = ψ.lattice[L,L]
+     ϕᵣ₊₁₊₂ = ψ.lattice[L,1]
+    sum += n⁺(ψ, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
+    
+    # Sum over borders without corners
+    for i = 2:(L-1)
+        # Upper border (counting in +x direction)
+        r = [i-1, L-1]
+        ϕ = ψ.lattice[1,i]
+        ϕᵣ₊₁ = ψ.lattice[1,i+1]
+        ϕᵣ₊₂ = ψ.lattice[L,i]
+        ϕᵣ₊₁₊₂ = ψ.lattice[L,i+1]
+        sum += n⁺(ψ, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)*exp(im*(k⋅r))
+        
+        # Left border (counting in -y direction)
+        r = [0, L-i]
+        ϕ = ψ.lattice[i,1]
+        ϕᵣ₊₁ = ψ.lattice[i,2]
+        ϕᵣ₊₂ = ψ.lattice[i-1,1]
+        ϕᵣ₊₁₊₂ = ψ.lattice[i-1,2]
+        sum += n⁺(ψ, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
+        
+        # Lower border (counting in +x direction)
+        r = [i-1, 0]
+        ϕ = ψ.lattice[L,i]
+        ϕᵣ₊₁ = ψ.lattice[L,i+1]
+        ϕᵣ₊₂ = ψ.lattice[L-1,i]
+        ϕᵣ₊₁₊₂ = ψ.lattice[L-1,i+1]
+        sum += n⁺(ψ, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)*exp(im*(k⋅r))
+        
+        # Right border (counting in -y direction)
+        r = [L-1, L-i]
+        ϕ = ψ.lattice[i,L]
+        ϕᵣ₊₁ = ψ.lattice[i,1]
+        ϕᵣ₊₂ = ψ.lattice[i-1,L]
+        ϕᵣ₊₁₊₂ = ψ.lattice[i-1,1]
+        sum += n⁺(ψ, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
+    end
+    
+    # Sum over rest of the bulk
+    for h_pos = 2:(L-1)
+        for v_pos = 2:(L-1)
+            r = [h_pos-1, L-v_pos]
+            ϕ = ψ.lattice[v_pos,h_pos]
+            ϕᵣ₊₁ = ψ.lattice[v_pos,h_pos+1]
+            ϕᵣ₊₂ = ψ.lattice[v_pos-1,h_pos]
+            ϕᵣ₊₁₊₂ = ψ.lattice[v_pos-1,h_pos+1]
+            sum += n⁺(ψ, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)*exp(im*(k⋅r))
+        end
+    end
+    
+    return abs2(sum)
+end
+
+# -----------------------------------------------------------------------------------------------------------
+# This version should do the same as above, but determines the neighbors dynamically at a slight cost
+# to performance.
+function structureFunctionPlussDyn(k::Array{Int64,1}, ψ::State)
+    L = size(ψ.lattice, 1)
+    sum = Complex(0.0)
+    
+    # Sum over entire lattice and determine nearest neighbors dynamically.
+    for h_pos = 1:L
+        for v_pos = 1:L
+            
+            r = [h_pos-1, L-v_pos]
+            ϕ = ψ.lattice[v_pos,h_pos]
+            ϕᵣ₊₁ = ψ.lattice[v_pos, mod(h_pos, L)+1]
+            ϕᵣ₊₂ = ψ.lattice[mod(v_pos-2,L)+1, h_pos]
+            ϕᵣ₊₁₊₂ = ψ.lattice[mod(v_pos-2,L)+1, mod(h_pos, L)+1]
+            sum += n⁺(ψ, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)*exp(im*(k⋅r))
+        end
+    end
+    return abs2(sum)
+end
+
+
+
+####################################################################################################################
+#                            Misc. help functions
+#
+####################################################################################################################
+
+# Helping function for calculating position vector in [x,y] format from a lattice position
+# assuming origo is in lower left corner of the square lattice. L is the size of the lattice along one dimension.
+function getVectorPosition(L::Int64, pos::Array{Int64,1})
+    v_pos = pos[1]
+    h_pos = pos[2]
+    return [h_pos-1, L-v_pos]
 end

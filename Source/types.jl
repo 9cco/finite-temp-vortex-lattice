@@ -1,3 +1,6 @@
+# Constants
+const two_pi = 2π
+
 type LatticeSite
     A::Array{Float64,1}  # Fluctuating vector potential
     θ⁺::Float64 # Phase of the + component
@@ -38,7 +41,7 @@ function State(N::Int64, choice::Int64)
     γ = 1.0    # Order parameter amplitude
     g = 1.0    # Gauge coupling
     ν = 0.0    # Anisotropy constant
-    f = 0.0    # Magnetic filling fraction
+    f = 1.0/N    # Magnetic filling fraction
     
     # Construct ordered state 
     if choice == 1
@@ -51,7 +54,7 @@ function State(N::Int64, choice::Int64)
     elseif choice == 2
         Amax::Int64 = 2^10
 		lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
-							   rand(Uniform(0,2π)), rand(Uniform(0,2π)), rand()) for y=1:N, x=1:N]
+						   rand(Uniform(0,2π)), rand(Uniform(0,2π)), rand()) for y=1:N, x=1:N]
         ψ = State(lattice, γ, g, ν, f)
         
     # We only have choices 1 and 2 so far so other values for choice will give an error.
@@ -60,4 +63,27 @@ function State(N::Int64, choice::Int64)
     end
     ψ
 end
-
+# Same as above, but with possibility to initiate state constants
+function State(N::Int64, choice::Int64, γ::Float64, g::Float64, ν::Float64, f::Float64)
+    N <= 1 && throw(DomainError())
+    
+    # Construct ordered state 
+    if choice == 1
+        
+        # Construct NxN lattice of NxN LatticeSites
+        lattice = [LatticeSite([0,0],0,0,0) for y=1:N, x=1:N]
+        ψ = State(lattice, γ, g, ν, f)
+        
+    # Construct random state
+    elseif choice == 2
+        Amax::Int64 = 2^10
+		lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
+						   rand(Uniform(0,2π)), rand(Uniform(0,2π)), rand()) for y=1:N, x=1:N]
+        ψ = State(lattice, γ, g, ν, f)
+        
+    # We only have choices 1 and 2 so far so other values for choice will give an error.
+    else
+        throw(DomainError())
+    end
+    ψ
+end
