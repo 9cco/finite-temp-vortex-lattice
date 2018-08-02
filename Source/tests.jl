@@ -107,4 +107,4 @@ println(@test structureFunctionPluss(k, ψ) == res)
 ψ = State(30,1)
 ψ.f = 1/(2*L)
 ψ.g = 1
-println(@test structureFunctionPluss([0,0], ψ) == (ψ.f*L^2)^2)
+println(@test isapprox(structureFunctionPluss([0,0], ψ),(ψ.f*L^2)^2,atol=0,rtol=1e-13))
