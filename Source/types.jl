@@ -1,5 +1,15 @@
+using Distributions
+
 # Constants
 const two_pi = 2π
+struct SystConstants
+    N::Int64      # System size
+    γ::Float64    # Order parameter amplitude
+    g::Float64    # Gauge coupling
+    ν::Float64    # Anisotropy constant
+    f::Float64    # Magnetic filling fraction
+    β::Float64    # Simulation inverse temperature
+end
 
 type LatticeSite
     A::Array{Float64,1}  # Fluctuating vector potential
@@ -27,6 +37,14 @@ function copy(ψ::State)
     lattice = [LatticeSite([ψ.lattice[y,x].A[1],ψ.lattice[y,x].A[2]],ψ.lattice[y,x].θ⁺,ψ.lattice[y,x].θ⁻,
             ψ.lattice[y,x].u⁺) for y = 1:Ly, x=1:Lx]
     State(lattice, ψ.γ, ψ.g, ψ.ν, ψ.f)
+end
+
+# -------------------------------------------------------------------------------------------------
+# LatticeSite outer constructor
+# Initializes a lattice site that has radom values
+function LatticeSite()
+    A_max = 3.0
+    LatticeSite([rand(Uniform(-A_max, A_max)), rand(Uniform(-A_max, A_max))], two_pi*rand(), two_pi*rand(),rand())
 end
 
 # -------------------------------------------------------------------------------------------------
@@ -87,3 +105,4 @@ function State(N::Int64, choice::Int64, γ::Float64, g::Float64, ν::Float64, f:
     end
     ψ
 end
+
