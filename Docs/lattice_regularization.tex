@@ -216,9 +216,27 @@ for the potential term in Eq.~\eqref{eq:disc:FreeEn:disc:potential} and
   &\phantom{(\nu+}\;\,-u^-_{\v{r}+\hat{y}}u^+_{\v{r}+\hat{x}}\sin\big(\theta^+_{\v{r}+\hat{x}} - \theta^-_{\v{r}+\hat{y}} + ga(A_{\v{r},x} - A_{\v{r},y})\big) + 2u^+_\v{r}u^-_\v{r}\sin\big(\theta^-_\v{r}-\theta^+_\v{r}\big)\\
   &\phantom{(\nu0}\;\,+u^-_\v{r}u^+_{\v{r}+\hat{x}}\sin\big(\theta^+_{\v{r}+\hat{x}} - \theta^-_\v{r}+gaA_{\v{r},x}\big)
   -u^+_\v{r}u^-_{\v{r}+\hat{x}}\sin\big(\theta^-_{\v{r}+\hat{x}} - \theta^+_\v{r}+gaA_{\v{r},x}\big)\\
-  &\phantom{(\nu0}-\Big(u^-_\v{r}u^+_{\v{r}+\hat{y}}\sin\big(\theta^+_{\v{r}+\hat{y}} - \theta^-_\v{r}+gaA_{\v{r},y}\big)
--u^+_\v{r}u^-_{\v{r}+\hat{y}}\sin\big(\theta^-_{\v{r}+\hat{y}} - \theta^+_\v{r}+gaA_{\v{r},y}\big)\Big)\Big]\Big\},
+  &\phantom{(\nu0}+u^-_\v{r}u^+_{\v{r}+\hat{y}}\sin\big(\theta^+_{\v{r}+\hat{y}} - \theta^-_\v{r}+gaA_{\v{r},y}\big)
+-u^+_\v{r}u^-_{\v{r}+\hat{y}}\sin\big(\theta^-_{\v{r}+\hat{y}} - \theta^+_\v{r}+gaA_{\v{r},y}\big)\Big]\Big\},
   \end{split}
   \label{eq:disc:cp1:MGT}
 \end{equation}
 for the mixed gradient terms in Eq.~\eqref{eq:disc:FreeEn:disc:MGT}. The Maxwell term is unchanged from its form in Eq.~\eqref{eq:disc:Maxwell:plaquetteSum}.
+
+For the numerics we set $a=1$ and rescale the gauge field s.t. $A_{\v{r},\mu} \mapsto -\frac{1}{ga}A_{\v{r},\mu}$. Then the free energy is $F = F_K + F_V + F_\text{AB} + F_\text{MGT} + F_A$ where
+the different energies take the form
+\begin{align}
+  &F_K = -2\gamma^2\sum_{\v{r},\mu,h}u_{\v{r}+\hat{\mu}}^hu_\v{r}^h\cos\big(\theta_{\v{r}+\hat{\mu}}^h-\theta_\v{r}^h - A_{\v{r},\mu}\big),\label{eq:disc:cp1:rescale:FK}\\
+  &F_V = \gamma^4\sum_\v{r}\big(u_\v{r}^+u_\v{r}^-\big)^2\Big[1+\nu\cos2\big(\theta_\v{r}^+ - \theta_\v{r}^-\big)\Big], \label{eq:disc:cp1:rescale:FV}\\
+  &F_A = \frac{1}{g^2}\sum_\v{r}\big(A_{\Box,\v{r}}^f\big)^2, \label{eq:disc:cp1:rescale:FA}\\
+  \begin{split}
+	F_\text{AB} = \gamma^2(\nu+1)\sum_\v{r}\Big\{&\Big[u_\v{r}^-u_{\v{r}+\hat{y}}^+\cos\big(\theta_{\v{r}+\hat{y}}^+ - \theta_\v{r}^- - A_{\v{r},y}\big) 
+  - u_\v{r}^-u_{\v{r}+\hat{x}}^+\cos\big(\theta_{\v{r}+\hat{x}}^+-\theta_\v{r}^--A_{\v{r},x}\big)\Big]\\ + &\Big[+\leftrightarrow-\Big]\Big\},
+\end{split}\label{eq:disc:cp1:rescale:FAB}\\
+  \begin{split}
+	F_\text{MGT} = \gamma^2(\nu-1)\sum_\v{r}&\Big\{\Big[u_{\v{r}+\hat{y}}^+u_{\v{r}+\hat{x}}^-\sin\big(\theta_{\v{r}+\hat{x}}^--\theta_{\v{r}+\hat{y}}^+ - (A_{\v{r},x}-A_{\v{r},y})\big)\\
+	&+ u_\v{r}^-u_{\v{r}+\hat{x}}^+\sin\big(\theta_{\v{r}+\hat{x}}^+-\theta_\v{r}^--A_{\v{r},x}\big) + u_\v{r}^-u_{\v{r}+\hat{y}}^+\sin\big(\theta_{\v{r}+\hat{y}}^+-\theta_\v{r}^--A_{\v{r},y}\big)\Big]\\
+	- &\Big[+\leftrightarrow-\Big] + 2u_\v{r}^+u_\v{r}^-\sin\big(\theta_\v{r}^--\theta_\v{r}^+\big)\Big\}.
+  \end{split}\label{eq:disc:cp1:rescale:FMGT}\\
+\end{align}
+Here we have split the previous $F_\text{MGT}$ energy into the Andreev-Bashkin terms $F_\text{AB}$, and the true mixed gradient terms $F_\text{MGT}$.
