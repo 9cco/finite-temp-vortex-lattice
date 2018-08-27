@@ -282,6 +282,7 @@ println(@test E(ψ₁) < E(ψ₂))
 println("Checking that return arrays have same length")
 println(@test size(E₁,1) == size(E₂,1) == size(dE, 1))
 println("Plotting results")
+N = size(dE, 1)
 int = 1:N
 plt = plot(int, dE[int], title="Difference in energy for a correlated state - random state", xlabel="MCS", ylabel="E1-E2")
 display(plt)

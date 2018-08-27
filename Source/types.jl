@@ -13,20 +13,20 @@ struct SystConstants
     f::Float64    # Magnetic filling fraction
     β::Float64    # Simulation inverse temperature
 end
-type Controls
+mutable struct Controls
     θmax::Float64
     umax::Float64
     Amax::Float64
 end
 
-type LatticeSite
+mutable struct LatticeSite
     A::Array{Float64,1}  # Fluctuating vector potential
     θ⁺::Float64 # Phase of the + component
     θ⁻::Float64 # Phase of the - component
     u⁺::Float64 # Amplitude of + component
     u⁻::Float64 # Amplitude of - component (should always be √u⁺)
 end
-type State
+mutable struct State
     lattice::Array{LatticeSite,2}  # Numerical lattice
     consts::SystConstants          # Collection of all constants for the state.
 end
