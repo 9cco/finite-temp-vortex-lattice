@@ -48,6 +48,9 @@ function copy(ψ::State)
     consts = copy(ψ.consts)
     State(lattice, consts)
 end
+function copy(sim::Controls)
+    return Controls(sim.θmax, sim.umax, sim.Amax)
+end
 
 # -------------------------------------------------------------------------------------------------
 # LatticeSite outer constructor
@@ -58,6 +61,12 @@ function LatticeSite()
     LatticeSite([rand(Uniform(-A_max, A_max)), rand(Uniform(-A_max, A_max))], two_pi*rand(), two_pi*rand(), 
         u⁺, √(1-u⁺^2))
 end
+
+
+####################################################################################################################
+#                            Functions for ::State
+#
+####################################################################################################################
 
 # -------------------------------------------------------------------------------------------------
 # Outer constructor
@@ -156,3 +165,19 @@ function checkState(ψ::State)
     @test typeof(ψ.consts.γ) == typeof(ψ.consts.g⁻²) == typeof(ψ.consts.ν) == typeof(ψ.consts.f) == Float64
 	@test isapprox(ψ.consts.L*abs(ψ.consts.f) % 1, 0.0, atol=0, rtol=1e-13)
 end
+
+
+####################################################################################################################
+#                            Functions for ::Controls
+#
+####################################################################################################################
+
+# -------------------------------------------------------------------------------------------------
+function setValues!(sim_target::Controls, sim_source::Controls)
+    sim_target.θmax = sim_source.θmax
+    sim_target.umax = sim_source.umax
+    sim_target.Amax = sim_source.Amax
+    return
+end
+
+

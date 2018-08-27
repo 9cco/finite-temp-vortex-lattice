@@ -259,16 +259,35 @@ for x=1:ψ.consts.L, y=1:ψ.consts.L
 end
 println(@test isCompletelyDifferent==true)
 
+println("Checking that mcSweepEn! gives the same energy difference as taking E_new - E_old")
+ψ = State(2, syst)
+ψ_old = copy(ψ)
+δE = 0.0
+T = 1000 # Number of MCS
+for i = 1:T
+    δE += mcSweepEn!(ψ)
+end
+println(δE)
+println(E(ψ)- E(ψ_old))
+println(@test isapprox(δE, E(ψ)- E(ψ_old), atol=0, rtol=1e-13))
+
 println("\nTesting findEquilibrium\n----------------------------------------------------------------")
-consts = SystConstants(30, 1.0, 1/(0.9)^2, 0.5, 0.9/40, 1/32)
+consts = SystConstants(18, 1.0, 1/(0.3)^2, 0.3, -3.0/18, 1/0.12)
 ψ₁ = State(1, consts)
 ψ₂ = State(2, consts)
 println("Checking that a random state has lower energy than a completely correlated state")
 println(@test E(ψ₁) < E(ψ₂))
-(t₀, dE, ψ₁, ψ₂) = findEquilibrium(consts)
+(t₀, E₁, E₂, dE, ψ₁, ψ₂, sim₁, sim₂) = findEquilibrium(consts)
 @show t₀
-T = size(dE,1)
-plt = plot(1:T,dE, title="Difference in energy for a correlated state - random state", xlabel="MCS", ylabel="E1-E2")
+println("Checking that return arrays have same length")
+println(@test size(E₁,1) == size(E₂,1) == size(dE, 1))
+println("Plotting results")
+int = 1:N
+plt = plot(int, dE[int], title="Difference in energy for a correlated state - random state", xlabel="MCS", ylabel="E1-E2")
+display(plt)
+plt = plot(int, E₁[int], title="Internal energy of correlated state", xlabel="MCS", ylabel="E1")
+display(plt)
+plt = plot(int, E₂[int], title="Internal energy of un-correlated state", xlabel="MCS", ylabel="E2")
 display(plt)
 
 ########################################################################################
