@@ -633,7 +633,7 @@ end
 # takes until the internal energy of the system reaches a more or less constant value.
 function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 3.0), 
         T::Int64=1000, ex::Float64=1.5, di::Int64=8)
-    CUTOFF_MAX::Int64 = 40000
+    CUTOFF_MAX::Int64 = 1000000
     ADJUST_INTERVAL::Int64 = 2000
     STD_NUMBER::Int64 = 1
     println("Finding Equilibrium of\n$(c)\n$(sim₁)")
@@ -706,6 +706,7 @@ function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 
                     dE[i] = E₂[i] - E₁[i]
                 end
             end
+			flush(STDOUT)
             
             # Then we again see if we can find the first occurrence of dE <= 0 after tₛ
             t₀ = T
@@ -742,9 +743,9 @@ function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 
                 adjustment_mcs += max(mcs1, mcs2)
                 
                 # Then we also go over an extra time to get energy correct
-                E₁[i] = E(ψ₁)
-                E₂[i] = E(ψ₂)
-                dE[i] = E₂[i] - E₁[i]
+                E₁[T] = E(ψ₁)
+                E₂[T] = E(ψ₂)
+                dE[T] = E₂[T] - E₁[T]
             end
         end
         
@@ -805,9 +806,9 @@ end
 # Returns the un-normalized local vorticity by preforming a plaquette sum using the gauge-invariant
 # difference of the θ field.
 function n⁺(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, h_pos::Int64)
-    return (mod(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺, two_pi) - ϕ.A[1] + mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₁.θ⁺, two_pi) - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos) 
-        - mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₂.θ⁺, two_pi) + ϕᵣ₊₂.A[1] 
-        - mod(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺, two_pi) + (ϕ.A[2] + two_pi*c.f*(h_pos-1)))
+	return (mod(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺, two_pi) - ϕ.A[1] + mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₁.θ⁺, two_pi) - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos)  
+			- mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₂.θ⁺, two_pi) + ϕᵣ₊₂.A[1]
+			- mod(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺, two_pi) + (ϕ.A[2] + two_pi*c.f*(h_pos-1)))
 end
 function n⁻(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, h_pos::Int64)
     return (mod(ϕᵣ₊₁.θ⁻ - ϕ.θ⁻, two_pi) - ϕ.A[1] + mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₁.θ⁻, two_pi) - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos) 
@@ -1195,6 +1196,55 @@ function structureFunctionAvg{T<:Real}(ks::Array{Array{T, 1}, 2}, syst::SystCons
     end
     
     return (avS⁺, errS⁺, avS⁻, errS⁻)
+end
+
+# Take in a matrix of k-values and calculate both the vorticity of θ⁺ and θ⁻.
+# Same as previous structureFunction, but now assumes the state is at equilibrium
+function structureFunctionAvg!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Controls, M::Int64, Δt::Int64)
+    syst = ψ.consts
+    Lky = size(ks, 1)
+    Lkx = size(ks, 2)
+    S⁺ = [zeros(M) for y=1:Lky, x=1:Lkx]    # Matrix containing the series of measurements for each k
+    S⁻ = [zeros(M) for y=1:Lky, x=1:Lkx]
+    Sm⁺ = [0.0 for y=1:Lky, x=1:Lkx]
+    Sm⁻ = [0.0 for y=1:Lky, x=1:Lkx]
+    s_norm_inv = 1/(syst.f*syst.L^2*two_pi)^2
+    
+    println("Making measurements over a $(Lkx)×$(Lky) matrix of ks.")
+    # Loop over M measurements
+    for m = 1:M
+        print("Measurement progress: $(Int(round(m/M*100,0)))% \r")
+        flush(STDOUT)
+        
+        # Take Δt MCS
+        for i = 1:Δt
+            mcSweep!(ψ, sim)
+        end
+        
+        # Make measurements 
+        for y = 1:Lky, x = 1:Lkx
+            (S⁺[y,x][m], S⁻[y,x][m]) = s_norm_inv.*structureFunction(ks[y,x], ψ)
+            Sm⁺[y,x] += S⁺[y,x][m]^2
+            Sm⁻[y,x] += S⁻[y,x][m]^2
+        end
+    end
+    
+    # Return average and error estimates
+    avS⁺ = [mean(S⁺[y,x]) for y=1:Lky, x=1:Lkx]
+    avS⁻ = [mean(S⁻[y,x]) for y=1:Lky, x=1:Lkx]
+    τ⁺ = [autocorrTime(S⁺[y,x], 5.0) for y=1:Lky, x=1:Lkx]
+    τ⁻ = [autocorrTime(S⁻[y,x], 5.0) for y=1:Lky, x=1:Lkx]
+    errS⁺ = [0.0 for y=1:Lky, x=1:Lkx]
+    errS⁻ = [0.0 for y=1:Lky, x=1:Lkx]
+    
+    for y=1:Lky, x=1:Lkx
+        Sm⁺[y,x] /= M
+        Sm⁻[y,x] /= M
+        errS⁺[y,x] = (1+2*τ⁺[y,x])*(Sm⁺[y,x] - avS⁺[y,x]^2)/(M-1)
+        errS⁻[y,x] = (1+2*τ⁻[y,x])*(Sm⁻[y,x] - avS⁻[y,x]^2)/(M-1)
+    end
+    
+    return (avS⁺, errS⁺, S⁺, avS⁻, errS⁻, S⁻)
 end
 
 
