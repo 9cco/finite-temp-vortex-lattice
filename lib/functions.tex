@@ -1,0 +1,117 @@
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}	% For theorems.
+\usepackage{siunitx}	% For SI units.
+\usepackage{slashed}	% For Feynman Slash notation
+\usepackage{mathrsfs}	% For fancy script font.
+\usepackage{tikz}
+\usetikzlibrary{arrows,shapes,trees,decorations.markings, calc,tikzmark}
+\usepackage[compat=1.1.0]{tikz-feynman}
+\usepackage{mathtools}
+% Configuring space above and below theorems
+\makeatletter
+\def\thm@space@setup{%
+  \thm@preskip=0.5in plus 0.1in minus 0.2in
+  \thm@postskip=\topsep % or whatever, if you don't want them to be equal
+}
+\makeatother
+
+%\renewcommand{\theenumi}{(\alph{enumi})}
+%\renewcommand{\labelenumi}{\theenumi} % Labeling in lists.
+% For slanted fractions.
+\newcommand*\sfrac[2]{{}^{#1}\!/_{#2}}
+% For derivatives.
+\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}} 
+\newcommand{\pdd}[2]{\frac{\partial^2 #1}{\partial #2^2}}
+\newcommand{\pddt}[3]{\frac{\partial^2 #1}{\partial #2\,\partial #3}}
+\newcommand{\fd}[1]{\frac{\delta}{\delta #1}}	% Functional derivative
+\let\underdot=\d % rename builtin command \d{} to \underdot{}
+\renewcommand{\d}[2]{\frac{\mathrm{d} #1}{\mathrm{d} #2}} % for derivatives
+\let\vaccent=\v % rename builtin command \v{} to \vaccent{}
+\renewcommand{\v}[1]{{\ensuremath{\boldsymbol{\mathbf{#1}}}}} % for vectors
+\newcommand{\vv}[1]{\ensuremath{\overrightarrow{\boldsymbol{\mathbf{#1}}}}} % for vectors with arrow
+\newcommand{\gv}[1]{\ensuremath{\mbox{\boldmath$ #1 $}}} 
+% for vectors of Greek letters
+\newcommand{\uv}[1]{\ensuremath{\mathbf{\hat{#1}}}} % for unit vector
+\newcommand{\norm}[1]{{\left\|#1\right\|}}
+\newcommand{\ket}[1]{\left| #1 \right>} % for Dirac kets 
+\newcommand{\ketp}[1]{\left| #1 \right)} % for kets with )
+\newcommand{\ketb}[1]{\left| #1 \right\}} % for kets with }
+\newcommand{\bra}[1]{\left< #1 \right|} % for Dirac bras
+\newcommand{\brap}[1]{\left( #1 \right|}
+\newcommand{\brab}[1]{\left\{ #1 \right|}
+\newcommand{\braket}[2]{\left< #1 \vphantom{#2} \right|
+ \left. \!\!#2 \vphantom{#1} \right>} % for Dirac brackets
+\newcommand{\brakep}[2]{\left( #1 \vphantom{#2} \right|
+ \left. \!\!#2 \vphantom{#1} \right)} % for Dirac brackets with ()
+\newcommand{\brakeb}[2]{\left\{ #1 \vphantom{#2} \right|
+\left. \!\!#2 \vphantom{#1} \right\}} % for Dirac brackets with {}
+
+\newcommand{\avg}[1]{\left< #1 \right>} % for average
+\newcommand{\opavg}[1]{\big< #1 \big>} % not so large average
+\newcommand{\abs}[1]{\left| #1 \right|} % for absolute value
+\newcommand{\dd}[2]{\frac{d^2 #1}{d #2^2}} % for double derivatives
+\newcommand{\ip}[2]{{\langle #1,#2\rangle}}  % for inner products
+\newcommand{\ten}[3]{#1_{#2}^{\phantom{#2}#3}} % for down-up tensors.
+\DeclareMathOperator{\Tr}{Tr} % Trace operator
+\DeclareMathOperator{\tr}{tr}
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+\newcommand{\Ham}{\mathscr{H}}	% Hamiltonian operator
+\newcommand{\Hamop}{\hat{\mathcal{H}}} 	% Hamiltonian operator
+\newcommand{\Id}{\mathbb{I}}	% Identity operator
+\newcommand{\alphav}{\gv{\alpha}}	% Dirac alpha vector
+\newcommand{\pauliv}{\gv{\sigma}}	% Pauli matrix vector
+\newcommand{\piv}{\gv{\pi}}		% Effective momentum in minimal coupling
+\newcommand{\inte}[1]{\int\!\!\mathrm{d}#1\,}	% Integral with measure in front
+\newcommand{\dint}[2]{\int\!\!\mathrm{d}#1\mathrm{d}#2\,}	% Double integral with measure in front.
+\newcommand{\up}{\uparrow}
+\newcommand{\down}{\downarrow}
+\newcommand{\pathint}[1]{\int\!\mathcal{D}[#1]\,}	% Path integral
+\newcommand{\pathintlim}[2]{\int\limits_{\mathrlap{#1}}\!\mathcal{D}[#2]\,} % For providing a lower limit in a path-integral that extends towards the right. Btw there are also functions mathclap,
+																		% which centers the content, and mathllap which right justifies it
+\newcommand{\ferm}[1]{n_\text{F}(#1)}				% Shorthand for the symbol of the fermi-distribution-function.
+\newcommand{\diag}[1]{\mathrm{diag}\left(#1\right)}
+\newcommand{\rep}[1]{\hat{D}(#1)}					% Operator represention of group element #1
+\newcommand{\bos}[1]{\boldsymbol{#1}}
+\newcommand*\circled{\:\tikz[baseline=(char.base)]{
+            (0,0) \node[shape=circle,draw,inner sep=-3.4pt](char){$\sum$};}\:}
+\newcommand{\rom}[1]{%
+  \textup{\uppercase\expandafter{\romannumeral#1}}  % For roman numerals
+}
+\newcommand*\chem[1]{\ensuremath{\mathrm{#1}}}
+
+% AMS-LaTeX
+%\usepackage{amsmath}
+%\usepackage{amsfonts}
+%\usepackage{amssymb}
+
+\DeclareMathOperator{\clos}{clos}
+\DeclareMathOperator{\sgn}{sgn}
+\DeclareMathOperator{\Span}{span}
+\DeclareMathOperator{\ran}{ran}
+\DeclareMathOperator*{\Res}{Res}
+\DeclareMathOperator{\Pf}{Pf}
+
+% Set various options, like unnumbered sections
+%\setcounter{secnumdepth}{0}
+
+%\pagestyle{empty}	% Turn of page numbers.
+
+
+
+
+% Theorems
+\theoremstyle{plain}
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{corr}[thm]{Corollary}
+\newtheorem{prop}[thm]{Proposition}
+\newtheorem{lem}[thm]{Lemma}
+\theoremstyle{definition}
+\newtheorem{dfn}{Definition}
+\newtheorem{ex}[dfn]{Example}
+\theoremstyle{remark}
+\newtheorem*{rmk}{Remark}
+
+% Use a filled qed symbol for the end of proofs
+\renewcommand{\qedsymbol}{$\blacksquare$}
