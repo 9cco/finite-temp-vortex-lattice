@@ -16,14 +16,14 @@ function getVectorPosition(L::Int64, pos::Array{Int64,1})
 end
 
 # -----------------------------------------------------------------------------------------------------------
-function autocorrTime(O::Array{Float64,1}, c::Float64=5.0)
+function autocorrTime{T<:Real}(O::Array{T,1}, c::Float64=5.0)
     N = size(O,1)
     
     # Estimate all correlation functions for different lags=[0:N]
     ρ = autocor(O, 0:(N-1))
     # Estimate correlation times. Each element in the array is an estimate for the correlation time τ(m) 
     # where summing over the i=1:M lagged autocorrelation functions using different numbers  M <= N
-    τ = 2*cumsum(ρ)-1
+    τ = 2.*cumsum(ρ).-1
     
     for m=1:N
         if m < c*τ[m]
@@ -815,27 +815,95 @@ function n⁻(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ
         - mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₂.θ⁻, two_pi) + ϕᵣ₊₂.A[1] 
         - mod(ϕᵣ₊₂.θ⁻ - ϕ.θ⁻, two_pi) + (ϕ.A[2] + two_pi*c.f*(h_pos-1)))
 end
+# Returns both vorticities of the gauge-invariant phase difference.
+function nᵣ(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, h_pos::Int64)
+    vort_θ⁺ = (mod(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺ - ϕ.A[1], two_pi) + mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₁.θ⁺ - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos), two_pi)
+        - mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₂.θ⁺ - ϕᵣ₊₂.A[1], two_pi) 
+        - mod(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺ - (ϕ.A[2] + two_pi*c.f*(h_pos-1)), two_pi))
+    vort_θ⁻ = (mod(ϕᵣ₊₁.θ⁻ - ϕ.θ⁻ - ϕ.A[1], two_pi) + mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₁.θ⁻ - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos), two_pi)
+        - mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₂.θ⁻ - ϕᵣ₊₂.A[1], two_pi) 
+        - mod(ϕᵣ₊₂.θ⁻ - ϕ.θ⁻ - (ϕ.A[2] + two_pi*c.f*(h_pos-1)), two_pi))
+    return vort_θ⁺, vort_θ⁻
+end
 
 # -----------------------------------------------------------------------------------------------------------
 # Assuming we have a state ψ, we want to find the lattice of vortexes.
-function vortexSnapshot(ψ)
+function vortexSnapshot(ψ::State)
     L = ψ.consts.L
     V⁺ = zeros(L,L)
     V⁻ = zeros(L,L)
     
-    # Sum over entire lattice and determine nearest neighbors dynamically.
-    for h_pos = 1:L
-        for v_pos = 1:L
-            
-            r = [h_pos-1, L-v_pos]
+    # Sum over the corners
+    # Upper left corner
+     ϕ = ψ.lattice[1,1]
+     ϕᵣ₊₁ = ψ.lattice[1,2]
+     ϕᵣ₊₂ = ψ.lattice[L,1]
+     ϕᵣ₊₁₊₂ = ψ.lattice[L,2]
+    (V⁺[1,1], V⁻[1,1]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)
+    
+    # Lower left corner
+     ϕ = ψ.lattice[L,1]
+     ϕᵣ₊₁ = ψ.lattice[L,2]
+     ϕᵣ₊₂ = ψ.lattice[L-1,1]
+     ϕᵣ₊₁₊₂ = ψ.lattice[L-1,2]
+    (V⁺[L,1], V⁻[L,1]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)
+    
+    # Lower right corner
+     ϕ = ψ.lattice[L,L]
+     ϕᵣ₊₁ = ψ.lattice[L,1]
+     ϕᵣ₊₂ = ψ.lattice[L-1,L]
+     ϕᵣ₊₁₊₂ = ψ.lattice[L-1,1]
+    (V⁺[L,L], V⁻[L,L]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)
+    
+    # Upper right corner
+     ϕ = ψ.lattice[1,L]
+     ϕᵣ₊₁ = ψ.lattice[1,1]
+     ϕᵣ₊₂ = ψ.lattice[L,L]
+     ϕᵣ₊₁₊₂ = ψ.lattice[L,1]
+    (V⁺[1,L], V⁻[1,L]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)
+    
+    # Sum over borders without corners
+    for i = 2:(L-1)
+        # Upper border (counting in +x direction)
+        ϕ = ψ.lattice[1,i]
+        ϕᵣ₊₁ = ψ.lattice[1,i+1]
+        ϕᵣ₊₂ = ψ.lattice[L,i]
+        ϕᵣ₊₁₊₂ = ψ.lattice[L,i+1]
+        (V⁺[1,i], V⁻[1,i]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)
+        
+        # Left border (counting in -y direction)
+        ϕ = ψ.lattice[i,1]
+        ϕᵣ₊₁ = ψ.lattice[i,2]
+        ϕᵣ₊₂ = ψ.lattice[i-1,1]
+        ϕᵣ₊₁₊₂ = ψ.lattice[i-1,2]
+        (V⁺[i,1], V⁻[i,1]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)
+        
+        # Lower border (counting in +x direction)
+        ϕ = ψ.lattice[L,i]
+        ϕᵣ₊₁ = ψ.lattice[L,i+1]
+        ϕᵣ₊₂ = ψ.lattice[L-1,i]
+        ϕᵣ₊₁₊₂ = ψ.lattice[L-1,i+1]
+        (V⁺[L,i], V⁻[L,i]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)
+        
+        # Right border (counting in -y direction)
+        ϕ = ψ.lattice[i,L]
+        ϕᵣ₊₁ = ψ.lattice[i,1]
+        ϕᵣ₊₂ = ψ.lattice[i-1,L]
+        ϕᵣ₊₁₊₂ = ψ.lattice[i-1,1]
+        (V⁺[i,L], V⁻[i,L]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)
+    end
+    
+    # Sum over rest of the bulk
+    for h_pos = 2:(L-1)
+        for v_pos = 2:(L-1)
             ϕ = ψ.lattice[v_pos,h_pos]
-            ϕᵣ₊₁ = ψ.lattice[v_pos, mod(h_pos, L)+1]
-            ϕᵣ₊₂ = ψ.lattice[mod(v_pos-2,L)+1, h_pos]
-            ϕᵣ₊₁₊₂ = ψ.lattice[mod(v_pos-2,L)+1, mod(h_pos, L)+1]
-            V⁺[v_pos,h_pos] += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)/two_pi
-            V⁻[v_pos,h_pos] += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)/two_pi
+            ϕᵣ₊₁ = ψ.lattice[v_pos,h_pos+1]
+            ϕᵣ₊₂ = ψ.lattice[v_pos-1,h_pos]
+            ϕᵣ₊₁₊₂ = ψ.lattice[v_pos-1,h_pos+1]
+            (V⁺[v_pos,h_pos], V⁻[v_pos, h_pos]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)
         end
     end
+    
     return (V⁺, V⁻)
 end
 
@@ -878,182 +946,27 @@ function combineVortexLattices{T<:Real}(vortex_matrix⁺::Array{T, 2}, vortex_ma
 end
 
 # -----------------------------------------------------------------------------------------------------------
-function structureFunctionPluss{T<:Real}(k::Array{T,1}, ψ::State)
-    sum = Complex(0)
+# V⁺ and V⁻ are LxL matrices of plaquettes containing the vorticities nᵣ of the two components.
+# Returns the structure function at k of both vorticities.
+function structureFunction{T<:Real, I<:Real}(k::Array{T,1}, ψ::State, V⁺::Array{I,2}, V⁻::Array{I,2})
+    sum⁺ = Complex(0)
+    sum⁻ = Complex(0)
     L = ψ.consts.L
+    origo_l = Int(floor((L-1)/2))
+    origo_r = L-1-origo_l # For a lattice where L is odd, origo will be in the center.
     
-    # Sum over the corners
-    # Upper left corner
-     r = [0, L-1] # For r we assume origo is in position [L,1] of the lattice. 
-                  # Note that r is the same as pos (found previously) with y-axis flipped and -1 in each direction.
-                  # Additionally we define it such that we get the usual r = [x,y] order of dimensions.
-     ϕ = ψ.lattice[1,1]
-     ϕᵣ₊₁ = ψ.lattice[1,2]
-     ϕᵣ₊₂ = ψ.lattice[L,1]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L,2]
-    sum += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
-    
-    # Lower left corner
-     r = [0,0]
-     ϕ = ψ.lattice[L,1]
-     ϕᵣ₊₁ = ψ.lattice[L,2]
-     ϕᵣ₊₂ = ψ.lattice[L-1,1]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L-1,2]
-    sum += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
-    
-    # Lower right corner
-     r = [L-1,0]
-     ϕ = ψ.lattice[L,L]
-     ϕᵣ₊₁ = ψ.lattice[L,1]
-     ϕᵣ₊₂ = ψ.lattice[L-1,L]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L-1,1]
-    sum += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
-    
-    # Upper right corner
-     r = [L-1,L-1]
-     ϕ = ψ.lattice[1,L]
-     ϕᵣ₊₁ = ψ.lattice[1,1]
-     ϕᵣ₊₂ = ψ.lattice[L,L]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L,1]
-    sum += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
-    
-    # Sum over borders without corners
-    for i = 2:(L-1)
-        # Upper border (counting in +x direction)
-        r = [i-1, L-1]
-        ϕ = ψ.lattice[1,i]
-        ϕᵣ₊₁ = ψ.lattice[1,i+1]
-        ϕᵣ₊₂ = ψ.lattice[L,i]
-        ϕᵣ₊₁₊₂ = ψ.lattice[L,i+1]
-        sum += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)*exp(im*(k⋅r))
-        
-        # Left border (counting in -y direction)
-        r = [0, L-i]
-        ϕ = ψ.lattice[i,1]
-        ϕᵣ₊₁ = ψ.lattice[i,2]
-        ϕᵣ₊₂ = ψ.lattice[i-1,1]
-        ϕᵣ₊₁₊₂ = ψ.lattice[i-1,2]
-        sum += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
-        
-        # Lower border (counting in +x direction)
-        r = [i-1, 0]
-        ϕ = ψ.lattice[L,i]
-        ϕᵣ₊₁ = ψ.lattice[L,i+1]
-        ϕᵣ₊₂ = ψ.lattice[L-1,i]
-        ϕᵣ₊₁₊₂ = ψ.lattice[L-1,i+1]
-        sum += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)*exp(im*(k⋅r))
-        
-        # Right border (counting in -y direction)
-        r = [L-1, L-i]
-        ϕ = ψ.lattice[i,L]
-        ϕᵣ₊₁ = ψ.lattice[i,1]
-        ϕᵣ₊₂ = ψ.lattice[i-1,L]
-        ϕᵣ₊₁₊₂ = ψ.lattice[i-1,1]
-        sum += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
-    end
-    
-    # Sum over rest of the bulk
-    for h_pos = 2:(L-1)
-        for v_pos = 2:(L-1)
-            r = [h_pos-1, L-v_pos]
-            ϕ = ψ.lattice[v_pos,h_pos]
-            ϕᵣ₊₁ = ψ.lattice[v_pos,h_pos+1]
-            ϕᵣ₊₂ = ψ.lattice[v_pos-1,h_pos]
-            ϕᵣ₊₁₊₂ = ψ.lattice[v_pos-1,h_pos+1]
-            sum += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)*exp(im*(k⋅r))
+    # Sum over all the plaquettes in the whole lattice
+    for h_pos = 1:L
+        for v_pos = 1:L
+            r = [h_pos-1-origo_l, origo_r+1-v_pos]
+            sum⁺ += V⁺[v_pos,h_pos]*exp(im*(k⋅r))
+            sum⁻ += V⁻[v_pos,h_pos]*exp(im*(k⋅r))
         end
     end
     
-    return abs2(sum)
+    return (abs2(sum⁺),abs2(sum⁻))
 end
-function structureFunctionMinus{T<:Real}(k::Array{T,1}, ψ::State)
-    sum = Complex(0)
-    L = ψ.consts.L
-    
-    # Sum over the corners
-    # Upper left corner
-     r = [0, L-1] # For r we assume origo is in position [L,1] of the lattice. 
-                  # Note that r is the same as pos (found previously) with y-axis flipped and -1 in each direction.
-                  # Additionally we define it such that we get the usual r = [x,y] order of dimensions.
-     ϕ = ψ.lattice[1,1]
-     ϕᵣ₊₁ = ψ.lattice[1,2]
-     ϕᵣ₊₂ = ψ.lattice[L,1]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L,2]
-    sum += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
-    
-    # Lower left corner
-     r = [0,0]
-     ϕ = ψ.lattice[L,1]
-     ϕᵣ₊₁ = ψ.lattice[L,2]
-     ϕᵣ₊₂ = ψ.lattice[L-1,1]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L-1,2]
-    sum += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
-    
-    # Lower right corner
-     r = [L-1,0]
-     ϕ = ψ.lattice[L,L]
-     ϕᵣ₊₁ = ψ.lattice[L,1]
-     ϕᵣ₊₂ = ψ.lattice[L-1,L]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L-1,1]
-    sum += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
-    
-    # Upper right corner
-     r = [L-1,L-1]
-     ϕ = ψ.lattice[1,L]
-     ϕᵣ₊₁ = ψ.lattice[1,1]
-     ϕᵣ₊₂ = ψ.lattice[L,L]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L,1]
-    sum += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
-    
-    # Sum over borders without corners
-    for i = 2:(L-1)
-        # Upper border (counting in +x direction)
-        r = [i-1, L-1]
-        ϕ = ψ.lattice[1,i]
-        ϕᵣ₊₁ = ψ.lattice[1,i+1]
-        ϕᵣ₊₂ = ψ.lattice[L,i]
-        ϕᵣ₊₁₊₂ = ψ.lattice[L,i+1]
-        sum += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)*exp(im*(k⋅r))
-        
-        # Left border (counting in -y direction)
-        r = [0, L-i]
-        ϕ = ψ.lattice[i,1]
-        ϕᵣ₊₁ = ψ.lattice[i,2]
-        ϕᵣ₊₂ = ψ.lattice[i-1,1]
-        ϕᵣ₊₁₊₂ = ψ.lattice[i-1,2]
-        sum += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
-        
-        # Lower border (counting in +x direction)
-        r = [i-1, 0]
-        ϕ = ψ.lattice[L,i]
-        ϕᵣ₊₁ = ψ.lattice[L,i+1]
-        ϕᵣ₊₂ = ψ.lattice[L-1,i]
-        ϕᵣ₊₁₊₂ = ψ.lattice[L-1,i+1]
-        sum += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)*exp(im*(k⋅r))
-        
-        # Right border (counting in -y direction)
-        r = [L-1, L-i]
-        ϕ = ψ.lattice[i,L]
-        ϕᵣ₊₁ = ψ.lattice[i,1]
-        ϕᵣ₊₂ = ψ.lattice[i-1,L]
-        ϕᵣ₊₁₊₂ = ψ.lattice[i-1,1]
-        sum += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
-    end
-    
-    # Sum over rest of the bulk
-    for h_pos = 2:(L-1)
-        for v_pos = 2:(L-1)
-            r = [h_pos-1, L-v_pos]
-            ϕ = ψ.lattice[v_pos,h_pos]
-            ϕᵣ₊₁ = ψ.lattice[v_pos,h_pos+1]
-            ϕᵣ₊₂ = ψ.lattice[v_pos-1,h_pos]
-            ϕᵣ₊₁₊₂ = ψ.lattice[v_pos-1,h_pos+1]
-            sum += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)*exp(im*(k⋅r))
-        end
-    end
-    
-    return abs2(sum)
-end
+# If V⁺ and V⁻ are not known, they have to be calculated.
 function structureFunction{T<:Real}(k::Array{T,1}, ψ::State)
     sum⁺ = Complex(0)
     sum⁻ = Complex(0)
@@ -1322,11 +1235,11 @@ function structureFunctionVortexLatticeAvg!{T<:Real}(ks::Array{Array{T, 1}, 2},
     # Setup structure factor storage
     Lky = size(ks, 1)
     Lkx = size(ks, 2)
-    S⁺ = [zeros(M) for y=1:Lky, x=1:Lkx]    # Matrix containing the series of measurements for each k
-    S⁻ = [zeros(M) for y=1:Lky, x=1:Lkx]
-    Sm⁺ = [0.0 for y=1:Lky, x=1:Lkx]
-    Sm⁻ = [0.0 for y=1:Lky, x=1:Lkx]
-    s_norm_inv = 1/(syst.f*syst.L^2*two_pi)^2
+    S⁺ = [zeros(Lky,Lkx) for i=1:M] # Series of matrices, one matrix for each measurement.
+    S⁻ = [zeros(Lky,Lkx) for i=1:M]
+    Sm⁺ = zeros(Lky,Lkx)
+    Sm⁻ = zeros(Lky,Lkx)
+    s_norm_inv = 1/(L^2*syst.f*two_pi)^2
     
     # Setup vortex lattice storage
     V⁺ = [zeros(L,L) for i=1:M]    # Matrix containing the series of measurements for each position
@@ -1336,7 +1249,7 @@ function structureFunctionVortexLatticeAvg!{T<:Real}(ks::Array{Array{T, 1}, 2},
     avV⁺ = zeros(L,L)
     avV⁻ = zeros(L,L)
     
-    println("Making measurements over a $(Lkx)×$(Lky) matrix of ks.")
+    println("Making $(M) measurements using $(M*Δt) MCS over a $(Lkx)×$(Lky) matrix of ks.")
     # Loop over M measurements
     for m = 1:M
         print("Measurement progress: $(Int(round(m/M*100,0)))% \r")
@@ -1350,20 +1263,21 @@ function structureFunctionVortexLatticeAvg!{T<:Real}(ks::Array{Array{T, 1}, 2},
         # Find n_z(r) of the lattice.
         (V⁺[m], V⁻[m]) = vortexSnapshot(ψ)
         
-        # Calculate average of vorticity and vorticity second moment. 
+        # Calculate average of vorticity second moment. 
         for y = 1:L, x = 1:L
-            avV⁺[y,x] += V⁺[m][y,x]
-            avV⁻[y,x] += V⁻[m][y,x]
             VSm⁺[y,x] += V⁺[m][y,x]^2
             VSm⁻[y,x] += V⁻[m][y,x]^2
         end
         
         # Find structure factor. 
         for y = 1:Lky, x = 1:Lkx
-            (S⁺[y,x][m], S⁻[y,x][m]) = s_norm_inv.*structureFunction(ks[y,x], ψ)
-            Sm⁺[y,x] += S⁺[y,x][m]^2
-            Sm⁻[y,x] += S⁻[y,x][m]^2
+            (S⁺[m][y,x], S⁻[m][y,x]) = s_norm_inv.*structureFunction(ks[y,x], ψ, V⁺[m], V⁻[m])
+            Sm⁺[y,x] += S⁺[m][y,x]^2
+            Sm⁻[y,x] += S⁻[m][y,x]^2
         end
+        
+        V⁺[m] = V⁺[m]./two_pi
+        V⁻[m] = V⁻[m]./two_pi
     end
     
     # Error calculation of average vorticity
@@ -1372,20 +1286,21 @@ function structureFunctionVortexLatticeAvg!{T<:Real}(ks::Array{Array{T, 1}, 2},
     errV⁺ = zeros(L,L)
     errV⁻ = zeros(L,L)
     
+    avV⁺ = mean(V⁺)
+    avV⁻ = mean(V⁻)
+    
     for y=1:L, x=1:L
         VSm⁺[y,x] /= M
         VSm⁻[y,x] /= M
-        avV⁺[y,x] /= M
-        avV⁻[y,x] /= M
         errV⁺[y,x] = (1+2*τ_V⁺[y,x])*(VSm⁺[y,x] - avV⁺[y,x]^2)/(M-1)
         errV⁻[y,x] = (1+2*τ_V⁻[y,x])*(VSm⁻[y,x] - avV⁻[y,x]^2)/(M-1)
     end
     
     # Error calculation of structure factor.
-    avS⁺ = [mean(S⁺[y,x]) for y=1:Lky, x=1:Lkx]
-    avS⁻ = [mean(S⁻[y,x]) for y=1:Lky, x=1:Lkx]
-    τ_S⁺ = [autocorrTime(S⁺[y,x], 5.0) for y=1:Lky, x=1:Lkx]
-    τ_S⁻ = [autocorrTime(S⁻[y,x], 5.0) for y=1:Lky, x=1:Lkx]
+    avS⁺ = mean(S⁺)
+    avS⁻ = mean(S⁻)
+    τ_S⁺ = [autocorrTime([S⁺[m][y,x] for m=1:M], 5.0) for y=1:Lky, x=1:Lkx]
+    τ_S⁻ = [autocorrTime([S⁻[m][y,x] for m=1:M], 5.0) for y=1:Lky, x=1:Lkx]
     errS⁺ = [0.0 for y=1:Lky, x=1:Lkx]
     errS⁻ = [0.0 for y=1:Lky, x=1:Lkx]
     
@@ -1396,55 +1311,73 @@ function structureFunctionVortexLatticeAvg!{T<:Real}(ks::Array{Array{T, 1}, 2},
         errS⁻[y,x] = (1+2*τ_S⁻[y,x])*(Sm⁻[y,x] - avS⁻[y,x]^2)/(M-1)
     end
     
+    # Finding max values over the matrices.
+    max_S⁺= maximum(avS⁺)
+    max_S⁻ = maximum(avS⁻)
+    max_err_S⁺ = maximum(errS⁺)
+    max_err_S⁻ = maximum(errS⁻)
+    max_τ_S⁺ = maximum(τ_S⁺)
+    max_τ_S⁻ = maximum(τ_S⁻)
+    println("\nMax (S⁺, S⁻)\n($(max_S⁺), $(max_S⁻))")
+    println("Max δ(S⁺, S⁻)\n($(max_err_S⁺), $(max_err_S⁻))")
+    println("Max correlation time\n($(max_τ_S⁺), $(max_τ_S⁻))")
+    
     return (avV⁺, errV⁺, V⁺, avV⁻, errV⁻, V⁻, avS⁺, errS⁺, S⁺, avS⁻, errS⁻, S⁻)
 end
 
 # -----------------------------------------------------------------------------------------------------------
 # Plotting result of structureFunctionVortexLatticeAvg!
-function plotStructureFunctionAndVortexLattice{T<:Real}(avV⁺::Array{T, 2}, avV⁻::Array{T, 2}, 
-        V⁺::Array{T, 2}, V⁻::Array{T,2}, avS⁺::Array{T, 2}, avS⁻::Array{T,2})
+# -----------------------------------------------------------------------------------------------------------
+# Plotting result of structureFunctionVortexLatticeAvg!
+function plotStructureFunctionVortexLattice{T<:Real, R<:Real}(avV⁺::Array{T, 2}, avV⁻::Array{T, 2}, 
+        V⁺::Array{R, 2}, V⁻::Array{R,2}, avS⁺::Array{T, 2}, avS⁻::Array{T,2}, ks::Array{Array{T,1}, 2})
     L = size(avV⁺,1)
     # Plotting structure factor
-    plt = heatmap(-π:2π/L:π*(L-2)/L, -π:2π/L:π*(L-2)/L, avS⁺, title="average S+", xlabel="k_x", ylabel="k_y")
+    L_k = size(ks, 1)
+	k_x = [ks[L_k,x][1] for x=1:L_k]
+    k_y = [ks[y,1][2] for y=1:L_k]
+    plt = heatmap(k_x, k_y, avS⁺, title="average S+", xlabel="k_x", ylabel="k_y", aspect_ratio=1)
     display(plt)
-    plt = heatmap(-π:2π/L:π*(L-2)/L, -π:2π/L:π*(L-2)/L, avS⁻, title="average S-", xlabel="k_x", ylabel="k_y")
+    plt = heatmap(k_x, k_y, avS⁻, title="average S-", xlabel="k_x", ylabel="k_y", aspect_ratio=1)
     display(plt)
     
     # Removing middle-point
     println("S⁺(0) ≈ $(avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))])")
-    temp⁺ = avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))]
-    avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))] = avS⁺[Int(ceil(1+L/2)), Int(ceil(L/2))]
+    temp⁺ = avS⁺[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))]
+    avS⁺[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))] = avS⁺[Int(ceil(1+L_k/2)), Int(ceil(L_k/2))]
     println("S⁻(0) ≈ $(avS⁻[Int(ceil(L/2)), Int(ceil(1+L/2))])")
-    temp⁻ = avS⁻[Int(ceil(L/2)), Int(ceil(1+L/2))]
-    avS⁻[Int(ceil(L/2)), Int(ceil(1+L/2))] = avS⁻[Int(ceil(1+L/2)), Int(ceil(L/2))]
+    temp⁻ = avS⁻[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))]
+    avS⁻[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))] = avS⁻[Int(ceil(1+L_k/2)), Int(ceil(L_k/2))]
     
     # And then re-plotting
-    plt = heatmap(-π:2π/L:π*(L-2)/L, -π:2π/L:π*(L-2)/L, avS⁺, 
-        title="average S+ with S(0) removed", xlabel="k_x", ylabel="k_y")
+    plt = heatmap(k_x, k_y, avS⁺, 
+        title="average S+ with S(0) removed", xlabel="k_x", ylabel="k_y", aspect_ratio=1)
     display(plt)
-    plt = heatmap(-π:2π/L:π*(L-2)/L, -π:2π/L:π*(L-2)/L, avS⁻, 
-        title="average S- with S(0) removed", xlabel="k_x", ylabel="k_y")
+    plt = heatmap(k_x, k_y, avS⁻, 
+        title="average S- with S(0) removed", xlabel="k_x", ylabel="k_y", aspect_ratio=1)
     display(plt)
     
     # Restoring middle point
-    avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))] = temp⁺
-    avS⁻[Int(ceil(L/2)), Int(ceil(1+L/2))] = temp⁻
+    avS⁺[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))] = temp⁺
+    avS⁻[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))] = temp⁻
     
     # Plotting vortex snapshots
-    plt = heatmap(1:L, 1:L, V⁺, title="Snapshot of + component vorticity", xlabel="x", ylabel="y")
+    plt = heatmap(1:L, 1:L, V⁺, title="Snapshot of + component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
     display(plt)
-    plt = heatmap(1:L, 1:L, V⁻, title="Snapshot of - component vorticity", xlabel="x", ylabel="y")
+    plt = heatmap(1:L, 1:L, V⁻, title="Snapshot of - component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
     display(plt)
     
     # Combining matrices
     combined_lattice = combineVortexLattices(V⁺, V⁻)
-    plt = heatmap(1:L, 1:L, combined_lattice, title="Combination of snapshots", xlabel="x", ylabel="y")
+    plt = heatmap(1:L, 1:L, combined_lattice, title="Combination of snapshots", xlabel="x", ylabel="y", aspect_ratio=1)
     display(plt)
     
     # Finding the proportion of the different kinds of vortices in combined matrix
     av_vortex_kinds = zeros(9)
     for v_pos = 1:L, h_pos = 1:L
-        av_vortex_kinds[combined_lattice[v_pos, h_pos]+1] += 1
+        if combined_lattice[v_pos, h_pos] >= 0
+            av_vortex_kinds[combined_lattice[v_pos, h_pos]+1] += 1
+        end
     end
     av_vortex_kinds *= 100/L^2
     println("The proportion of vortices (n⁺, n⁻) in snapshot")
@@ -1470,12 +1403,104 @@ function plotStructureFunctionAndVortexLattice{T<:Real}(avV⁺::Array{T, 2}, avV
     flush(STDOUT)
     
     # Plotting vortex averages
-    plt = heatmap(1:L, 1:L, avV⁺, title="Average + component vorticity", xlabel="x", ylabel="y")
+    plt = heatmap(1:L, 1:L, avV⁺, title="Average + component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
     display(plt)
-    plt = heatmap(1:L, 1:L, avV⁻, title="Average - component vorticity", xlabel="x", ylabel="y")
+    plt = heatmap(1:L, 1:L, avV⁻, title="Average - component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
     display(plt)
-end 
+end
 
+# -----------------------------------------------------------------------------------------------------------
+# Plotting and saving result of structureFunctionVortexLatticeAvg!
+# Should be run inside of designated directory.
+function plotStructureFunctionVortexLatticeS{T<:Real, R<:Real}(avV⁺::Array{T, 2}, avV⁻::Array{T, 2}, 
+        V⁺::Array{R, 2}, V⁻::Array{R,2}, avS⁺::Array{T, 2}, avS⁻::Array{T,2}, ks::Array{Array{T,1}, 2})
+    L = size(avV⁺,1)
+    # Plotting structure factor
+    L_k = size(ks, 1)
+	k_x = [ks[L_k,x][1] for x=1:L_k]
+    k_y = [ks[y,1][2] for y=1:L_k]
+    plt = heatmap(k_x, k_y, avS⁺, title="average S+", xlabel="k_x", ylabel="k_y", aspect_ratio=1)
+    savefig(plt, "sfvl_avg_S+_plot.pdf")
+    plt = heatmap(k_x, k_y, avS⁻, title="average S-", xlabel="k_x", ylabel="k_y", aspect_ratio=1)
+    savefig(plt, "sfvl_avg_S-_plot.pdf")
+    
+    # Removing middle-point
+    println("S⁺(0) ≈ $(avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))])")
+    temp⁺ = avS⁺[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))]
+    avS⁺[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))] = avS⁺[Int(ceil(1+L_k/2)), Int(ceil(L_k/2))]
+    println("S⁻(0) ≈ $(avS⁻[Int(ceil(L/2)), Int(ceil(1+L/2))])")
+    temp⁻ = avS⁻[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))]
+    avS⁻[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))] = avS⁻[Int(ceil(1+L_k/2)), Int(ceil(L_k/2))]
+    
+    # And then re-plotting
+    plt = heatmap(k_x, k_y, avS⁺, 
+        title="average S+ with S(0) removed", xlabel="k_x", ylabel="k_y", aspect_ratio=1)
+    savefig(plt, "sfvl_avg_S+_removed_plot.pdf")
+    plt = heatmap(k_x, k_y, avS⁻, 
+        title="average S- with S(0) removed", xlabel="k_x", ylabel="k_y", aspect_ratio=1)
+    savefig(plt, "sfvl_avg_S-_removed_plot.pdf")
+    
+    # Restoring middle point
+    avS⁺[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))] = temp⁺
+    avS⁻[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))] = temp⁻
+    
+    # Plotting vortex snapshots
+    plt = heatmap(1:L, 1:L, V⁺, title="Snapshot of + component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
+    savefig(plt, "sfvl_V+_snapshot_plot.pdf")
+    plt = heatmap(1:L, 1:L, V⁻, title="Snapshot of - component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
+    savefig(plt, "sfvl_V-_snapshot_plot.pdf")
+    
+    # Combining matrices
+    combined_lattice = combineVortexLattices(V⁺, V⁻)
+    plt = heatmap(1:L, 1:L, combined_lattice, title="Combination of snapshots", xlabel="x", ylabel="y", aspect_ratio=1)
+    savefig(plt, "sfvl_comb_snapshort_plot.pdf")
+    
+    # Finding the proportion of the different kinds of vortices in combined matrix
+    av_vortex_kinds = zeros(9)
+    for v_pos = 1:L, h_pos = 1:L
+        if combined_lattice[v_pos, h_pos] >= 0
+            av_vortex_kinds[combined_lattice[v_pos, h_pos]+1] += 1
+        end
+    end
+    av_vortex_kinds *= 100/L^2
+    println("The proportion of vortices (n⁺, n⁻) in snapshot")
+    println("% of vortex kind (-1, -1): \t$(Int(round(av_vortex_kinds[1],0)))")
+    println("% of vortex kind (-1, 0): \t$(Int(round(av_vortex_kinds[2],0)))")
+    println("% of vortex kind (-1, 1): \t$(Int(round(av_vortex_kinds[3],0)))")
+    println("% of vortex kind (0, -1): \t$(Int(round(av_vortex_kinds[4],0)))")
+    println("% of vortex kind (0, 0): \t$(Int(round(av_vortex_kinds[5],0)))")
+    println("% of vortex kind (0, 1): \t$(Int(round(av_vortex_kinds[6],0)))")
+    println("% of vortex kind (1, -1): \t$(Int(round(av_vortex_kinds[7],0)))")
+    println("% of vortex kind (1, 0): \t$(Int(round(av_vortex_kinds[8],0)))")
+    println("% of vortex kind (1, 1): \t$(Int(round(av_vortex_kinds[9],0)))\n")
+    
+    # Calculating the sum of vortices of snapshot
+    sum⁺ = 0.0
+    sum⁻ = 0.0
+    for h_pos = 1:L, v_pos = 1:L
+        sum⁺ += V⁺[v_pos, h_pos]
+        sum⁻ += V⁻[v_pos, h_pos]
+    end
+    println("Sum of + component vorticity in the snapshot: $(sum⁺)")
+    println("Sum of - component vorticity in the snapshot: $(sum⁻)")
+    flush(STDOUT)
+    
+    # Plotting vortex averages
+    plt = heatmap(1:L, 1:L, avV⁺, title="Average + component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
+    savefig(plt, "sfvl_avg_V+_plot.pdf")
+    plt = heatmap(1:L, 1:L, avV⁻, title="Average - component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
+    savefig(plt, "sfvl_avg_V-_plot.pdf")
+    
+    # Saving average matrices to file
+    writedlm("avg_S+.data", avS⁺, ":")
+    writedlm("avg_S-.data", avS⁻, ":")
+    writedlm("avg_V+.data", avV⁺, ":")
+    writedlm("avg_V-.data", avV⁻, ":")
+    writedlm("k_x_range.data", k_x, ":")
+    writedlm("k_y_range.data", k_y, ":")
+    
+    return 1
+end 
 
 
 ####################################################################################################################
@@ -1483,69 +1508,6 @@ end
 #
 ####################################################################################################################
 
-
-# -----------------------------------------------------------------------------------------------------------
-# Performing common initialization checks and plots for making sure the states are correctly
-# thermalized.
-function initializeTwoStates(syst::SystConstants, sim::Controls)
-    (t₀, E₁, E₂, dE, ψ₁, ψ₂, sim₁, sim₂) = findEquilibrium(syst, sim);
-    flush(STDOUT)
-    
-    N = size(dE, 1)
-    int = 1:N
-    plt = plot(int, dE[int], title="Energy difference")
-    display(plt)
-    plt = plot(int, E₁[int], title="Internal energy 1")
-    display(plt)
-    plt = plot(int, E₂[int], title="Internal energy 2")
-    display(plt)
-    
-    println("Performing extra MCS")
-    for i = 1:t₀
-        mcSweep!(ψ₂)
-        mcSweep!(ψ₁)
-        print("$(round(i/t₀*100,2))%\r")
-    end
-    
-    println("Calculating energies and acceptance rates")
-    flush(STDOUT)
-    T = 4000
-    dE = zeros(2T)
-    E₁ = zeros(2T)
-    E₂ = zeros(2T)
-    p₁ = zeros(2T)
-    p₂ = zeros(2T)
-    for i = 1:T
-        E₁[i] = E(ψ₁)
-        E₂[i] = E(ψ₂)
-        dE[i] = E₂[i]-E₁[i]
-        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
-        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
-    end
-    adjustSimConstants!(sim₁, ψ₁)
-    adjustSimConstants!(sim₂, ψ₂)
-    for i = T+1:2T
-        E₁[i] = E(ψ₁)
-        E₂[i] = E(ψ₂)
-        dE[i] = E₂[i]-E₁[i]
-        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
-        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
-    end
-
-    # Plotting results
-    plt = plot(1:2T, dE, title="Energy difference")
-    display(plt)
-    plt = plot(1:2T, E₁, title="Internal energy 1")
-    display(plt)
-    plt = plot(1:2T, E₂, title="Internal energy 2")
-    display(plt)
-    plt = plot(1:2T, p₁, title="Accept probability 1")
-    display(plt)
-    plt = plot(1:2T, p₂, title="Accept probability 2")
-    display(plt)
-    
-    return (ψ₁, sim₁, ψ₂, sim₂)
-end
 
 # -----------------------------------------------------------------------------------------------------------
 # Testing how well our algorithms work for this choice of parameters.
@@ -1596,4 +1558,286 @@ function testSystem(syst::SystConstants, sim::Controls, M::Int64=2000)
     T = size(dE,1)
     plt = plot(1:T,dE, title="Difference in energy for a correlated state - random state", xlabel="MCS", ylabel="E1-E2")
     display(plt)
+end
+
+
+####################################################################################################################
+#                            Utility Functions
+#
+####################################################################################################################
+
+# -----------------------------------------------------------------------------------------------------------
+# Creates a new directory based on the simulation constants and enters it for further writing of files.
+function mkcdSystemDirectory(syst::SystConstants, M::Int64, Δt::Int64)
+    DATA_DIR = "Data"
+    REMOTE_TREE = "/work/fredrkro/finite-temp-vortex-lattice/Data"
+    LOCAL_TREE = "../Data"
+    FOLDER_FILE = "last_folder.txt"
+    acc = 3
+    
+    # Now we try to find the appropriate Data directory to put the new folder in.
+    # Our first priority is checking if we are on the remote system.
+    if ispath(REMOTE_TREE)
+        println("It seems we are on a remote machine. Changing to appropriate directoy.")
+        cd(REMOTE_TREE)
+        # If the function is run from the Notebooks folder then we might have a data-directory as a neighbor
+    elseif ispath(LOCAL_TREE)
+        println("There is a neighboring Data directory. Changing to this.")
+        cd(LOCAL_TREE)
+        # If the current directory has a data directory below it we change to that.
+    elseif isdir("./$(DATA_DIR)")
+        println("A Data directory was found below the current. Changing.")
+        cd(DATA_DIR)
+    end
+    
+    # Make directory name based on system constants
+    DIR_NAME = "VORTEX_GAMMA_$(round(syst.γ,acc))_g_$(round(√(1/syst.g⁻²),acc))_NU_$(round(syst.ν,acc))"
+    DIR_NAME = DIR_NAME * "_f_$(round(syst.f,acc))_T_$(round(1/syst.β,acc))_L_$(syst.L)_M_$(M)"
+    
+    if isdir("./$(DIR_NAME)")
+        print("The directory $(DIR_NAME) already exists. Should we delete it? [y/n]: ")
+        answ = readline(STDIN)
+        if answ == "n"
+            return 0
+        end
+        rm("./$(DIR_NAME)", recursive=true)
+    end
+    
+    mkdir(DIR_NAME)
+    println("Made directory at $(pwd())/$(DIR_NAME)")
+    println("Writing folder name $(DIR_NAME) to $(FOLDER_FILE)")
+    open(FOLDER_FILE, "w") do f
+        write(f, "$(DIR_NAME)\n")
+    end
+    
+    cd(DIR_NAME)
+    return 1
+end
+
+# -----------------------------------------------------------------------------------------------------------
+# In the current directory, writes the current system and simulations constants to a file system_values.data
+function writeSimulationConstants(syst::SystConstants, sim::Controls, M::Int64, Δt::Int64, 
+        filename::AbstractString = "system_values.data")
+    open(filename, "w") do f
+        write(f, "L $(syst.L)\n")
+        write(f, "GAMMA $(syst.γ)\n")
+        write(f, "g $(√(1/syst.g⁻²))\n")
+        write(f, "NU $(syst.ν)\n")
+        write(f, "f $(syst.f)\n")
+        write(f, "TEMP $(1/syst.β)\n")
+        write(f, "INV_TEMP $(syst.β)\n")
+        write(f, "NR_MEASUREMENTS $(M)\n")
+        write(f, "MEASUREMENT_INTERVAL $(Δt)\n")
+        write(f, "SIM_THETA_MAX $(sim.θmax)\n")
+        write(f, "SIM_UMAX $(sim.umax)\n")
+        write(f, "SIM_AMAX $(sim.Amax)\n")
+    end
+end
+# -----------------------------------------------------------------------------------------------------------
+# Plotting result of structureFunctionVortexLatticeAvg! and saving it to .pdf files in current directory.
+function plotStructureFunctionVortexLatticeS{T<:Real}(avV⁺::Array{T, 2}, avV⁻::Array{T, 2}, 
+        V⁺::Array{T, 2}, V⁻::Array{T,2}, avS⁺::Array{T, 2}, avS⁻::Array{T,2})
+    L = size(avV⁺,1)
+    # Plotting structure factor
+    k_int = -π:2π/L:π*(L-1)/L
+    plt = heatmap(k_int, k_int, avS⁺, title="average S+", xlabel="k_x", ylabel="k_y")
+    savefig(plt, "sfvl_avg_S+_plot.pdf")
+    plt = heatmap(k_int, k_int, avS⁻, title="average S-", xlabel="k_x", ylabel="k_y")
+    savefig(plt, "sfvl_avg_S-_plot.pdf")
+    
+    # Removing middle-point
+    println("S⁺(0) ≈ $(avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))])")
+    temp⁺ = avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))]
+    avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))] = avS⁺[Int(ceil(1+L/2)), Int(ceil(L/2))]
+    println("S⁻(0) ≈ $(avS⁻[Int(ceil(L/2)), Int(ceil(1+L/2))])")
+    temp⁻ = avS⁻[Int(ceil(L/2)), Int(ceil(1+L/2))]
+    avS⁻[Int(ceil(L/2)), Int(ceil(1+L/2))] = avS⁻[Int(ceil(1+L/2)), Int(ceil(L/2))]
+    
+    # And then re-plotting
+    plt = heatmap(k_int, k_int, avS⁺, 
+        title="average S+ with S(0) removed", xlabel="k_x", ylabel="k_y")
+    savefig(plt, "sfvl_avg_S+_removed_plot.pdf")
+    plt = heatmap(k_int, k_int, avS⁻, 
+        title="average S- with S(0) removed", xlabel="k_x", ylabel="k_y")
+    savefig(plt, "sfvl_avg_S-_removed_plot.pdf")
+    
+    # Restoring middle point
+    avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))] = temp⁺
+    avS⁻[Int(ceil(L/2)), Int(ceil(1+L/2))] = temp⁻
+    
+    # Plotting vortex snapshots
+    plt = heatmap(1:L, 1:L, V⁺, title="Snapshot of + component vorticity", xlabel="x", ylabel="y")
+    savefig(plt, "sfvl_V+_snapshot_plot.pdf")
+    plt = heatmap(1:L, 1:L, V⁻, title="Snapshot of - component vorticity", xlabel="x", ylabel="y")
+    savefig(plt, "sfvl_V-_snapshot_plot.pdf")
+    
+    # Combining matrices
+    combined_lattice = combineVortexLattices(V⁺, V⁻)
+    plt = heatmap(1:L, 1:L, combined_lattice, title="Combination of snapshots", xlabel="x", ylabel="y")
+    savefig(plt, "sfvl_comb_snapshort_plot.pdf")
+    
+    # Finding the proportion of the different kinds of vortices in combined matrix
+    av_vortex_kinds = zeros(9)
+    for v_pos = 1:L, h_pos = 1:L
+        if combined_lattice[v_pos, h_pos] >= 0
+            av_vortex_kinds[combined_lattice[v_pos, h_pos]+1] += 1
+        end
+    end
+	av_vortex_kinds *= 100/L^2
+    println("The proportion of vortices (n⁺, n⁻) in snapshot")
+    println("% of vortex kind (-1, -1): \t$(Int(round(av_vortex_kinds[1],0)))")
+    println("% of vortex kind (-1, 0): \t$(Int(round(av_vortex_kinds[2],0)))")
+    println("% of vortex kind (-1, 1): \t$(Int(round(av_vortex_kinds[3],0)))")
+    println("% of vortex kind (0, -1): \t$(Int(round(av_vortex_kinds[4],0)))")
+    println("% of vortex kind (0, 0): \t$(Int(round(av_vortex_kinds[5],0)))")
+    println("% of vortex kind (0, 1): \t$(Int(round(av_vortex_kinds[6],0)))")
+    println("% of vortex kind (1, -1): \t$(Int(round(av_vortex_kinds[7],0)))")
+    println("% of vortex kind (1, 0): \t$(Int(round(av_vortex_kinds[8],0)))")
+    println("% of vortex kind (1, 1): \t$(Int(round(av_vortex_kinds[9],0)))\n")
+    
+    # Calculating the sum of vortices of snapshot
+    sum⁺ = 0.0
+    sum⁻ = 0.0
+    for h_pos = 1:L, v_pos = 1:L
+        sum⁺ += V⁺[v_pos, h_pos]
+        sum⁻ += V⁻[v_pos, h_pos]
+    end
+    println("Sum of + component vorticity in the snapshot: $(sum⁺)")
+    println("Sum of - component vorticity in the snapshot: $(sum⁻)")
+    flush(STDOUT)
+    
+    # Plotting vortex averages
+    plt = heatmap(1:L, 1:L, avV⁺, title="Average + component vorticity", xlabel="x", ylabel="y")
+    savefig(plt, "sfvl_avg_V+_plot.pdf")
+    plt = heatmap(1:L, 1:L, avV⁻, title="Average - component vorticity", xlabel="x", ylabel="y")
+    savefig(plt, "sfvl_avg_V-_plot.pdf")
+end 
+
+# -----------------------------------------------------------------------------------------------------------
+# Performing common initialization checks and plots for making sure the states are correctly
+# thermalized.
+function initializeTwoStates(syst::SystConstants, sim::Controls)
+    (t₀, E₁, E₂, dE, ψ₁, ψ₂, sim₁, sim₂) = findEquilibrium(syst, sim);
+    flush(STDOUT)
+    
+    N = size(dE, 1)
+    int = 1:N
+    plt = plot(int, dE[int], title="Energy difference")
+    display(plt)
+    plt = plot(int, E₁[int], title="Internal energy 1")
+    display(plt)
+    plt = plot(int, E₂[int], title="Internal energy 2")
+    display(plt)
+    
+    println("Performing extra MCS")
+    for i = 1:t₀
+        mcSweep!(ψ₂)
+        mcSweep!(ψ₁)
+		print("$(Int(round(i/t₀*100,0)))%\r")
+    end
+    
+    println("Calculating energies and acceptance rates")
+    flush(STDOUT)
+    T = 4000
+    dE = zeros(2T)
+    E₁ = zeros(2T)
+    E₂ = zeros(2T)
+    p₁ = zeros(2T)
+    p₂ = zeros(2T)
+    for i = 1:T
+        E₁[i] = E(ψ₁)
+        E₂[i] = E(ψ₂)
+        dE[i] = E₂[i]-E₁[i]
+        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
+        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
+    end
+    adjustSimConstants!(sim₁, ψ₁)
+    adjustSimConstants!(sim₂, ψ₂)
+    for i = T+1:2T
+        E₁[i] = E(ψ₁)
+        E₂[i] = E(ψ₂)
+        dE[i] = E₂[i]-E₁[i]
+        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
+        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
+    end
+
+    # Plotting results
+    plt = plot(1:2T, dE, title="Energy difference")
+    display(plt)
+    plt = plot(1:2T, E₁, title="Internal energy 1")
+    display(plt)
+    plt = plot(1:2T, E₂, title="Internal energy 2")
+    display(plt)
+    plt = plot(1:2T, p₁, title="Accept probability 1")
+    display(plt)
+    plt = plot(1:2T, p₂, title="Accept probability 2")
+    display(plt)
+    
+    return (ψ₁, sim₁, ψ₂, sim₂)
+end
+
+# Same as above, but now saves the plots to ini_.*_plot.pdf files.
+function initializeTwoStatesS(syst::SystConstants, sim::Controls)
+    (t₀, E₁, E₂, dE, ψ₁, ψ₂, sim₁, sim₂) = findEquilibrium(syst, sim);
+    flush(STDOUT)
+    
+    N = size(dE, 1)
+    int = 1:N
+    plt = plot(int, dE[int], title="Energy difference", xlabel="MCS")
+    savefig(plt, "ini_equi_dE_plot.pdf")
+    plt = plot(int, E₁[int], title="Internal energy 1", xlabel="MCS")
+    savefig(plt, "ini_equi_E1_plot.pdf")
+    plt = plot(int, E₂[int], title="Internal energy 2", xlabel="MCS")
+    savefig(plt, "ini_equi_E2_plot.pdf")
+    
+    println("Performing extra MCS")
+    for i = 1:t₀
+        mcSweep!(ψ₂)
+        mcSweep!(ψ₁)
+		print("$(Int(round(i/t₀*100,0)))%\r")
+    end
+    
+    println("Calculating energies and acceptance rates")
+    flush(STDOUT)
+    T = 4000
+    dE = zeros(2T)
+    E₁ = zeros(2T)
+    E₂ = zeros(2T)
+    p₁ = zeros(2T)
+    p₂ = zeros(2T)
+    for i = 1:T
+        E₁[i] = E(ψ₁)
+        E₂[i] = E(ψ₂)
+        dE[i] = E₂[i]-E₁[i]
+        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
+        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
+    end
+    adjustSimConstants!(sim₁, ψ₁)
+    adjustSimConstants!(sim₂, ψ₂)
+    for i = T+1:2T
+        E₁[i] = E(ψ₁)
+        E₂[i] = E(ψ₂)
+        dE[i] = E₂[i]-E₁[i]
+        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
+        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
+    end
+    
+    # Making %
+    p₁ = 100 .* p₁
+    p₂ = 100 .* p₂
+
+    # Plotting results
+    x_mcs = (2t₀+1):1:(2t₀+1)
+    plt = plot(1:2T, dE, title="Energy difference", xlabel="MCS")
+    savefig(plt, "ini_extra_dE_plot.pdf")
+    plt = plot(1:2T, E₁, title="Internal energy 1", xlabel="MCS")
+    savefig(plt, "ini_extra_E1_plot.pdf")
+    plt = plot(1:2T, E₂, title="Internal energy 2", xlabel="MCS")
+    savefig(plt, "ini_extra_E2_plot.pdf")
+    plt = plot(1:2T, p₁, title="Accept probability 1", xlabel="MCS", ylabel="%")
+    savefig(plt, "ini_extra_AR1_plot.pdf")
+    plt = plot(1:2T, p₂, title="Accept probability 2", xlabel="MCS", ylabel="%")
+    savefig(plt, "init_extra_AR2_plot.pdf")
+    
+    return (ψ₁, sim₁, ψ₂, sim₂)
 end

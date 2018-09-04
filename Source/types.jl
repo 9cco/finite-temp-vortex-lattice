@@ -166,6 +166,35 @@ function checkState(ψ::State)
 	@test isapprox(ψ.consts.L*abs(ψ.consts.f) % 1, 0.0, atol=0, rtol=1e-13)
 end
 
+# -------------------------------------------------------------------------------------------------
+# Saves the state to file with specified filename. If mode is set to "a" then the state is appended
+# to the file.
+function save(ψ::State, filename::AbstractString, mode::AbstractString="w")
+    if mode != "w" && mode != "a"
+        println("$(mode) is not a valid file-opening option.")
+        return 0
+    end
+    println("Saving state to file $(filename)")
+    L = ψ.consts.L
+    open(filename, mode) do f
+        # Write line indicating start of state
+        write(f, "state start\n")
+        # Writing system constants on top of the file
+        write(f, "$(ψ.consts.L)\n")
+        write(f, "$(ψ.consts.γ)\n")
+        write(f, "$(ψ.consts.g⁻²)\n")
+        write(f, "$(ψ.consts.ν)\n")
+        write(f, "$(ψ.consts.f)\n")
+        write(f, "$(ψ.consts.β)\n")
+        # Then starting writing the state lattice
+        for x=1:L, y=1:L
+            ϕ = ψ.lattice[y,x]
+            write(f, "$(ϕ.A[1]):$(ϕ.A[2]):$(ϕ.θ⁺):$(ϕ.θ⁻):$(ϕ.u⁺):$(ϕ.u⁻)\n")
+        end
+        write(f, "end\n")
+    end
+    return 1
+end
 
 ####################################################################################################################
 #                            Functions for ::Controls
