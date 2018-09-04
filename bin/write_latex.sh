@@ -17,6 +17,7 @@ error_exit()
 filename="system_values.data"
 OUTPUT_FILE="test_output.tex"
 FOLDER_FILE="last_folder.txt"
+LATEX_LOG="latex_compile.log"
 
 
 # Figuring out if a command line argument was given
@@ -128,7 +129,7 @@ cat << EOF > $OUTPUT_FILE || error_exit "ERROR: Can't write LaTeX file"
 \usepackage{amsmath}
 \usepackage{amssymb}
 
-\input{functions.tex}
+%\input{../../lib/functions.tex}
 
 \title{Output of Markov-Chain Monte-Carlo simulation}
 \author{Krohg, F.N.}
@@ -193,7 +194,7 @@ echo -e "\n\\\end{document}\n" >> $OUTPUT_FILE
 
 echo "Compiling LaTeX document."
 # The we compile the latex document
-pdflatex $OUTPUT_FILE > /dev/null 2>&1
+pdflatex $OUTPUT_FILE > $LATEX_LOG 2>&1
 
 # And open the created pdf document. We do this by taking the .tex file-name and stripping the
 # trailing .tex with .pdf using a regular expression. The pdf is opened as a background process
