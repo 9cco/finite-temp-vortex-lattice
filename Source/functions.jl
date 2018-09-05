@@ -689,7 +689,7 @@ function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 
             tₛ = T
             T = min(Int(ceil(T*ex)), CUTOFF_MAX)
             for i = (tₛ+1):T
-                print("$(round(i/CUTOFF_MAX*100,1))% of max\r") # Debug
+				print("$(Int(round(i/CUTOFF_MAX*100,0)))% of max\r") # Debug
                 E₁[i] = E₁[i-1] + mcSweepEn!(ψ₁, sim₁)
                 E₂[i] = E₂[i-1] + mcSweepEn!(ψ₂, sim₂)
                 dE[i] = E₂[i] - E₁[i]
