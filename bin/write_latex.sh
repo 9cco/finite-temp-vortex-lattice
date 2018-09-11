@@ -14,10 +14,11 @@ error_exit()
 
 # Read the simulation values from a file.
 
-filename="system_values.data"
-OUTPUT_FILE="test_output.tex"
+SYSTEM_FILE="system_values.data"
+TEX_FILE="test_output.tex"
 FOLDER_FILE="last_folder.txt"
 LATEX_LOG="latex_compile.log"
+JULIA_OUTPUT="julia.output"
 
 
 # Figuring out if a command line argument was given
@@ -47,11 +48,15 @@ fi
 
 # Now we are in the directory where we assume the pdf-files and system_values.data is
 
+# Try to find any file that ends on julia.output
+julia_outputs=(`ls -1 | grep ".*$JULIA_OUTPUT"`)
+[ ${#julia_outputs[@]} == 1 ] || error_exit "ERROR: Too many files ending with *$JULIA_OUTPUT"
+JULIA_OUTPUT="${julia_outputs[0]}"
 
-# Checking if output_file exists and if it does ask if we can overwrite
-if [ -e $OUTPUT_FILE ]
+# Checking if tex_file exists and if it does, ask if we can overwrite
+if [ -e $TEX_FILE ]
 then
-	echo -n "File $OUTPUT_FILE already exists. Ok to overwrite? [y/n]: "
+	echo -n "File $TEX_FILE already exists. Ok to overwrite? [y/n]: "
 	read answ
 	if [ $answ = "n" ]
 	then
@@ -59,7 +64,7 @@ then
 	fi
 fi
 
-[ -e "$filename" ] || error_exit "ERROR: Could not find $filename in `pwd`"
+[ -e "$SYSTEM_FILE" ] || error_exit "ERROR: Could not find $SYSTEM_FILE in `pwd`"
 echo -e "Reading system constants.\n"
 i=0
 declare -a keywords
@@ -114,20 +119,28 @@ do
 	esac
 
 	i=$(( $i + 1 ))
-done < "$filename"
+done < "$SYSTEM_FILE"
+
+# Check that julia output-file is included.
+[ -e $JULIA_OUTPUT ] || error_exit "ERROR: Could not find julia output in `pwd`/$JULIA_OUTPUT"
 
 # Write the beginning of the tex file with correct values.
 echo -e "\nWriting these constants to LaTeX file."
 
-cat << EOF > $OUTPUT_FILE || error_exit "ERROR: Can't write LaTeX file"
+cat << EOF > $TEX_FILE || error_exit "ERROR: Can't write LaTeX file"
 \documentclass[a4paper, 11pt]{article}
 
 \usepackage{float}
 \usepackage{graphicx}
-\usepackage[utf8]{inputenc}
-\usepackage[margin=2.5cm, bottom=0.75in, a4paper]{geometry}
+%\usepackage[utf8]{inputenc}
+%\usepackage[margin=2.5cm, bottom=0.75in, a4paper]{geometry}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{listingsutf8}
+\usepackage{fancyvrb}
+
+\usepackage{fontspec}
+\newfontfamily\codefont{Unifont}
 
 %\input{../../lib/functions.tex}
 
@@ -159,6 +172,11 @@ cat << EOF > $OUTPUT_FILE || error_exit "ERROR: Can't write LaTeX file"
 \end{table}
 \clearpage
 
+\section{Output}
+\VerbatimInput[frame=lines, label=Julia Output, fontfamily=Unifont(0), fontsize=\scriptsize, framesep=5mm]{$JULIA_OUTPUT}
+%\lstinputlisting{$JULIA_OUTPUT}
+\clearpage
+
 \section{Plots}
 EOF
 
@@ -179,7 +197,7 @@ for file in "${include_files[@]}"; do
 	echo "Adding $file"
 	LABEL="`expr $file : '\(.*\)_plot.pdf'`"
 	# Write the included file into a figure
-	cat << EOF >> $OUTPUT_FILE || error_exit "ERROR: Can't write LaTeX file"
+	cat << EOF >> $TEX_FILE || error_exit "ERROR: Can't write LaTeX file"
 \begin{figure}[h]
   \centering
   \includegraphics[width=\textwidth]{$file}
@@ -190,13 +208,13 @@ done
 
 # Write the final part of the latex document. The -e is added to echo to turn of interpretation
 # of backslashes so that we can write newline characters.
-echo -e "\n\\\end{document}\n" >> $OUTPUT_FILE
+echo -e "\n\\\end{document}\n" >> $TEX_FILE
 
 echo "Compiling LaTeX document."
 # The we compile the latex document
-pdflatex $OUTPUT_FILE > $LATEX_LOG 2>&1
+xelatex $TEX_FILE > $LATEX_LOG 2>&1
 
 # And open the created pdf document. We do this by taking the .tex file-name and stripping the
 # trailing .tex with .pdf using a regular expression. The pdf is opened as a background process
 # and all output is discarded.
-evince "`expr $OUTPUT_FILE : '\(.*\)\.tex'`.pdf" 1>/dev/null 2>&1 &
+evince "`expr $TEX_FILE : '\(.*\)\.tex'`.pdf" 1>/dev/null 2>&1 &

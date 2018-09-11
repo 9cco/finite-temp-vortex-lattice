@@ -1,8 +1,8 @@
 # This script takes arguments from the command line which is assumed to be
 # formatted in the way that
 # julia driver.jl g ν H L T γ M Δt
-# We also assume that the script is run from a work directory where we can put output
-# files.
+# We also assume that the script is run from the Source directory and that there is
+# a neighboring Data directory.
 
 tic()
 
@@ -54,20 +54,15 @@ f = ceil(abs(H/(2π)*L))/L*sign(H)
 
 # TODO: We should have some more checks and balances for the values entered in the variables
 
-work_dir = "$(pwd())"
-@everywhere println(pwd())
-# Broadcast work_dir to all processes
-@eval @everywhere work_dir=$work_dir
-@everywhere source_dir = "$(work_dir)/../../Source"
-println("driver.jl was called from $(pwd())")
 println("Loading MC code")
-@everywhere include("$(source_dir)/ChiralMC.jl")
+
+@everywhere include("./ChiralMC.jl")
 @everywhere using ChiralMC
 
 #@everywhere include("./functions_msc.jl")
-@everywhere include("$(source_dir)/functions_observables.jl")
-@everywhere include("$(source_dir)/functions_parallel.jl")
-include("$(source_dir)/functions_plots_and_files.jl")
+#@everywhere include("./functions_observables.jl")
+@everywhere include("./functions_parallel.jl")
+include("./functions_plots_and_files.jl")
 # Hack to disable gr error messages.
 ENV["GKSwstype"] = "100"
 
@@ -92,21 +87,16 @@ println("\n\n
 #---------------------------------------------------------------------------------------------------
 
 println("Setting up folder and system files")
+# Make and create system directory in neighboring Data directory and move to this
+mkcdSystemDirectory(syst, M, Δt)
 writeSimulationConstants(syst, sim, M, Δt)
 
-# Run simulation
+# Run test
 #---------------------------------------------------------------------------------------------------
 
-println("Running simulation..\n\nInitializing states
---------------------------------------------------------------------------------------")
-(ψ₁, sim₁, ψ₂, sim₂, t₀) = initializeTwoStatesS(syst, sim)
-save(ψ₁, "state1")
-save(ψ₂, "state2")
-ψ_list = parallelMultiplyState(ψ₁, sim₁, t₀)
-println("\nMeasuring structure function and vortex lattice
---------------------------------------------------------------------------------------")
-(av_V⁺, err_V⁺, V⁺, av_V⁻, err_V⁻, V⁻, av_S⁺, err_S⁺, S⁺, av_S⁻, err_S⁻, S⁻) = parallelSFVLA!(k_matrix, ψ_list, sim₁, M, Δt)
-plotStructureFunctionVortexLatticeS(av_V⁺, av_V⁻, V⁺[rand(1:M)], V⁻[rand(1:M)], av_S⁺, av_S⁻, k_matrix)
+ψ = State(2, syst)
+println("Starting test of $(M) parallel Monte-Carlo steps on $(nprocs()) processes")
+ψ_list = parallelMultiplyState(ψ, sim, M)
 
-println("\nSimulation finished!  o(〃＾▽＾〃)o\n\nResults are found in \n$(pwd())")
+println("\nSimulation finished!  o(〃＾▽＾〃)o\n\nResults are found in $(pwd())")
 toc()

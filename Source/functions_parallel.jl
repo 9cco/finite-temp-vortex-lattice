@@ -102,7 +102,10 @@ function sfvlaMeasure!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Contr
     
     # For each measurement
     for m = 2:M
-        print("Measurement progress: $(Int(round(m/M*100,0)))% \r")
+		this_pr = Int(round(m/M*100,0))
+		if this_pr % 10 == 0
+        	println("Measurement progress: $(this_pr)%")
+		end
         flush(STDOUT)
         
         # Take Δt MCS

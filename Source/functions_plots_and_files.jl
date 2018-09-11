@@ -277,12 +277,13 @@ function mkcdSystemDirectory(syst::SystConstants, M::Int64, Δt::Int64)
     DIR_NAME = DIR_NAME * "_f_$(round(syst.f,acc))_T_$(round(1/syst.β,acc))_L_$(syst.L)_M_$(M)"
     
     if isdir("./$(DIR_NAME)")
-        print("The directory $(DIR_NAME) already exists. Should we delete it? [y/n]: ")
+        print("The directory $(DIR_NAME) already exists.\nShould we delete it? [y/n]: ")
         answ = readline(STDIN)
         if answ == "n"
             return 0
         end
         rm("./$(DIR_NAME)", recursive=true)
+		print("\n")
     end
     
     mkdir(DIR_NAME)
@@ -418,9 +419,10 @@ function initializeTwoStates(syst::SystConstants, sim::Controls)
         mcSweep!(ψ₁)
 		this_pr = Int(round(i/t₀*100,0))
 		# Only print to STDOUT when a new whole percentage is reached so that STDOUT is not
-		# flooded.
-		if (this_pr > last_pr)
-			print("$(this_pr)%\r")
+		# flooded and only print at 10% increments
+		if (this_pr > last_pr && this_pr % 10 == 0)
+			println("$(this_pr)%")
+			last_pr = this_pr
 		end
     end
     
@@ -489,9 +491,10 @@ function initializeTwoStatesS(syst::SystConstants, sim::Controls)
         mcSweep!(ψ₁)
 		this_pr = Int(round(i/t₀*100,0))
 		# Only print to STDOUT when a new whole percentage is reached so that STDOUT is not
-		# flooded.
-		if (this_pr > last_pr)
-			print("$(this_pr)%\r")
+		# flooded and only print at 10% increments
+		if (this_pr > last_pr && this_pr % 10 == 0)
+			println("$(this_pr)%")
+			last_pr = this_pr
 		end
     end
     
