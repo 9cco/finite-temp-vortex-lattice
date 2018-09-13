@@ -1,6 +1,6 @@
 #!/bin/bash
 # Author: F.N. Krohg
-# Last-updated: 30.08.18
+# Last-updated: 11.09.18
 # PBS job script for launching chiral superconductivity calculation on the vilje
 # supercomputer. Based on a sample job script by Jabir Ali Ouassou.
 # Launches numerous of the run-single-job.sh job
@@ -13,7 +13,7 @@ error_exit()
 
 
 # First we need to input the temperature range
-TEMPS=(0.5 0.4 0.3 0.2 0.1)
+TEMPS=(0.8 0.5 0.2)
 # Then the other variables are set as before
 g="0.3"
 NU="0.3"
@@ -21,7 +21,7 @@ H="-0.72"
 L="64"
 GAMMA="1.0"
 M="2000"
-dt="1000"
+dt="3000"
 
 # For each of the values in TEMPS, we make a new name
 declare -a IDS
@@ -29,7 +29,7 @@ declare -a names
 t_len=${#TEMPS[@]}
 for (( i=1; i<=${t_len}; i++ ));
 do
-	names+=("sfvl_$i")
+	names+=("sfvl_new_$i")
 done
 
 # For each of the temps we create a separate temp_single_job.pbs script
@@ -39,7 +39,7 @@ do
 	cat << EOF > ${names[$i]}.pbs || error_exit "ERROR: Can't write PBS script $i"
 #!/bin/bash
 # Author: F.N. Krohg
-# Last-updated: 30.08.18
+# Last-updated: `date`
 # PBS job script for launching chiral superconductivity calculation on the vilje
 # supercomputer. Based on a sample job script by Jabir Ali Ouassou.
 
@@ -54,7 +54,7 @@ do
 #PBS -o ${names[$i]}.o
 #PBS -e ${names[$i]}.e
 #PBS -l select=1:ncpus=16
-#PBS -l walltime=03:00:00
+#PBS -l walltime=22:00:00
 #PBS -l pmem=1000MB
 
 ##################################################################
