@@ -1,9 +1,9 @@
-####################################################################################################################
+####################################################################################################
 #                            Monte-Carlo functions
 #
-####################################################################################################################
+####################################################################################################
 
-# -----------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 # Given a lattice site ϕ, propose a new lattice site with values in intervals around the existing ones.
 function proposeLocalUpdate(ϕ::LatticeSite, sim::Controls)
     
@@ -14,7 +14,7 @@ function proposeLocalUpdate(ϕ::LatticeSite, sim::Controls)
         u⁺, √(1-u⁺^2))
 end
 
-# -----------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 # Performes a Metropolis Hasting update on a lattice site at position pos in state ψ given an inverse temperature
 # β and where ϕᵣ... gives nearest and next nearest neighbor sites. Note that pos gives [y,x] of the position of
 # the lattice site in normal array notation such that [1,1] is the upper left corner.
@@ -43,7 +43,7 @@ function metropolisHastingUpdate!(ψ::State, pos::Array{Int64,1}, ϕᵣ₊₁::L
     end
 end
 
-# -----------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 # Takes a state ψ with an L×L lattice and tries to update each site on the lattice by running the
 # metropolisHastingUpdate! function on it. Each part of the boundary is updated separately so that periodic
 # boundary conditions are taken care of for values stored in each lattice site.
@@ -148,7 +148,7 @@ function mcSweep!(ψ::State, sim::Controls = Controls(π/3, 0.4, 3.0))
     end
 end
 
-# -----------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 # Same as above but returns the fraction of accepted proposals over number of proposals and calculates
 # nearest neighbors in a dynamic but more costly way.
 function mcSweepFrac!(ψ::State, sim::Controls = Controls(π/3, 0.4, 1.0))
@@ -435,15 +435,15 @@ function adjustSimConstants!(sim::Controls, ψ::State, M::Int64 = 40)
 end
 
 
-# -----------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------
 # Version of find Equilibrium that doesn't waste MCS when adjusting sim Constants and also calculates energy based
 # on return value of mcSweepEn! as well as gets rid of the use of dynamic arrays.
-# -----------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------
 # Given values for the physical constants of the system as well as the system size, we find the number of MC-sweeps it
 # takes until the internal energy of the system reaches a more or less constant value.
 function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 3.0), 
         T::Int64=1000, ex::Float64=1.5, di::Int64=8)
-    CUTOFF_MAX::Int64 = 1000000
+    CUTOFF_MAX::Int64 = 8000000
     ADJUST_INTERVAL::Int64 = 2000
     STD_NUMBER::Int64 = 1
     println("Finding Equilibrium of\n$(c)\n$(sim₁)")
@@ -463,6 +463,9 @@ function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 
     
     tₛ = 0    # The wanted t₀ does not exist at or before this position.
     t₀ = T
+
+	println("Performing initial $(T) MCS")
+	flush(STDOUT)
     
     E₁[1] = E(ψ₁)
     E₂[1] = E(ψ₂)
@@ -486,6 +489,7 @@ function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 
     while tₛ < CUTOFF_MAX
         # Find the first occurence of dE <= 0 if it exists
         println("Searching for ΔE <= 0..")
+		flush(STDOUT)
         t₀ = T
         for i = (tₛ+1):T
             if dE[i] <= 0
@@ -535,6 +539,7 @@ function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 
         end
         println("ΔE <= 0 found at t₀ = $(t₀)!\nChecking if average is close to 0..")
 		println("$(Int(round(T/CUTOFF_MAX*100,0)))% of max") # Debug
+		flush(STDOUT)
         
         # Now we make sure that T is large enough such that [1,T] includes an interval [t₀, t₀+t₀/div]
         # so that an average can be performed

@@ -26,15 +26,40 @@ function nᵣGaugeInv(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSit
         - mod(ϕᵣ₊₂.θ⁻ - ϕ.θ⁻ - (ϕ.A[2] + two_pi*c.f*(h_pos-1)), two_pi))
     return vort_θ⁺, vort_θ⁻
 end
+#function nᵣ(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, h_pos::Int64)
+#    vort_θ⁺ = (mod(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺, two_pi) - ϕ.A[1] + mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₁.θ⁺, two_pi) - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos)
+#        - mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₂.θ⁺, two_pi)  + ϕᵣ₊₂.A[1]
+#        - mod(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺, two_pi)  + (ϕ.A[2] + two_pi*c.f*(h_pos-1)))
+#    vort_θ⁻ = (mod(ϕᵣ₊₁.θ⁻ - ϕ.θ⁻, two_pi) - ϕ.A[1] + mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₁.θ⁻, two_pi) - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos)
+#        - mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₂.θ⁻, two_pi)  + ϕᵣ₊₂.A[1]
+#        - mod(ϕᵣ₊₂.θ⁻ - ϕ.θ⁻, two_pi)  + (ϕ.A[2] + two_pi*c.f*(h_pos-1)))
+#    return vort_θ⁺, vort_θ⁻
+#end
+# New version of nᵣ based on suggestion by Troels. We are drawing the gauge-invariant phase
+# difference back to [-π, π) instead of [0, 2π) and also adding 2πf so that we are measuring
+# n instead of (n-f) which we would do by just doing the gauge-invariant phase difference.
+function drawback{T<:Real}(x::T)
+    return mod2pi(x+π)-π
+end
 function nᵣ(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, h_pos::Int64)
-    vort_θ⁺ = (mod(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺, two_pi) - ϕ.A[1] + mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₁.θ⁺, two_pi) - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos)
-        - mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₂.θ⁺, two_pi)  + ϕᵣ₊₂.A[1]
-        - mod(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺, two_pi)  + (ϕ.A[2] + two_pi*c.f*(h_pos-1)))
-    vort_θ⁻ = (mod(ϕᵣ₊₁.θ⁻ - ϕ.θ⁻, two_pi) - ϕ.A[1] + mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₁.θ⁻, two_pi) - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos)
-        - mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₂.θ⁻, two_pi)  + ϕᵣ₊₂.A[1]
-        - mod(ϕᵣ₊₂.θ⁻ - ϕ.θ⁻, two_pi)  + (ϕ.A[2] + two_pi*c.f*(h_pos-1)))
+    vort_θ⁺ = (drawback(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺ - ϕ.A[1]) + drawback(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₁.θ⁺ - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos))
+        - drawback(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₂.θ⁺  - ϕᵣ₊₂.A[1])
+        - drawback(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺  - (ϕ.A[2] + two_pi*c.f*(h_pos-1)))+two_pi*c.f)
+    vort_θ⁻ = (drawback(ϕᵣ₊₁.θ⁻ - ϕ.θ⁻ - ϕ.A[1]) + drawback(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₁.θ⁻ - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos))
+        - drawback(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₂.θ⁻  - ϕᵣ₊₂.A[1])
+        - drawback(ϕᵣ₊₂.θ⁻ - ϕ.θ⁻  - (ϕ.A[2] + two_pi*c.f*(h_pos-1)))+two_pi*c.f)
     return vort_θ⁺, vort_θ⁻
 end
+function nᵣNoA(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, h_pos::Int64)
+    vort_θ⁺ = (mod(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺, two_pi) + mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₁.θ⁺, two_pi)
+        - mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₂.θ⁺, two_pi)
+        - mod(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺, two_pi))
+    vort_θ⁻ = (mod(ϕᵣ₊₁.θ⁻ - ϕ.θ⁻, two_pi) + mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₁.θ⁻, two_pi)
+        - mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₂.θ⁻, two_pi) 
+        - mod(ϕᵣ₊₂.θ⁻ - ϕ.θ⁻, two_pi))
+    return vort_θ⁺, vort_θ⁻
+end
+
 
 # -----------------------------------------------------------------------------------------------------------
 # Assuming we have a state ψ, we want to find the lattice of vortexes.
@@ -382,7 +407,7 @@ function structureFunctionAvg{T<:Real}(ks::Array{Array{T, 1}, 2}, syst::SystCons
     return (avS⁺, errS⁺, avS⁻, errS⁻)
 end
 
-# -----------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 # Take in a matrix of k-values and calculate both the vorticity of θ⁺ and θ⁻.
 # Same as previous structureFunction, but now assumes the state is at equilibrium
 function structureFunctionAvg!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Controls, M::Int64, Δt::Int64)
@@ -432,11 +457,10 @@ function structureFunctionAvg!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, si
     return (avS⁺, errS⁺, S⁺, avS⁻, errS⁻, S⁻)
 end
 
-# -----------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 # Take in a matrix of k-values and calculate both the vorticity of θ⁺ and θ⁻, as well as an average over the
 # real space vortex lattice.
 # Assumes input state is at equilibrium.
-# TODO:  make snapshot more efficit and make better use of it.
 function structureFunctionVortexLatticeAvg!{T<:Real}(ks::Array{Array{T, 1}, 2}, 
         ψ::State, sim::Controls, M::Int64, Δt::Int64)
     syst = ψ.consts

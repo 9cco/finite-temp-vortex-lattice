@@ -91,7 +91,8 @@ println("\n\n
 # Setup files
 #---------------------------------------------------------------------------------------------------
 
-println("Setting up folder and system files")
+println("Writing system:\ng\t=\t$(g)\nν\t=\t$(ν)\nH\t=\t$(H)\nL\t=\t$(L)\nT\t=\t$(T)")
+println("γ\t=\t$(γ)\nM\t=\t$(M)\nΔt\t=\t$(Δt)\nf\t=\t$(f)")
 writeSimulationConstants(syst, sim, M, Δt)
 
 # Run simulation

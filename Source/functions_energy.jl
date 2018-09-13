@@ -1,9 +1,9 @@
-####################################################################################################################
+####################################################################################################
 #                            Energy functions
 #
-####################################################################################################################
+####################################################################################################
 
-# -----------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------------
 # Calculate energy contribution from a single term in the energy sum of the Higgs terms.
 function fᵣ(ϕ::LatticeSite,ϕᵣ₊₁::LatticeSite,ϕᵣ₊₂::LatticeSite,A₀::Float64,c::SystConstants)
     energy = 0
@@ -31,7 +31,7 @@ function fᵣ(ϕ::LatticeSite,ϕᵣ₊₁::LatticeSite,ϕᵣ₊₂::LatticeSite,
     energy
 end
 
-# -----------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 # Loops over all positions of the lattice of a state and calculates the total energy from the
 # Higgs-field terms using the function fᵣ() + the energy from the gauge field.
 function E(ψ::State)
@@ -84,7 +84,7 @@ function E(ψ::State)
     energy
 end
 
-# -----------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------
 # Find the energy difference between two states; one that has ϕ′ in position r with ϕᵣ... as neighbors,
 # and one that has ϕ in position r. the position along the x-axis is needed for the constant Gauge field.
 function ΔE(ϕ′::LatticeSite, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, 
