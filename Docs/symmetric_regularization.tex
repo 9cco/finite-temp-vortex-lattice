@@ -1,0 +1,120 @@
+\section{Symmetric Regularization}
+
+\subsection{Covariant Derivative}
+
+When we did the substitution in Eq.~\eqref{eq:disc:map:covarDer}, the finite-difference that approximated the covariant derivative was a forward difference. This resulted in
+an anisotropic next nearest neighbor coupling between lattice sites $\v{r}+\hat{x}$ and $\v{r}+\hat{y}$ in the mixed gradient terms in $F_\text{MGT}$ in Eq.~\eqref{eq:disc:cp1:rescale:FMGT}
+that was not found between positions e.g. $\v{r}+\hat{x}$ and $\v{r}-\hat{y}$. In an attempt to remedy this situation, we try to use the central difference for lattice-regularizing
+the covariant derivatives. Parallel transport in the gauge field is taken into account by multiplying with a group element in $U(1)$ so that evaluation is done in the position $\v{r}$.
+The central difference is found by taken the average of forward and backward finite-difference, which yields
+\begin{equation}
+  \begin{split}
+	D_\mu\eta^h \;\mapsto\; &\frac{1}{2}\Big\{\frac{1}{a}\Big(\eta^h_{\v{r}+\hat{\mu}}e^{igaA_{\v{r},\mu}} - \eta^h_\v{r}\Big) + \frac{1}{a}\Big(\eta^h_\v{r} - \eta^h_{\v{r}-\hat{\mu}}e^{-igaA_{\v{r}-\hat{\mu},\mu}}\Big)\Big\}\\
+	&\frac{1}{2a}\Big(\eta^h_{\v{r}+\hat{\mu}}e^{igaA_{\v{r},\mu}} - \eta^h_{\v{r}-\hat{\mu}}e^{-igaA_{\v{r}-\hat{\mu},\mu}}\Big).
+  \end{split}
+  \label{eq:sreg:covariantDerivative}
+\end{equation}
+
+\subsection{Kinetic lattice couplings}
+
+Inserting the discretization of the covariant derivative in Eq.~\eqref{eq:sreg:covariantDerivative} into the free energy given by Eq.~\eqref{eq:disc:FreeEn:initial} yields again a regularized free energy $F^\text{reg}$ which we split into the different contributions 
+$F^\text{reg} = F_K + F_\text{An} + F_\text{MGT} + F_V + F_A$. These contributions will be written using the parameterization
+\begin{equation}
+  \eta^h_\v{r} = u^h_\v{r}e^{i\theta^h_\v{r}},
+  \label{eq:sreg:parameterization}
+\end{equation}
+of the regularized order parameter components $\eta^\pm_\v{r}$. In this section we don't restrict the amplitudes $u^h_\v{r}$.
+
+$F_K$, $F_\text{An}$ and $F_\text{MGT}$ contain the couplings between negihboring lattice sites, with $F_K$ being the regularization
+of the normal kinetic term, $F_\text{An}$ the band-anisotropy, and $F_\text{MGT}$ the mixed gradient terms. When regularizing the normal kinetic term, we also get a mass term that we relocate to $F_V$
+such that we get the expression
+\begin{equation}
+	F_K = -\frac{1}{2}\sum_{\v{r}h\mu}u^h_{\v{r}+\hat{\mu}}u^h_{\v{r}-\hat{\mu}}\cos\big[\theta^h_{\v{r}+\hat{\mu}} - \theta^h_{\v{r}-\hat{\mu}} + ga(A_{\v{r},\mu}+A_{\v{r}-\hat{\mu},\mu})\big].
+  \label{eq:sreg:FK}
+\end{equation}
+We see that this term couples next next nearest neighbors of similar helicity along the $x$ and $y$ directions of the lattice.
+The band-anisotropy term $F_\text{An}$ mixes the components of the order parameter, without mixing directions such that we get coupling between next next nearest neighbors of different helicity by
+\begin{equation}
+  \begin{split}
+	F_\text{An} = \frac{(\nu+1)}{4}\sum_\v{r}\Big\{\Big[&u_{\v{r}+\hat{y}}^+u_{\v{r}-\hat{y}}^-\cos\big(\theta^+_{\v{r}+\hat{y}}-\theta^-_{\v{r}-\hat{y}} + ga(A_{\v{r},y}+A_{\v{r}-\hat{y},y})\big)\\
+	- &u_{\v{r}+\hat{x}}^+u_{\v{r}-\hat{x}}^-\cos\big(\theta^+_{\v{r}+\hat{x}}-\theta^-_{\v{r}-\hat{x}} + ga(A_{\v{r},x}+A_{\v{r}-\hat{x},x})\big)\Big] + \Big[+\leftrightarrow-\Big]\Big\}.
+  \end{split}
+  \label{eq:sreg:FAn}
+\end{equation}
+The mixed gradient terms in $F_\text{MGT}$ mixes both gradient directions and helicity components. This yields diagonal couplings between e.g. $\v{r}+\hat{x}$ and $\v{r}+\hat{y}$ given by
+\begin{equation}
+  \begin{split}
+	F_\text{MGT} = \frac{(\nu-1)}{4}\sum_\v{r}\Big\{\Big[&u_{\v{r}+\hat{x}}^+u_{\v{r}+\hat{y}}^-\sin\big(\theta^-_{\v{r}+\hat{y}}-\theta^+_{\v{r}+\hat{x}} + ga(A_{\v{r},y}-A_{\v{r},x})\big)\\
+	+&u^+_{\v{r}-\hat{x}}u^-_{\v{r}-\hat{y}}\sin\big(\theta^-_{\v{r}-\hat{y}}-\theta^+_{\v{r}-\hat{x}} + ga(A_{\v{r}-\hat{x},x}-A_{\v{r}-\hat{y},y})\big)\\
+	+&u^+_{\v{r}+\hat{y}}u^-_{\v{r}-\hat{x}}\sin\big(\theta^+_{\v{r}+\hat{y}}-\theta^-_{\v{r}-\hat{x}} + ga(A_{\v{r}-\hat{x},x}+A_{\v{r},y})\big)\\
+  +&u^+_{\v{r}+\hat{x}}u^-_{\v{r}-\hat{y}}\sin\big(\theta^+_{\v{r}+\hat{x}}-\theta^-_{\v{r}-\hat{y}} + ga(A_{\v{r},x}+A_{\v{r}-\hat{y},y})\big)\Big] - \Big[+\leftrightarrow-\Big]\Big\}.
+  \end{split}
+  \label{eq:sreg:FMGT}
+\end{equation}
+
+The mass terms and potential terms are collected in $F_V$ which without the $\mathbb{CP}^1$ restriction takes the form
+\begin{equation}
+  F_V = a^2\sum_\v{r}\Big\{\big(u^+_\v{r}u^-_\v{r}\big)^2\big[2+\nu\cos2(\theta^+_\v{r}-\theta^-_\v{r})\big] + \frac{1}{2}\sum_h(u_\v{r}^h)^4\Big\} + (1-a^2)\sum_{\v{r}h}(u^h_\v{r})^2.
+  \label{eq:sreg:FV}
+\end{equation}
+Here we have included the mass term $\sum_{\v{r}h}(u^h_\v{r})^2$ coming from regularization of the normal kinetic term. The last contribution to $F^\text{reg}$ is the Maxwell term in $F_A$ which is
+unchanged from its form in Eq.~\eqref{eq:disc:Maxwell:plaquetteSum}.
+
+\subsection{Energy differences}
+
+When doing a Monte-Carlo update using the Metropolis-Hasting algorithm, we need to calculate the difference in energy associated with updating the values $u_\v{r}^h$, $\theta^h_\v{r}$ and $A_{\v{r},\mu}$
+at a point $\v{r}$ with new values $u^{\prime h}_\v{r}$, $\theta^{\prime h}_\v{r}$ and $A'_{\v{r},\mu}$. To minimize the computational complexity of doing a Monte-Carlo step, we calculate this energy
+difference explicitly for the different contributions to the free energy.
+
+Looking at the summand in $F_K$ we see that the only ways of anything being evaluated at the updated lattice point $\v{r}$ is either for the summand to be evaluated at $\v{r}$, $\v{r}+\hat{\mu}$ or
+$\v{r}-\hat{\mu}$. Hence we get the $3$ contributions
+\begin{equation}
+  \begin{split}
+	\Delta F_K = -\frac{1}{2}\sum_{h\mu}\Big\{&u^h_{\v{r}+\hat{\mu}}u^h_{\v{r}-\hat{\mu}}\cos\big[\theta^h_{\v{r}+\hat{\mu}}-\theta^h_{\v{r}-\hat{\mu}}+ga(A'_{\v{r},\mu}+A_{\v{r}-\hat{\mu},\mu})\big] - \UP\\
+	+&u^{\prime h}_\v{r}u^h_{\v{r}-2\hat{\mu}}\cos\big[\theta^{\prime h}_\v{r}-\theta^h_{\v{r}-2\hat{\mu}} + ga(A_{\v{r}-\hat{\mu},\mu}+A_{\v{r}-2\hat{\mu},\mu})\big] - \UP\\
+	+&u^h_{\v{r}+2\hat{\mu}}u^{\prime h}_\v{r}\cos\big[\theta^h_{\v{r}+2\hat{\mu}}-\theta^{\prime h}_\v{r} + ga(A_{\v{r}+\hat{\mu},\mu}+A'_{\v{r},\mu})\big] - \UP\Big\},
+  \end{split}
+  \label{eq:sreg:DFK}
+\end{equation}
+where $\UP$ is a short-hand for \emph{unprimed} i.e. taking the preceding expression, take away any primes $'$ and substituting this for $\UP$.
+
+Doing the same exercise for $F_\text{An}$ yields
+\begin{equation}
+  \begin{split}
+	\Delta F_\text{An} = \frac{(\nu+1)}{4}\Big\{\Big[&u^+_{\v{r}+\hat{y}}u_{\v{r}-\hat{y}}^-\cos\big(\theta^+_{\v{r}+\hat{y}}-\theta^-_{\v{r}-\hat{y}} + ga(A'_{\v{r},y}+A_{\v{r}-\hat{y},y})\big) - \UP\\
+	  -&u_{\v{r}+\hat{x}}^+u_{\v{r}-\hat{x}}^-\cos\big(\theta_{\v{r}+\hat{x}}^+-\theta_{\v{r}-\hat{x}}^- + ga(A'_{\v{r},x}+A_{\v{r}-\hat{x},x})\big) - \UP\\
+	  +&u_\v{r}^{\prime +}u_{\v{r}-2\hat{y}}^-\cos\big(\theta^{\prime +}_\v{r}-\theta^-_{\v{r}-2\hat{y}} + ga(A_{\v{r}-\hat{y},y}+A_{\v{r}-2\hat{y},y})\big) - \UP\\
+	  +&u_{\v{r}+2\hat{y}}^+u^{\prime -}_\v{r}\cos\big(\theta^+_{\v{r}+2\hat{y}}-\theta^{\prime -}_\v{r} + ga(A_{\v{r}+\hat{y},y}+A'_{\v{r},y})\big) - \UP\\
+	  -&u_\v{r}^{\prime +}u_{\v{r}-2\hat{x}}^-\cos\big(\theta^{\prime +}_\v{r}-\theta^-_{\v{r}-2\hat{x}} + ga(A_{\v{r}-\hat{x},x}+A_{\v{r}-2\hat{x},x})\big) - \UP\\
+	-&u_{\v{r}+2\hat{x}}^+u_\v{r}^{\prime -}\cos\big(\theta^+_{\v{r}+2\hat{x}}-\theta^{\prime -}_\v{r} + ga(A_{\v{r}+\hat{x},x}+A'_{\v{r},x})\big) - \UP\Big] + \Big[+\leftrightarrow-\Big]\Big\}.
+  \end{split}
+  \label{eq:sreg:DFAn}
+\end{equation}
+
+Doing the same exercise for $F_\text{MGT}$ yields
+\begin{equation}
+  \begin{split}
+	\Delta F_\text{MGT} = \frac{(\nu-1)}{4}\Big\{\Big[&u_{\v{r}+\hat{x}}^+u_{\v{r}+\hat{y}}^-\sin\big(\theta^-_{\v{r}+\hat{y}}-\theta^+_{\v{r}+\hat{x}} + ga(A'_{\v{r},y}-A'_{\v{r},x})\big) - \UP\\
+	  +&u^+_{\v{r}+\hat{y}}u^-_{\v{r}-\hat{x}}\sin\big(\theta^+_{\v{r}+\hat{y}}-\theta^-_{\v{r}-\hat{x}} + ga(A_{\v{r}-\hat{x},x}+A'_{\v{r},y})\big) - \UP\\
+	  +&u^+_{\v{r}+\hat{x}}u^-_{\v{r}-\hat{y}}\sin\big(\theta^+_{\v{r}+\hat{x}}-\theta^-_{\v{r}-\hat{y}} + ga(A'_{\v{r},x}+A_{\v{r}-\hat{y},y})\big) - \UP\\
+	  +&u^{\prime +}_\v{r}u^-_{\v{r}-\hat{x}+\hat{y}}\sin\big(\theta^-_{\v{r}-\hat{x}+\hat{y}}-\theta^{\prime +}_\v{r} + ga(A_{\v{r}-\hat{x},y}-A_{\v{r}-\hat{x},x})\big) - \UP\\
+	  +&u^{\prime +}_\v{r}u^-_{\v{r}-\hat{x}-\hat{y}}\sin\big(\theta^{\prime +}_\v{r}-\theta^-_{\v{r}-\hat{x}-\hat{y}} + ga(A_{\v{r}-\hat{x},x}+A_{\v{r}-\hat{x}-\hat{y},y})\big) - \UP\\
+	  +&u^+_{\v{r}-\hat{y}+\hat{x}}u^{\prime -}_\v{r}\sin\big(\theta^{\prime -}_\v{r}-\theta^+_{\v{r}-\hat{y}+\hat{x}} + ga(A_{\v{r}-\hat{y},y}-A_{\v{r}-\hat{y},x})\big) - \UP\\
+	  +&u^{\prime +}_\v{r}u^-_{\v{r}-\hat{y}-\hat{x}}\sin\big(\theta^{\prime +}_\v{r}-\theta^-_{\v{r}-\hat{y}-\hat{x}} + ga(A_{\v{r}-\hat{y}-\hat{x},x}+A_{\v{r}-\hat{y},y})\big) - \UP\\
+	  +&u^{\prime +}_\v{r}u^-_{\v{r}+\hat{x}-\hat{y}}\sin\big(\theta^-_{\v{r}+\hat{x}-\hat{y}}-\theta^{\prime +}_\v{r} + ga(A'_{\v{r},x}-A_{\v{r}+\hat{x}-\hat{y},y})\big) - \UP\\
+	  +&u^+_{\v{r}+\hat{x}+\hat{y}}u^{\prime -}_\v{r}\sin\big(\theta^+_{\v{r}+\hat{x}+\hat{y}}-\theta^{\prime -}_\v{r} + ga(A'_{\v{r},x}+A_{\v{r}+\hat{x},y})\big) - \UP\\
+	  +&u^+_{\v{r}+\hat{y}-\hat{x}}u^{\prime -}_\v{r}\sin\big(\theta^{\prime -}_\v{r}-\theta^+_{\v{r}+\hat{y}-\hat{x}} + ga(A_{\v{r}+\hat{y}-\hat{x},x}-A'_{\v{r},y})\big) - \UP\\
+	+&u^+_{\v{r}+\hat{y}+\hat{x}}u^{\prime -}_\v{r}\sin\big(\theta^+_{\v{r}+\hat{y}+\hat{x}}-\theta^{\prime -}_\v{r} + ga(A_{\v{r}+\hat{y},x}+A'_{\v{r},y})\big) - \UP\Big]\\
+  &- \Big[+\leftrightarrow-\Big]\Big\}
+  \end{split}
+  \label{eq:sreg:DFMGT}
+\end{equation}
+
+For the energy difference in $F_V$, we only need to evaluate the summand in $\v{r}$ which yields
+\begin{equation}
+  \begin{split}
+	\Delta F_V = &a^2\Big\{\Big[(u_\v{r}^{\prime +}u_\v{r}^{\prime -})^2\big[2+\nu\cos2(\theta_\v{r}^{\prime +}-\theta_\v{r}^{\prime -})\big] + \frac{1}{2}\sum_h(u_\v{r}^{\prime h})^4\Big] - \UP\Big\}\\
+	&+(1-a^2)\Big[\sum_h(u_\v{r}^{\prime h})^2 - \UP\Big].
+  \end{split}
+  \label{eq:sreg:DFV}
+\end{equation}
