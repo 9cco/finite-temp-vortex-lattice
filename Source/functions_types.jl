@@ -8,13 +8,17 @@ end
 function copy(c::SystConstants)
     SystConstants(c.L, c.γ, c.g⁻², c.ν, c.f, c.β)
 end
+#TODO: Write copy functions for Neighbors, NextNeighbors and NNNeighbors
 function copy(ψ::State)
     Lx = size(ψ.lattice,2)
     Ly = size(ψ.lattice,1)
     lattice = [LatticeSite([ψ.lattice[y,x].A[1],ψ.lattice[y,x].A[2]],ψ.lattice[y,x].θ⁺,ψ.lattice[y,x].θ⁻,
             ψ.lattice[y,x].u⁺, ψ.lattice[y,x].u⁻) for y = 1:Ly, x=1:Lx]
+	nb = copy(ψ.nb)
+	nnb = copy(ψ.nnb)
+	nnnb = copy(ψ.nnnb)
     consts = copy(ψ.consts)
-    State(lattice, consts)
+	State(lattice, consts, nb, nnb, nnnb)
 end
 function copy(sim::Controls)
     return Controls(sim.θmax, sim.umax, sim.Amax)
@@ -36,46 +40,13 @@ end
 #
 ####################################################################################################
 
+#TODO: Write lattice constructors for Neighbors, NextNeighbors and NNNeighbors
+
 # -------------------------------------------------------------------------------------------------
 # Outer constructor
 # Initializes a state ψ that either 1: has zero as value for the the fluctuating gauge potential link variables,
 # the phase and the u⁺ component (which means the u⁻=1) at each lattice site, or 2: has random values for
-# these variables. The lattice in state ψ will consist of NxN lattice sites.
-function State(N::Int64, choice::Int64)
-    N <= 1 && throw(DomainError())
-    
-    # Constants
-    γ = 1.0    # Order parameter amplitude
-    g = 1.0    # Gauge coupling
-    ν = 0.0    # Anisotropy constant
-    f = 1.0/N    # Magnetic filling fraction
-    β = 1/40   # Inverse temperature
-    consts = SystConstants(N, γ, 1/g^2, ν, f, β)
-    
-    # Construct ordered state 
-    if choice == 1
-        
-        # Construct NxN lattice of NxN LatticeSites
-        lattice = [LatticeSite([0,0],0,0,0,1) for y=1:N, x=1:N]
-        ψ = State(lattice, consts)
-        
-    # Construct random state
-    elseif choice == 2
-        Amax::Int64 = 2^10
-		lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
-						   rand(Uniform(0,2π)), rand(Uniform(0,2π)), rand(), 1) for y=1:N, x=1:N]
-        for y=1:N, x=1:N
-            lattice[y,x].u⁻ = √(1-lattice[y,x].u⁺^2)
-        end
-        ψ = State(lattice, consts)
-        
-    # We only have choices 1 and 2 so far so other values for choice will give an error.
-    else
-        throw(DomainError())
-    end
-    ψ
-end
-# Same as above, but now inserting the constants as SystConstants object
+# these variables.
 function State(choice::Int64, consts::SystConstants)
     N = consts.L
     N <= 1 && throw(DomainError())
@@ -84,7 +55,10 @@ function State(choice::Int64, consts::SystConstants)
         
         # Construct NxN lattice of NxN LatticeSites
         lattice = [LatticeSite([0,0],0,0,0,1) for y=1:N, x=1:N]
-        ψ = State(lattice, consts)
+		nb = Neighbors(lattice,N)
+		nnb = NextNeighbors(lattice,N)
+		nnnb = NNNeighbors(lattice,N)
+        ψ = State(lattice, consts, nb, nnb, nnnb)
         
     # Construct random state
     elseif choice == 2
@@ -94,7 +68,10 @@ function State(choice::Int64, consts::SystConstants)
         for y=1:N, x=1:N
             lattice[y,x].u⁻ = √(1-lattice[y,x].u⁺^2)
         end
-        ψ = State(lattice, consts)
+		nb = latticeNeighbors(lattice,N)
+		nnb = latticeNextNeighbors(lattice,N)
+		nnnb = latticeNNNeighbors(lattice,N)
+        ψ = State(lattice, consts, nb, nnb, nnnb)
         
     # We only have choices 1 and 2 so far so other values for choice will give an error.
     else
@@ -178,3 +155,9 @@ function setValues!(sim_target::Controls, sim_source::Controls)
 end
 
 
+####################################################################################################
+#                            Functions for ::Neighbors, ::NextNeighbors, ::NNNeighbors
+#
+####################################################################################################
+
+# -------------------------------------------------------------------------------------------------

@@ -24,6 +24,25 @@ end
 mutable struct State
     lattice::Array{LatticeSite,2}  # Numerical lattice
     consts::SystConstants          # Collection of all constants for the state.
+	nb::Array{Neighbors,2}
+	nnb::Array{NextNeighbors,2}
+	nnnb::Array{NNNeighbors,2}
 end
-
-
+struct Neighbors
+	ϕᵣ₊₁::LatticeSite
+	ϕᵣ₋₁::LatticeSite
+	ϕᵣ₊₂::LatticeSite
+	ϕᵣ₋₂::LatticeSite
+end
+struct NextNeighbors
+	ϕᵣ₊₁₊₂::LatticeSite
+	ϕᵣ₊₁₋₂::LatticeSite
+	ϕᵣ₋₁₊₂::LatticeSite
+	ϕᵣ₋₁₋₂::LatticeSite
+end
+struct NNNeighbors
+	ϕᵣ₊₁₁::LatticeSite
+	ϕᵣ₋₁₁::LatticeSite
+	ϕᵣ₊₂₂::LatticeSite
+	ϕᵣ₋₂₂::LatticeSite
+end

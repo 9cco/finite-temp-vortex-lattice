@@ -4,7 +4,7 @@ using Distributions
 using StatsBase
 using Base.Test
 
-export SystConstants, LatticeSite, State, Controls
+export SystConstants, LatticeSite, State, Controls, Neighbors, NextNeighbors, NNNeighbors
 
 include("types.jl")
 

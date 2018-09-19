@@ -18,14 +18,13 @@ end
 # Performes a Metropolis Hasting update on a lattice site at position pos in state ψ given an inverse temperature
 # β and where ϕᵣ... gives nearest and next nearest neighbor sites. Note that pos gives [y,x] of the position of
 # the lattice site in normal array notation such that [1,1] is the upper left corner.
-function metropolisHastingUpdate!(ψ::State, pos::Array{Int64,1}, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite,
-        ϕᵣ₋₁::LatticeSite, ϕᵣ₋₂::LatticeSite, ϕᵣ₋₁₊₂::LatticeSite, ϕᵣ₋₂₊₁::LatticeSite, sim::Controls)
+function metropolisHastingUpdate!(ψ::State, pos::Array{Int64,1}, sim::Controls)
 	# Save the lattice site at the targeted position in a temporary variable ϕ and use the lattice site
 	# as a basis for proposing a new lattice site ϕ′. Then find the energy difference between having
 	# ϕ′ or ϕ at position pos.
     const ϕ = ψ.lattice[pos...]
     const ϕ′ = proposeLocalUpdate(ϕ, sim)
-    const δE = ΔE(ϕ′, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, pos[2], ψ.consts)
+    const δE = ΔE(ϕ′, ϕ, ψ.nb[pos...], ψ.nnb[pos...], ψ.nnnb[pos...], pos[2], ψ.consts)
     
     # Create random number ran ∈ (0,1].
     const ran = rand()
@@ -50,101 +49,10 @@ end
 function mcSweep!(ψ::State, sim::Controls = Controls(π/3, 0.4, 3.0))
    
     # Find size of the lattice L
-    const L::Int64 = ψ.consts.L
+    L::Int64 = ψ.consts.L
     
-    
-    # Updating upper right corner
-    const ϕᵣ₊₁ = ψ.lattice[1,1]
-    const ϕᵣ₊₂ = ψ.lattice[L,L]
-    const ϕᵣ₋₁ = ψ.lattice[1,L-1]
-    const ϕᵣ₋₂ = ψ.lattice[2,L]
-    const ϕᵣ₋₁₊₂ = ψ.lattice[L,L-1]
-    const ϕᵣ₋₂₊₁ = ψ.lattice[2,1]
-    metropolisHastingUpdate!(ψ, [1,L], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    
-    # Updating boundary paralell to y-axis
-    # except for the upper and lower right corner.
-    for y=2:(L-1)
-        ϕᵣ₊₁ = ψ.lattice[y,1]
-        ϕᵣ₊₂ = ψ.lattice[y-1,L]
-        ϕᵣ₋₁ = ψ.lattice[y,L-1]
-        ϕᵣ₋₂ = ψ.lattice[y+1,L]
-        ϕᵣ₋₁₊₂ = ψ.lattice[y-1,L-1]
-        ϕᵣ₋₂₊₁ = ψ.lattice[y+1,1]
-        metropolisHastingUpdate!(ψ, [y,L], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    end
-    
-    # Updating lower right corner
-    ϕᵣ₊₁ = ψ.lattice[L,1]
-    ϕᵣ₊₂ = ψ.lattice[L-1,L]
-    ϕᵣ₋₁ = ψ.lattice[L,L-1]
-    ϕᵣ₋₂ = ψ.lattice[1,L]
-    ϕᵣ₋₁₊₂ = ψ.lattice[L-1,L-1]
-    ϕᵣ₋₂₊₁ = ψ.lattice[1,1]
-    metropolisHastingUpdate!(ψ, [L,L], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    
-    # Updating lower x-axis boundary except for lower left and right corner
-    for x=2:(L-1)
-        ϕᵣ₊₁ = ψ.lattice[L,x+1]
-        ϕᵣ₊₂ = ψ.lattice[L-1,x]
-        ϕᵣ₋₁ = ψ.lattice[L,x-1]
-        ϕᵣ₋₂ = ψ.lattice[1,x]
-        ϕᵣ₋₁₊₂ = ψ.lattice[L-1,x-1]
-        ϕᵣ₋₂₊₁ = ψ.lattice[1,x+1]
-        metropolisHastingUpdate!(ψ, [L,x], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    end
-    
-    # Updating lower left corner
-    ϕᵣ₊₁ = ψ.lattice[L,2]
-    ϕᵣ₊₂ = ψ.lattice[L-1,1]
-    ϕᵣ₋₁ = ψ.lattice[L,L]
-    ϕᵣ₋₂ = ψ.lattice[1,1]
-    ϕᵣ₋₁₊₂ = ψ.lattice[L-1,L]
-    ϕᵣ₋₂₊₁ = ψ.lattice[1,2]
-    metropolisHastingUpdate!(ψ, [L,1], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    
-    # Updating left y-axis boundary except corners
-    for y=2:(L-1)
-        ϕᵣ₊₁ = ψ.lattice[y,2]
-        ϕᵣ₊₂ = ψ.lattice[y-1,1]
-        ϕᵣ₋₁ = ψ.lattice[y,L]
-        ϕᵣ₋₂ = ψ.lattice[y+1,1]
-        ϕᵣ₋₁₊₂ = ψ.lattice[y-1,L]
-        ϕᵣ₋₂₊₁ = ψ.lattice[y+1,2]
-        metropolisHastingUpdate!(ψ, [y,1], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    end
-    
-    # Updating upper left corner
-    ϕᵣ₊₁ = ψ.lattice[1,2]
-    ϕᵣ₊₂ = ψ.lattice[L,1]
-    ϕᵣ₋₁ = ψ.lattice[1,L]
-    ϕᵣ₋₂ = ψ.lattice[2,1]
-    ϕᵣ₋₁₊₂ = ψ.lattice[L,L]
-    ϕᵣ₋₂₊₁ = ψ.lattice[2,2]
-    metropolisHastingUpdate!(ψ, [1,1], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    
-    # Updating upper x-axis boundary
-    for x=2:(L-1)
-        ϕᵣ₊₁ = ψ.lattice[1,x+1]
-        ϕᵣ₊₂ = ψ.lattice[L,x]
-        ϕᵣ₋₁ = ψ.lattice[1,x-1]
-        ϕᵣ₋₂ = ψ.lattice[2,x]
-        ϕᵣ₋₁₊₂ = ψ.lattice[L,x-1]
-        ϕᵣ₋₂₊₁ = ψ.lattice[2,x+1]
-        metropolisHastingUpdate!(ψ, [1,x], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    end
-    
-    # This concludes the updates of the boundary
-    
-    # Update the bulk
-    for x=2:(L-1), y=2:(L-1)
-        ϕᵣ₊₁ = ψ.lattice[y,x+1]
-        ϕᵣ₊₂ = ψ.lattice[y-1,x]
-        ϕᵣ₋₁ = ψ.lattice[y,x-1]
-        ϕᵣ₋₂ = ψ.lattice[y+1,x]
-        ϕᵣ₋₁₊₂ = ψ.lattice[y-1,x-1]
-        ϕᵣ₋₂₊₁ = ψ.lattice[y+1,x+1]
-        metropolisHastingUpdate!(ψ, [y,x], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
+    for h_pos = 1:L, v_pos = 1:L
+        metropolisHastingUpdate!(ψ, [v_pos,h_pos], sim)
     end
 end
 
@@ -156,15 +64,7 @@ function mcSweepFrac!(ψ::State, sim::Controls = Controls(π/3, 0.4, 1.0))
     L = ψ.consts.L
     for h_pos = 1:L
         for v_pos = 1:L
-            ϕ = ψ.lattice[v_pos, h_pos]
-            ϕᵣ₊₁ = ψ.lattice[v_pos,mod(h_pos,L)+1]
-            ϕᵣ₊₂ = ψ.lattice[mod(v_pos-2,L)+1,h_pos]
-            ϕᵣ₋₁ = ψ.lattice[v_pos,mod(h_pos-2,L)+1]
-            ϕᵣ₋₂ = ψ.lattice[mod(v_pos,L)+1,h_pos]
-            ϕᵣ₋₁₊₂ = ψ.lattice[mod(v_pos-2,L)+1, mod(h_pos-2,L)+1]
-            ϕᵣ₋₂₊₁ = ψ.lattice[mod(v_pos,L)+1, mod(h_pos,L)+1]
-
-            if metropolisHastingUpdate!(ψ,[v_pos,h_pos],ϕᵣ₊₁,ϕᵣ₊₂,ϕᵣ₋₁,ϕᵣ₋₂,ϕᵣ₋₁₊₂,ϕᵣ₋₂₊₁, sim) != 0.0
+            if metropolisHastingUpdate!(ψ,[v_pos,h_pos], sim) != 0.0
                 count += 1
             end
         end
@@ -178,103 +78,12 @@ end
 function mcSweepEn!(ψ::State, sim::Controls = Controls(π/3, 0.4, 3.0))
     
     δE = 0.0
-   
     # Find size of the lattice L
-    const L::Int64 = ψ.consts.L
-    
-    
-    # Updating upper right corner
-    const ϕᵣ₊₁ = ψ.lattice[1,1]
-    const ϕᵣ₊₂ = ψ.lattice[L,L]
-    const ϕᵣ₋₁ = ψ.lattice[1,L-1]
-    const ϕᵣ₋₂ = ψ.lattice[2,L]
-    const ϕᵣ₋₁₊₂ = ψ.lattice[L,L-1]
-    const ϕᵣ₋₂₊₁ = ψ.lattice[2,1]
-    δE += metropolisHastingUpdate!(ψ, [1,L], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    
-    # Updating boundary paralell to y-axis
-    # except for the upper and lower right corner.
-    for y=2:(L-1)
-        ϕᵣ₊₁ = ψ.lattice[y,1]
-        ϕᵣ₊₂ = ψ.lattice[y-1,L]
-        ϕᵣ₋₁ = ψ.lattice[y,L-1]
-        ϕᵣ₋₂ = ψ.lattice[y+1,L]
-        ϕᵣ₋₁₊₂ = ψ.lattice[y-1,L-1]
-        ϕᵣ₋₂₊₁ = ψ.lattice[y+1,1]
-        δE += metropolisHastingUpdate!(ψ, [y,L], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    end
-    
-    # Updating lower right corner
-    ϕᵣ₊₁ = ψ.lattice[L,1]
-    ϕᵣ₊₂ = ψ.lattice[L-1,L]
-    ϕᵣ₋₁ = ψ.lattice[L,L-1]
-    ϕᵣ₋₂ = ψ.lattice[1,L]
-    ϕᵣ₋₁₊₂ = ψ.lattice[L-1,L-1]
-    ϕᵣ₋₂₊₁ = ψ.lattice[1,1]
-    δE += metropolisHastingUpdate!(ψ, [L,L], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    
-    # Updating lower x-axis boundary except for lower left and right corner
-    for x=2:(L-1)
-        ϕᵣ₊₁ = ψ.lattice[L,x+1]
-        ϕᵣ₊₂ = ψ.lattice[L-1,x]
-        ϕᵣ₋₁ = ψ.lattice[L,x-1]
-        ϕᵣ₋₂ = ψ.lattice[1,x]
-        ϕᵣ₋₁₊₂ = ψ.lattice[L-1,x-1]
-        ϕᵣ₋₂₊₁ = ψ.lattice[1,x+1]
-        δE += metropolisHastingUpdate!(ψ, [L,x], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    end
-    
-    # Updating lower left corner
-    ϕᵣ₊₁ = ψ.lattice[L,2]
-    ϕᵣ₊₂ = ψ.lattice[L-1,1]
-    ϕᵣ₋₁ = ψ.lattice[L,L]
-    ϕᵣ₋₂ = ψ.lattice[1,1]
-    ϕᵣ₋₁₊₂ = ψ.lattice[L-1,L]
-    ϕᵣ₋₂₊₁ = ψ.lattice[1,2]
-    δE += metropolisHastingUpdate!(ψ, [L,1], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    
-    # Updating left y-axis boundary except corners
-    for y=2:(L-1)
-        ϕᵣ₊₁ = ψ.lattice[y,2]
-        ϕᵣ₊₂ = ψ.lattice[y-1,1]
-        ϕᵣ₋₁ = ψ.lattice[y,L]
-        ϕᵣ₋₂ = ψ.lattice[y+1,1]
-        ϕᵣ₋₁₊₂ = ψ.lattice[y-1,L]
-        ϕᵣ₋₂₊₁ = ψ.lattice[y+1,2]
-        δE += metropolisHastingUpdate!(ψ, [y,1], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    end
-    
-    # Updating upper left corner
-    ϕᵣ₊₁ = ψ.lattice[1,2]
-    ϕᵣ₊₂ = ψ.lattice[L,1]
-    ϕᵣ₋₁ = ψ.lattice[1,L]
-    ϕᵣ₋₂ = ψ.lattice[2,1]
-    ϕᵣ₋₁₊₂ = ψ.lattice[L,L]
-    ϕᵣ₋₂₊₁ = ψ.lattice[2,2]
-    δE += metropolisHastingUpdate!(ψ, [1,1], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    
-    # Updating upper x-axis boundary
-    for x=2:(L-1)
-        ϕᵣ₊₁ = ψ.lattice[1,x+1]
-        ϕᵣ₊₂ = ψ.lattice[L,x]
-        ϕᵣ₋₁ = ψ.lattice[1,x-1]
-        ϕᵣ₋₂ = ψ.lattice[2,x]
-        ϕᵣ₋₁₊₂ = ψ.lattice[L,x-1]
-        ϕᵣ₋₂₊₁ = ψ.lattice[2,x+1]
-        δE += metropolisHastingUpdate!(ψ, [1,x], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
-    end
-    
-    # This concludes the updates of the boundary
+    L::Int64 = ψ.consts.L
     
     # Update the bulk
-    for x=2:(L-1), y=2:(L-1)
-        ϕᵣ₊₁ = ψ.lattice[y,x+1]
-        ϕᵣ₊₂ = ψ.lattice[y-1,x]
-        ϕᵣ₋₁ = ψ.lattice[y,x-1]
-        ϕᵣ₋₂ = ψ.lattice[y+1,x]
-        ϕᵣ₋₁₊₂ = ψ.lattice[y-1,x-1]
-        ϕᵣ₋₂₊₁ = ψ.lattice[y+1,x+1]
-        δE += metropolisHastingUpdate!(ψ, [y,x], ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₋₁, ϕᵣ₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₂₊₁, sim)
+    for x=1:L, y=1:L
+        δE += metropolisHastingUpdate!(ψ, [y,x], sim)
     end
     return δE
 end
