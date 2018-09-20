@@ -1,22 +1,30 @@
+include("ChiralMC.jl")
+using ChiralMC
+
+include("functions_msc.jl")
+include("functions_observables.jl")
+include("functions_parallel.jl")
+
 include("types.jl")
 include("functions.jl")
 
 using Base.Test
 using Plots
 gr()
+using Distributions
 
 # Testing State constructor.
 N = 20
 β = 1/300
-ψ = State(N, 2)
+ψ = State(2,N)
 
 println("Testing State constructor\n----------------------------------------------------------------")
 println("Testing if lattice dimensions are correct")
 println(@test size(ψ.lattice,1) == size(ψ.lattice,2) && size(ψ.lattice,2) == N && N == ψ.consts.L)
-println("Checking that State(N,2) gives a valid State")
+println("Checking that State(2,N) gives a valid State")
 println(checkState(ψ))
-ψ = State(N,1)
-println("Checking that State(N,1) gives a valid state")
+ψ = State(1,N)
+println("Checking that State(1,N) gives a valid state")
 println(checkState(ψ))
 gm = 1.0; g = 1.1; ν = 0.5; f = 1/N
 c = SystConstants(N, gm, 1/g^2, ν, f, β)
@@ -197,13 +205,12 @@ println("\nTesting Energy difference function ΔE\n-----------------------------
 # i.e. the [2,2] position. Then we use the different functions to calculate the energy
 # difference associated with this change.
 
-ψ₂ = State(3,2)
+ψ₂ = State(2,3)
 site = LatticeSite() # Get random lattice site
 ψ₁ = copy(ψ₂)
 ψ₁.lattice[2,2] = copy(site)
 
-dE = ΔE(site,ψ₂.lattice[2,2],ψ₂.lattice[2,3],ψ₂.lattice[1,2],ψ₂.lattice[2,1],ψ₂.lattice[3,2],ψ₂.lattice[1,1]
-    ,ψ₂.lattice[3,3], 2,ψ₂.consts)
+dE = ΔE(site,ψ₂.lattice[2,2],ψ₂.nb,ψ₂.nnb,ψ₂.nnnb, 2,ψ₂.consts)
 println("Checking that ΔE and E get same result")
 println(@test isapprox(E(ψ₁)-E(ψ₂), dE; atol=0, rtol=1e-13))
 
@@ -215,7 +222,7 @@ println(@test isapprox(E(ψ₁)-E(ψ₂), dE; atol=0, rtol=1e-13))
 
 
 # Create 20x20 random state.
-ψ = State(20, 2)
+ψ = State(2,20)
 # Testing mcSweep!
 println("\nTesting mcSweep!\n----------------------------------------------------------------")
 ψ_old = copy(ψ)
@@ -328,7 +335,7 @@ println(@test n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1
 println("\nTesting structureFunctionPluss(k, ψ)\n----------------------------------------------------------------")
 # First the zero test. If we set everything to 0 do we get 0 in the end?
 println("Case: S(k) for θ⁺=θ⁻=A=0 with k random")
-ψ = State(30, 1)
+ψ = State(1,30)
 L = size(ψ.lattice,1)
 ψ.consts = SystConstants(30, 1.0, 1.0, 0.5, 0, 1/300)
 k = [rand(1:L)-1, rand(1:L)-1]
@@ -358,7 +365,7 @@ println(@test structureFunctionPluss(k, ψ) == res)
 # Finally we want to turn on the static part of the gauge field and make sure that this normalizes correctly
 # when k = 0, given that all phases are again zero.
 println("Checking that function gives correct normalization unnormalizedS(0) = (fL²)²")
-ψ = State(L,1)
+ψ = State(1,L)
 ψ.consts = SystConstants(30, 1.0, 1.0, 0.5, 1/((rand()+1)*L), 1/300)
 res = (ψ.consts.f*L^2*two_pi)^2
 #println(res)

@@ -4,7 +4,7 @@ using Distributions
 using StatsBase
 using Base.Test
 
-export SystConstants, LatticeSite, State, Controls, Neighbors, NextNeighbors, NNNeighbors
+export SystConstants, LatticeSite, State, Controls, Neighbors, NextNeighbors, NNNeighbors, two_pi
 
 include("types.jl")
 
@@ -15,14 +15,19 @@ include("types.jl")
 
 include("functions_msc.jl")
 
-export save
+# This export is for testing
+export latticeNeighbors, latticeNextNeighbors, latticeNNNeighbors
+
+include("functions_neighbors.jl")
+
+export save, checkState, set!
 include("functions_types.jl")
 
-export E
+export E, ΔE
 
 include("functions_energy.jl")
 
-export mcSweep!, mcProposalFraction!, mcSweepEn!, mcSweepFrac!, adjustSimConstants!, findEquilibrium
+export mcSweep!, mcProposalFraction!, mcProposalFraction, mcSweepEn!, mcSweepFrac!, adjustSimConstants!, findEquilibrium
 
 include("functions_mc.jl")
 

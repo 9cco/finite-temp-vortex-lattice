@@ -8,17 +8,51 @@ end
 function copy(c::SystConstants)
     SystConstants(c.L, c.γ, c.g⁻², c.ν, c.f, c.β)
 end
-#TODO: Write copy functions for Neighbors, NextNeighbors and NNNeighbors
+# Copy functions for Neighbors, NextNeighbors and NNNeighbors
+function copy(nb::Neighbors)
+	Neighbors(nb.ϕᵣ₊₁,nb.ϕᵣ₋₁,nb.ϕᵣ₊₂,nb.ϕᵣ₋₂)
+end
+function copy(nnb::NextNeighbors)
+	NextNeighbors(nnb.ϕᵣ₊₁₊₂, nnb.ϕᵣ₊₁₋₂, nnb.ϕᵣ₋₁₊₂, nnb.ϕᵣ₋₁₋₂)
+end
+function copy(nnnb::NNNeighbors)
+	NNNeighbors(nnnb.ϕᵣ₊₁₁, nnnb.ϕᵣ₋₁₁, nnnb.ϕᵣ₊₂₂, nnnb.ϕᵣ₋₂₂)
+end
+# Copy functions for LxL lattices of Neighbors
+function copy(nbl::Array{Neighbors,2})
+	L = size(nbl,2)
+	nbl_copy = Array{Neighbors,2}(L,L)
+	for h_pos = 1:L, v_pos = 1:L
+		nbl_copy[v_pos,h_pos] = copy(nbl[v_pos,h_pos])
+	end
+	nbl_copy
+end
+function copy(nnbl::Array{NextNeighbors,2})
+	L = size(nnbl,2)
+	nnbl_copy = Array{NextNeighbors,2}(L,L)
+	for h_pos = 1:L, v_pos = 1:L
+		nnbl_copy[v_pos,h_pos] = copy(nnbl[v_pos,h_pos])
+	end
+	nnbl_copy
+end
+function copy(nnnbl::Array{NNNeighbors,2})
+	L = size(nnnbl,2)
+	nnnbl_copy = Array{NNNeighbors,2}(L,L)
+	for h_pos = 1:L, v_pos = 1:L
+		nnnbl_copy[v_pos,h_pos] = copy(nnnbl[v_pos,h_pos])
+	end
+	nnnbl_copy
+end
 function copy(ψ::State)
     Lx = size(ψ.lattice,2)
     Ly = size(ψ.lattice,1)
     lattice = [LatticeSite([ψ.lattice[y,x].A[1],ψ.lattice[y,x].A[2]],ψ.lattice[y,x].θ⁺,ψ.lattice[y,x].θ⁻,
             ψ.lattice[y,x].u⁺, ψ.lattice[y,x].u⁻) for y = 1:Ly, x=1:Lx]
-	nb = copy(ψ.nb)
-	nnb = copy(ψ.nnb)
-	nnnb = copy(ψ.nnnb)
+	nbl = latticeNeighbors(lattice, Lx)
+	nnbl = latticeNextNeighbors(lattice, Lx)
+	nnnbl = latticeNNNeighbors(lattice, Lx)
     consts = copy(ψ.consts)
-	State(lattice, consts, nb, nnb, nnnb)
+	State(lattice, consts, nbl, nnbl, nnnbl)
 end
 function copy(sim::Controls)
     return Controls(sim.θmax, sim.umax, sim.Amax)
@@ -34,6 +68,17 @@ function LatticeSite()
         u⁺, √(1-u⁺^2))
 end
 
+# -------------------------------------------------------------------------------------------------
+# Mutates target to have the same values as src.
+function set!(target::LatticeSite, src::LatticeSite)
+    target.A[1] = src.A[1]
+    target.A[2] = src.A[2]
+    target.θ⁺ = src.θ⁺
+    target.θ⁻ = src.θ⁻
+    target.u⁺ = src.u⁺
+    target.u⁻ = src.u⁻
+    return 1
+end
 
 ####################################################################################################
 #                            Functions for ::State
@@ -47,6 +92,40 @@ end
 # Initializes a state ψ that either 1: has zero as value for the the fluctuating gauge potential link variables,
 # the phase and the u⁺ component (which means the u⁻=1) at each lattice site, or 2: has random values for
 # these variables.
+function State(choice::Int64, L::Int64)
+    L <= 1 && throw(DomainError())
+
+	consts = SystConstants(L, 1.0, 1/0.3^2, 0.3, 2.0/L, 0.5)
+    # Construct ordered state 
+    if choice == 1
+        
+        # Construct LxL lattice of LxL LatticeSites
+        lattice = [LatticeSite([0,0],0,0,0,1) for y=1:L, x=1:L]
+		nbl = latticeNeighbors(lattice,L)
+		nnbl = latticeNextNeighbors(lattice,L)
+		nnnbl = latticeNNNeighbors(lattice,L)
+        ψ = State(lattice, consts, nbl, nnbl, nnnbl)
+        
+    # Construct random state
+    elseif choice == 2
+        Amax::Int64 = 2^10
+		lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
+						   rand(Uniform(0,2π)), rand(Uniform(0,2π)), rand(), 1) for y=1:L, x=1:L]
+        for y=1:L, x=1:L
+            lattice[y,x].u⁻ = √(1-lattice[y,x].u⁺^2)
+        end
+		nb = latticeNeighbors(lattice,L)
+		nnb = latticeNextNeighbors(lattice,L)
+		nnnb = latticeNNNeighbors(lattice,L)
+        ψ = State(lattice, consts, nb, nnb, nnnb)
+        
+    # We only have choices 1 and 2 so far so other values for choice will give an error.
+    else
+        throw(DomainError())
+    end
+    ψ
+end
+# Same as above but with non-default parameter-inputs from SystConstants
 function State(choice::Int64, consts::SystConstants)
     N = consts.L
     N <= 1 && throw(DomainError())
@@ -55,9 +134,9 @@ function State(choice::Int64, consts::SystConstants)
         
         # Construct NxN lattice of NxN LatticeSites
         lattice = [LatticeSite([0,0],0,0,0,1) for y=1:N, x=1:N]
-		nb = Neighbors(lattice,N)
-		nnb = NextNeighbors(lattice,N)
-		nnnb = NNNeighbors(lattice,N)
+		nb = latticeNeighbors(lattice,N)
+		nnb = latticeNextNeighbors(lattice,N)
+		nnnb = latticeNNNeighbors(lattice,N)
         ψ = State(lattice, consts, nb, nnb, nnnb)
         
     # Construct random state

@@ -22,12 +22,12 @@ function metropolisHastingUpdate!(ψ::State, pos::Array{Int64,1}, sim::Controls)
 	# Save the lattice site at the targeted position in a temporary variable ϕ and use the lattice site
 	# as a basis for proposing a new lattice site ϕ′. Then find the energy difference between having
 	# ϕ′ or ϕ at position pos.
-    const ϕ = ψ.lattice[pos...]
-    const ϕ′ = proposeLocalUpdate(ϕ, sim)
-    const δE = ΔE(ϕ′, ϕ, ψ.nb[pos...], ψ.nnb[pos...], ψ.nnnb[pos...], pos[2], ψ.consts)
+    ϕ = ψ.lattice[pos...]
+    ϕ′ = proposeLocalUpdate(ϕ, sim)
+    δE = ΔE(ϕ′, ϕ, ψ.nb[pos...], ψ.nnb[pos...], ψ.nnnb[pos...], pos[2], ψ.consts)
     
     # Create random number ran ∈ (0,1].
-    const ran = rand()
+    ran = rand()
     if ran==0
         ran=1
     end
@@ -35,7 +35,7 @@ function metropolisHastingUpdate!(ψ::State, pos::Array{Int64,1}, sim::Controls)
     # Update state with probability min(1, e^{-β⋅δE})
     # and return the energy of final state regardless of whether it gets updated or not.
     if log(ran) <= -ψ.consts.β*δE
-        ψ.lattice[pos...] = ϕ′
+		set!(ϕ, ϕ′)
         return δE
     else
         return 0.0
