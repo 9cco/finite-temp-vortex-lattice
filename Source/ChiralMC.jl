@@ -17,6 +17,7 @@ include("functions_msc.jl")
 
 # This export is for testing
 export latticeNeighbors, latticeNextNeighbors, latticeNNNeighbors
+export checkNeighbors
 
 include("functions_neighbors.jl")
 

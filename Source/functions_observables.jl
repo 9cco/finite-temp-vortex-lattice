@@ -68,73 +68,13 @@ function vortexSnapshot(ψ::State)
     V⁺ = zeros(L,L)
     V⁻ = zeros(L,L)
     
-    # Sum over the corners
-    # Upper left corner
-     ϕ = ψ.lattice[1,1]
-     ϕᵣ₊₁ = ψ.lattice[1,2]
-     ϕᵣ₊₂ = ψ.lattice[L,1]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L,2]
-    (V⁺[1,1], V⁻[1,1]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)
-    
-    # Lower left corner
-     ϕ = ψ.lattice[L,1]
-     ϕᵣ₊₁ = ψ.lattice[L,2]
-     ϕᵣ₊₂ = ψ.lattice[L-1,1]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L-1,2]
-    (V⁺[L,1], V⁻[L,1]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)
-    
-    # Lower right corner
-     ϕ = ψ.lattice[L,L]
-     ϕᵣ₊₁ = ψ.lattice[L,1]
-     ϕᵣ₊₂ = ψ.lattice[L-1,L]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L-1,1]
-    (V⁺[L,L], V⁻[L,L]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)
-    
-    # Upper right corner
-     ϕ = ψ.lattice[1,L]
-     ϕᵣ₊₁ = ψ.lattice[1,1]
-     ϕᵣ₊₂ = ψ.lattice[L,L]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L,1]
-    (V⁺[1,L], V⁻[1,L]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)
-    
-    # Sum over borders without corners
-    for i = 2:(L-1)
-        # Upper border (counting in +x direction)
-        ϕ = ψ.lattice[1,i]
-        ϕᵣ₊₁ = ψ.lattice[1,i+1]
-        ϕᵣ₊₂ = ψ.lattice[L,i]
-        ϕᵣ₊₁₊₂ = ψ.lattice[L,i+1]
-        (V⁺[1,i], V⁻[1,i]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)
-        
-        # Left border (counting in -y direction)
-        ϕ = ψ.lattice[i,1]
-        ϕᵣ₊₁ = ψ.lattice[i,2]
-        ϕᵣ₊₂ = ψ.lattice[i-1,1]
-        ϕᵣ₊₁₊₂ = ψ.lattice[i-1,2]
-        (V⁺[i,1], V⁻[i,1]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)
-        
-        # Lower border (counting in +x direction)
-        ϕ = ψ.lattice[L,i]
-        ϕᵣ₊₁ = ψ.lattice[L,i+1]
-        ϕᵣ₊₂ = ψ.lattice[L-1,i]
-        ϕᵣ₊₁₊₂ = ψ.lattice[L-1,i+1]
-        (V⁺[L,i], V⁻[L,i]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)
-        
-        # Right border (counting in -y direction)
-        ϕ = ψ.lattice[i,L]
-        ϕᵣ₊₁ = ψ.lattice[i,1]
-        ϕᵣ₊₂ = ψ.lattice[i-1,L]
-        ϕᵣ₊₁₊₂ = ψ.lattice[i-1,1]
-        (V⁺[i,L], V⁻[i,L]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)
-    end
-    
-    # Sum over rest of the bulk
-    for h_pos = 2:(L-1)
-        for v_pos = 2:(L-1)
+    # Sum over the lattice
+    for h_pos = 1:L
+        for v_pos = 1:L
             ϕ = ψ.lattice[v_pos,h_pos]
-            ϕᵣ₊₁ = ψ.lattice[v_pos,h_pos+1]
-            ϕᵣ₊₂ = ψ.lattice[v_pos-1,h_pos]
-            ϕᵣ₊₁₊₂ = ψ.lattice[v_pos-1,h_pos+1]
+			ϕᵣ₊₁ = ψ.nb[v_pos,h_pos].ϕᵣ₊₁
+			ϕᵣ₊₂ = ψ.nb[v_pos,h_pos].ϕᵣ₊₂
+			ϕᵣ₊₁₊₂ = ψ.nnb[v_pos,h_pos].ϕᵣ₊₁₊₂
             (V⁺[v_pos,h_pos], V⁻[v_pos, h_pos]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)
         end
     end
@@ -207,94 +147,20 @@ function structureFunction{T<:Real}(k::Array{T,1}, ψ::State)
     sum⁻ = Complex(0)
     L = ψ.consts.L
     
-    # Sum over the corners
-    # Upper left corner
-     r = [0, L-1] # For r we assume origo is in position [L,1] of the lattice. 
+    # Sum over lattice
+    for h_pos = 1:L
+        for v_pos = 1:L
+            r = [h_pos-1, L-v_pos]		# For r we assume origo is in position [L,1] of the lattice. 
                   # Note that r is the same as pos (found previously) with y-axis flipped and -1 in each direction.
                   # Additionally we define it such that we get the usual r = [x,y] order of dimensions.
-     ϕ = ψ.lattice[1,1]
-     ϕᵣ₊₁ = ψ.lattice[1,2]
-     ϕᵣ₊₂ = ψ.lattice[L,1]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L,2]
-    sum⁺ += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
-    sum⁻ += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
-    
-    # Lower left corner
-     r = [0,0]
-     ϕ = ψ.lattice[L,1]
-     ϕᵣ₊₁ = ψ.lattice[L,2]
-     ϕᵣ₊₂ = ψ.lattice[L-1,1]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L-1,2]
-    sum⁺ += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
-    sum⁻ += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
-    
-    # Lower right corner
-     r = [L-1,0]
-     ϕ = ψ.lattice[L,L]
-     ϕᵣ₊₁ = ψ.lattice[L,1]
-     ϕᵣ₊₂ = ψ.lattice[L-1,L]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L-1,1]
-    sum⁺ += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
-    sum⁻ += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
-    
-    # Upper right corner
-     r = [L-1,L-1]
-     ϕ = ψ.lattice[1,L]
-     ϕᵣ₊₁ = ψ.lattice[1,1]
-     ϕᵣ₊₂ = ψ.lattice[L,L]
-     ϕᵣ₊₁₊₂ = ψ.lattice[L,1]
-    sum⁺ += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
-    sum⁻ += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
-    
-    # Sum over borders without corners
-    for i = 2:(L-1)
-        # Upper border (counting in +x direction)
-        r = [i-1, L-1]
-        ϕ = ψ.lattice[1,i]
-        ϕᵣ₊₁ = ψ.lattice[1,i+1]
-        ϕᵣ₊₂ = ψ.lattice[L,i]
-        ϕᵣ₊₁₊₂ = ψ.lattice[L,i+1]
-        sum⁺ += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)*exp(im*(k⋅r))
-        sum⁻ += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)*exp(im*(k⋅r))
-        
-        # Left border (counting in -y direction)
-        r = [0, L-i]
-        ϕ = ψ.lattice[i,1]
-        ϕᵣ₊₁ = ψ.lattice[i,2]
-        ϕᵣ₊₂ = ψ.lattice[i-1,1]
-        ϕᵣ₊₁₊₂ = ψ.lattice[i-1,2]
-        sum⁺ += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
-        sum⁻ += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, 1)*exp(im*(k⋅r))
-        
-        # Lower border (counting in +x direction)
-        r = [i-1, 0]
-        ϕ = ψ.lattice[L,i]
-        ϕᵣ₊₁ = ψ.lattice[L,i+1]
-        ϕᵣ₊₂ = ψ.lattice[L-1,i]
-        ϕᵣ₊₁₊₂ = ψ.lattice[L-1,i+1]
-        sum⁺ += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)*exp(im*(k⋅r))
-        sum⁻ += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, i)*exp(im*(k⋅r))
-        
-        # Right border (counting in -y direction)
-        r = [L-1, L-i]
-        ϕ = ψ.lattice[i,L]
-        ϕᵣ₊₁ = ψ.lattice[i,1]
-        ϕᵣ₊₂ = ψ.lattice[i-1,L]
-        ϕᵣ₊₁₊₂ = ψ.lattice[i-1,1]
-        sum⁺ += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
-        sum⁻ += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, L)*exp(im*(k⋅r))
-    end
-    
-    # Sum over rest of the bulk
-    for h_pos = 2:(L-1)
-        for v_pos = 2:(L-1)
-            r = [h_pos-1, L-v_pos]
+
             ϕ = ψ.lattice[v_pos,h_pos]
-            ϕᵣ₊₁ = ψ.lattice[v_pos,h_pos+1]
-            ϕᵣ₊₂ = ψ.lattice[v_pos-1,h_pos]
-            ϕᵣ₊₁₊₂ = ψ.lattice[v_pos-1,h_pos+1]
-            sum⁺ += n⁺(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)*exp(im*(k⋅r))
-            sum⁻ += n⁻(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)*exp(im*(k⋅r))
+			ϕᵣ₊₁ = ψ.nb[v_pos,h_pos].ϕᵣ₊₁
+			ϕᵣ₊₂ = ψ.nb[v_pos,h_pos].ϕᵣ₊₂
+			ϕᵣ₊₁₊₂ = ψ.nnb[v_pos,h_pos].ϕᵣ₊₁₊₂
+			vort_θ⁺, vort_θ⁻ = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)
+            sum⁺ += vort_θ⁺*exp(im*(k⋅r))
+            sum⁻ += vort_θ⁻*exp(im*(k⋅r))
         end
     end
     

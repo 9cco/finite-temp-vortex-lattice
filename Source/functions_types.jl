@@ -93,7 +93,7 @@ end
 # the phase and the u⁺ component (which means the u⁻=1) at each lattice site, or 2: has random values for
 # these variables.
 function State(choice::Int64, L::Int64)
-    L <= 1 && throw(DomainError())
+    L <= 4 && throw(DomainError())
 
 	consts = SystConstants(L, 1.0, 1/0.3^2, 0.3, 2.0/L, 0.5)
     # Construct ordered state 
@@ -128,7 +128,7 @@ end
 # Same as above but with non-default parameter-inputs from SystConstants
 function State(choice::Int64, consts::SystConstants)
     N = consts.L
-    N <= 1 && throw(DomainError())
+    N <= 4 && throw(DomainError())
     # Construct ordered state 
     if choice == 1
         

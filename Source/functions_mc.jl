@@ -82,8 +82,8 @@ function mcSweepEn!(ψ::State, sim::Controls = Controls(π/3, 0.4, 3.0))
     L::Int64 = ψ.consts.L
     
     # Update the bulk
-    for x=1:L, y=1:L
-        δE += metropolisHastingUpdate!(ψ, [y,x], sim)
+    for h_pos=1:L, v_pos=1:L
+        δE += metropolisHastingUpdate!(ψ, [v_pos,h_pos], sim)
     end
     return δE
 end

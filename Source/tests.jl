@@ -5,9 +5,6 @@ include("functions_msc.jl")
 include("functions_observables.jl")
 include("functions_parallel.jl")
 
-include("types.jl")
-include("functions.jl")
-
 using Base.Test
 using Plots
 gr()
@@ -48,10 +45,59 @@ println("Testing getVectorPosition for special cases.")
 @test getVectorPosition(10, [1,1]) == [0, 9]
 println(@test getVectorPosition(10, [10,10]) == [9, 0])
 
-println("Testing autocorrTime for uniform list except one")
-list = [1.0 for x=1:10]
-list[4] = 4
-println(@test autocorrTime(list, 5.0) == 1.0)
+#println("Testing autocorrTime for uniform list except one")
+#list = [1.0 for x=1:10]
+#list[4] = 4
+#println(@test autocorrTime(list, 5.0) == 1.0)
+
+
+########################################################################################
+#                     Testing neighbor functions
+#
+########################################################################################
+
+# Checking that all neighbor references have been set to something.
+L = 5
+ψ = State(2,L)
+for h_pos = 1:L, v_pos = 1:L
+    @test isassigned(ψ.nb, v_pos,h_pos)
+    @test isassigned(ψ.nnb, v_pos,h_pos)
+    @test isassigned(ψ.nnnb, v_pos,h_pos)
+end
+
+# Create artificial lattice for finding position where θ⁺→v_pos, θ⁻→h_pos
+lattice = [LatticeSite([0,0],v_pos,h_pos,0,1) for v_pos=1:L, h_pos=1:L]
+nbl = latticeNeighbors(lattice,L)
+nnbl = latticeNextNeighbors(lattice,L)
+nnnbl = latticeNNNeighbors(lattice,L)
+
+println("Testing latticeNeighbors")
+for v_pos=1:L, h_pos=1:L
+    @test nbl[v_pos, h_pos].ϕᵣ₊₁.θ⁺ == Float64(v_pos)
+    @test nbl[v_pos, h_pos].ϕᵣ₊₁.θ⁻ == Float64(mod(h_pos,L)+1)
+    @test nbl[v_pos, h_pos].ϕᵣ₋₁.θ⁺ == Float64(v_pos)
+    @test nbl[v_pos, h_pos].ϕᵣ₋₁.θ⁻ == Float64(mod(h_pos-2,L)+1)
+    
+    @test nbl[v_pos, h_pos].ϕᵣ₊₂.θ⁺ == Float64(mod(v_pos-2,L)+1)
+    @test nbl[v_pos, h_pos].ϕᵣ₊₂.θ⁻ == Float64(h_pos)
+    @test nbl[v_pos, h_pos].ϕᵣ₋₂.θ⁺ == Float64(mod(v_pos,L)+1)
+    @test nbl[v_pos, h_pos].ϕᵣ₋₂.θ⁻ == Float64(h_pos)
+end
+println(@test nbl[1, 1].ϕᵣ₋₂.θ⁻ == Float64(1))
+
+println("Testing latticeNextNeighbors")
+for v_pos=1:L, h_pos=1:L
+    @test nnbl[v_pos, h_pos].ϕᵣ₊₁₊₂.θ⁺ == Float64(mod(v_pos-2,L)+1)
+    @test nnbl[v_pos, h_pos].ϕᵣ₊₁₊₂.θ⁻ == Float64(mod(h_pos,L)+1)
+    @test nnbl[v_pos, h_pos].ϕᵣ₊₁₋₂.θ⁺ == Float64(mod(v_pos,L)+1)
+    @test nnbl[v_pos, h_pos].ϕᵣ₊₁₋₂.θ⁻ == Float64(mod(h_pos,L)+1)
+    
+    @test nnbl[v_pos, h_pos].ϕᵣ₋₁₊₂.θ⁺ == Float64(mod(v_pos-2,L)+1)
+    @test nnbl[v_pos, h_pos].ϕᵣ₋₁₊₂.θ⁻ == Float64(mod(h_pos-2,L)+1)
+    @test nnbl[v_pos, h_pos].ϕᵣ₋₁₋₂.θ⁺ == Float64(mod(v_pos,L)+1)
+    @test nnbl[v_pos, h_pos].ϕᵣ₋₁₋₂.θ⁻ == Float64(mod(h_pos-2,L)+1)
+end
+println(@test nnbl[1, 1].ϕᵣ₊₁₊₂.θ⁺ == Float64(mod(1-2,L)+1))
 
 
 ########################################################################################
@@ -205,14 +251,33 @@ println("\nTesting Energy difference function ΔE\n-----------------------------
 # i.e. the [2,2] position. Then we use the different functions to calculate the energy
 # difference associated with this change.
 
-ψ₂ = State(2,3)
+L = 5
+ψ₂ = State(2,L)
 site = LatticeSite() # Get random lattice site
 ψ₁ = copy(ψ₂)
-ψ₁.lattice[2,2] = copy(site)
+@test ψ₁.nb[3,2].ϕᵣ₊₂.u⁺ == ψ₁.lattice[2,2].u⁺
+@test ψ₁.nb[3,2].ϕᵣ₊₂ == ψ₁.lattice[2,2]
+set!(ψ₁.lattice[2,2], site)
+@test ψ₁.nb[3,2].ϕᵣ₊₂.u⁺ == site.u⁺
 
-dE = ΔE(site,ψ₂.lattice[2,2],ψ₂.nb,ψ₂.nnb,ψ₂.nnnb, 2,ψ₂.consts)
+dE = ΔE(site,ψ₂.lattice[2,2],ψ₂.nb[2,2],ψ₂.nnb[2,2],ψ₂.nnnb[2,2], 2,ψ₂.consts)
 println("Checking that ΔE and E get same result")
+println("ΔE\t\t\tE₁-E₂")
+println("$dE\t$(E(ψ₁)-E(ψ₂))")
 println(@test isapprox(E(ψ₁)-E(ψ₂), dE; atol=0, rtol=1e-13))
+
+println("Checking that ΔE gives same result as E'-E on all different sites of the lattice")
+println("[v_pos, h_pos]\t|ΔE-(E₁-E₂)|")
+for h_pos = 1:L, v_pos = 1:L
+    ψ₁ = copy(ψ₂)
+    ϕ′ = LatticeSite()
+    dE = ΔE(ϕ′, ψ₂.lattice[v_pos,h_pos],ψ₂.nb[v_pos,h_pos],ψ₂.nnb[v_pos,h_pos],ψ₂.nnnb[v_pos,h_pos],h_pos,ψ₂.consts)
+    set!(ψ₁.lattice[v_pos,h_pos], ϕ′)
+    println("[$(v_pos), $h_pos]\t\t$(abs(dE-(E(ψ₁)-E(ψ₂))))")
+    @test isapprox(E(ψ₁)-E(ψ₂), dE; atol=0, rtol=5e-13)
+end
+println(@test isapprox(E(ψ₁)-E(ψ₂), dE; atol=0, rtol=5e-13))
+
 
 
 ########################################################################################
@@ -252,7 +317,7 @@ mcProposalFraction(ψ)
 # that after a couple of mcSweeps, the state will be completely changed
 println("Testing if mcSweep! gives completely different state when temperature is infinite, where completely different
 means that all values on all lattice sites are different. Thus we have proved that mcSweep! visits all lattice sites.")
-L = 4
+L = 5
 ψ = State(2, SystConstants(L, 1, 1/(0.9)^2, 0.5, 0.9/L, 0))
 ψ_old = copy(ψ)
 for i = 1:2
@@ -267,16 +332,28 @@ end
 println(@test isCompletelyDifferent==true)
 
 println("Checking that mcSweepEn! gives the same energy difference as taking E_new - E_old")
+
+H = -0.72   # External field
+# Calculate periodic boundary conditioned f s.t. fL ∈ N
+f = ceil(abs(H/(2π)*L))/L*sign(H)
+
+# Create system
+L = 22
+syst = SystConstants(L, 1.0, 1/0.3^2, 0.3, f, 1/0.12)
 ψ = State(2, syst)
 ψ_old = copy(ψ)
+println("Testing that copied ψ_old has correct nearest neighbors set")
+println(@test checkNeighbors(ψ_old))
 δE = 0.0
 T = 1000 # Number of MCS
 for i = 1:T
     δE += mcSweepEn!(ψ)
 end
-println(δE)
-println(E(ψ)- E(ψ_old))
-println(@test isapprox(δE, E(ψ)- E(ψ_old), atol=0, rtol=1e-13))
+println("Testing that resulting ψ still has correct nearest neighbors set")
+println(@test checkNeighbors(ψ))
+println("Total δE:\t$δE\t\tE_new:\t$(E(ψ))")
+println("E_new-E_old:\t$(E(ψ)- E(ψ_old))")
+println(@test isapprox(δE, E(ψ)- E(ψ_old), atol=0, rtol=1e-13*L^2*T))
 
 println("\nTesting findEquilibrium\n----------------------------------------------------------------")
 consts = SystConstants(18, 1.0, 1/(0.3)^2, 0.3, -3.0/18, 1/0.12)
@@ -298,13 +375,14 @@ display(plt)
 plt = plot(int, E₂[int], title="Internal energy of un-correlated state", xlabel="MCS", ylabel="E2")
 display(plt)
 
+
 ########################################################################################
 #                     Testing local vorticity
 #
 #######################################################################################
 println("\nTesting n⁺\n----------------------------------------------------------------")
 # Creating state where there is no contribution from Gauge fields
-ψ = State(1, SystConstants(2, 4.0, 0.0, 1.0, 0.0, 1/40))
+ψ = State(1, SystConstants(5, 4.0, 0.0, 1.0, 0.0, 1/40))
 ϕ = ψ.lattice[2,1]
 ϕᵣ₊₁ = ψ.lattice[2,2]
 ϕᵣ₊₂ = ψ.lattice[1,1]
@@ -337,9 +415,9 @@ println("\nTesting structureFunctionPluss(k, ψ)\n------------------------------
 println("Case: S(k) for θ⁺=θ⁻=A=0 with k random")
 ψ = State(1,30)
 L = size(ψ.lattice,1)
-ψ.consts = SystConstants(30, 1.0, 1.0, 0.5, 0, 1/300)
+ψ.consts = SystConstants(L, 1.0, 1.0, 0.5, 0, 1/300)
 k = [rand(1:L)-1, rand(1:L)-1]
-println(@test structureFunctionPluss(k, ψ) == 0)
+println(@test structureFunction(k, ψ)[1] == 0)
 
 # Even if we create a local vortex at [L-1,2], the sum should be zero still if k=0
 println("Case: S(0) for local vortex at position [L-2, 2] while A=0")
@@ -349,7 +427,7 @@ println("Case: S(0) for local vortex at position [L-2, 2] while A=0")
 println("n⁺ = -2π at [L-2,2]")
 println(@test n⁺(ψ.consts,ψ.lattice[L-1,2],ψ.lattice[L-1,3],ψ.lattice[L-2,2],ψ.lattice[L-2,3], 2) == -two_pi)
 println("S(0) = 0")
-println(@test structureFunctionPluss([0,0], ψ) == 0)
+println(@test structureFunction([0,0], ψ)[1] == 0)
 
 # For a general k, we will get the expression
 # Note that the order of the terms in the sum is important for getting the same floating point value.
@@ -360,7 +438,7 @@ res += exp(im*(k⋅getVectorPosition(L,[L-2, 1])))*two_pi
 res += exp(im*(k⋅getVectorPosition(L,[L-2, 2])))*two_pi
 res -= exp(im*(k⋅getVectorPosition(L,[L-1,2])))*two_pi
 res = abs2(res)
-println(@test structureFunctionPluss(k, ψ) == res)
+println(@test structureFunction(k, ψ)[1] == res)
 
 # Finally we want to turn on the static part of the gauge field and make sure that this normalizes correctly
 # when k = 0, given that all phases are again zero.
@@ -370,4 +448,4 @@ println("Checking that function gives correct normalization unnormalizedS(0) = (
 res = (ψ.consts.f*L^2*two_pi)^2
 #println(res)
 #println(structureFunctionPluss([0,0],ψ))
-println(@test isapprox(structureFunctionPluss([0,0], ψ),res,atol=0,rtol=1e-15*L^2))
+println(@test isapprox(structureFunction([0,0], ψ)[1],res,atol=0,rtol=1e-15*L^2))

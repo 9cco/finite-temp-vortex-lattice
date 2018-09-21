@@ -243,3 +243,79 @@ function latticeNNNeighbors(lattice::Array{LatticeSite, 2}, L::Int64)
     end
     nnnb
 end
+
+# --------------------------------------------------------------------------------------------------
+# Checks that all the nearest neighbor references in ψ.nb are set correctly
+# for a square lattice with periodic boundary conditions.
+function checkNeighbors(ψ::State)
+    
+    n_c::Bool = true
+    
+    # Test neighbors of upper right corner
+    n_c = n_c && ψ.nb[1,L].ϕᵣ₊₁ === ψ.lattice[1,1]
+    n_c = n_c && ψ.nb[1,L].ϕᵣ₋₁ === ψ.lattice[1,L-1]
+    n_c = n_c && ψ.nb[1,L].ϕᵣ₊₂ === ψ.lattice[L,L]
+    n_c = n_c && ψ.nb[1,L].ϕᵣ₋₂ === ψ.lattice[2,L]
+
+    
+    # Test neighbors of upper left corner
+    n_c = n_c && ψ.nb[1,1].ϕᵣ₊₁ === ψ.lattice[1,2]
+    n_c = n_c && ψ.nb[1,1].ϕᵣ₋₁ === ψ.lattice[1,L]
+    n_c = n_c && ψ.nb[1,1].ϕᵣ₊₂ === ψ.lattice[L,1]
+    n_c = n_c && ψ.nb[1,1].ϕᵣ₋₂ === ψ.lattice[2,1]
+
+    
+    # Test neighbors of lower right corner
+    n_c = n_c && ψ.nb[L,L].ϕᵣ₊₁ === ψ.lattice[L,1]
+    n_c = n_c && ψ.nb[L,L].ϕᵣ₋₁ === ψ.lattice[L,L-1]
+    n_c = n_c && ψ.nb[L,L].ϕᵣ₊₂ === ψ.lattice[L-1,L]
+    n_c = n_c && ψ.nb[L,L].ϕᵣ₋₂ === ψ.lattice[1,L]
+
+    
+    # Test neighbors of lower left corner
+    n_c = n_c && ψ.nb[L,1].ϕᵣ₊₁ === ψ.lattice[L,2]
+    n_c = n_c && ψ.nb[L,1].ϕᵣ₋₁ === ψ.lattice[L,L]
+    n_c = n_c && ψ.nb[L,1].ϕᵣ₊₂ === ψ.lattice[L-1,1]
+    n_c = n_c && ψ.nb[L,1].ϕᵣ₋₂ === ψ.lattice[1,1]
+
+    
+    # Test neighbors of borders except for corners
+    for i=2:L-1
+        # Right y-boundary
+        n_c = n_c && ψ.nb[i,L].ϕᵣ₊₁ === ψ.lattice[i,1]
+        n_c = n_c && ψ.nb[i,L].ϕᵣ₋₁ === ψ.lattice[i,L-1]
+        n_c = n_c && ψ.nb[i,L].ϕᵣ₊₂ === ψ.lattice[i-1,L]
+        n_c = n_c && ψ.nb[i,L].ϕᵣ₋₂ === ψ.lattice[i+1,L]
+
+        
+        # Left y-boundary
+        n_c = n_c && ψ.nb[i,1].ϕᵣ₊₁ === ψ.lattice[i,2]
+        n_c = n_c && ψ.nb[i,1].ϕᵣ₋₁ === ψ.lattice[i,L]
+        n_c = n_c && ψ.nb[i,1].ϕᵣ₊₂ === ψ.lattice[i-1,1]
+        n_c = n_c && ψ.nb[i,1].ϕᵣ₋₂ === ψ.lattice[i+1,1]
+
+        
+        # Lower x-boundary
+        n_c = n_c && ψ.nb[L,i].ϕᵣ₊₁ === ψ.lattice[L,i+1]
+        n_c = n_c && ψ.nb[L,i].ϕᵣ₋₁ === ψ.lattice[L,i-1]
+        n_c = n_c && ψ.nb[L,i].ϕᵣ₊₂ === ψ.lattice[L-1,i]
+        n_c = n_c && ψ.nb[L,i].ϕᵣ₋₂ === ψ.lattice[1,i]
+
+        
+        # Upper x-boundary
+        n_c = n_c && ψ.nb[1,i].ϕᵣ₊₁ === ψ.lattice[1,i+1]
+        n_c = n_c && ψ.nb[1,i].ϕᵣ₋₁ === ψ.lattice[1,i-1]
+        n_c = n_c && ψ.nb[1,i].ϕᵣ₊₂ === ψ.lattice[L,i]
+        n_c = n_c && ψ.nb[1,i].ϕᵣ₋₂ === ψ.lattice[2,i]
+
+    end
+    
+    # Contribution from the bulk of lattice sites
+    for x=2:(L-1), y=2:(L-1)
+        n_c = n_c && ψ.nb[y,x].ϕᵣ₊₁ === ψ.lattice[y,x+1]
+        n_c = n_c && ψ.nb[y,x].ϕᵣ₋₁ === ψ.lattice[y,x-1]
+        n_c = n_c && ψ.nb[y,x].ϕᵣ₊₂ === ψ.lattice[y-1,x]
+        n_c = n_c && ψ.nb[y,x].ϕᵣ₋₂ === ψ.lattice[y+1,x]
+    end
+    return n_c
+end
