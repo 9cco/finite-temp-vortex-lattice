@@ -59,6 +59,26 @@ function copy(sim::Controls)
 end
 
 # -------------------------------------------------------------------------------------------------
+# Comparison operator for custom types
+
+import Base.==
+function ==(ϕ₁::LatticeSite, ϕ₂::LatticeSite)
+    return (ϕ₁.A[1] == ϕ₂.A[1] && ϕ₁.A[2] == ϕ₂.A[2] && ϕ₁.θ⁺ == ϕ₂.θ⁺ && 
+        ϕ₁.θ⁻ == ϕ₂.θ⁻ && ϕ₁.u⁺ == ϕ₂.u⁺ && ϕ₁.u⁻ == ϕ₂.u⁻)
+end
+function ==(c₁::SystConstants, c₂::SystConstants)
+    return (c₁.L == c₂.L && c₁.γ == c₂.γ && c₁.g⁻² == c₂.g⁻² && c₁.ν == c₂.ν && c₁.f == c₂.f && c₁.β == c₂.β)
+end
+function ==(ψ₁::State, ψ₂::State)
+    check = ψ₁.consts == ψ₂.consts
+    L = ψ₁.consts.L
+    for h_pos=1:L, v_pos=1:L
+        check = check && ψ₁.lattice[v_pos,h_pos] == ψ₂.lattice[v_pos,h_pos]
+    end
+    return check
+end
+
+# -------------------------------------------------------------------------------------------------
 # LatticeSite outer constructor
 # Initializes a lattice site that has radom values
 function LatticeSite()
@@ -218,6 +238,43 @@ function save(ψ::State, filename::AbstractString, mode::AbstractString="w")
         write(f, "end\n")
     end
     return 1
+end
+
+# -------------------------------------------------------------------------------------------------
+# The converse of the save function above: takes a text file where a state is saved and converts
+# it into a State object which it return.
+function readState(filename::AbstractString)
+    open(filename, "r") do file
+        line = readline(file)
+        if line != "state start"
+            throw(DomainError())
+        end
+        L = parse(Int64, readline(file))
+        γ = parse(Float64, readline(file))
+        g⁻² = parse(Float64, readline(file))
+        ν = parse(Float64, readline(file))
+        f = parse(Float64, readline(file))
+        β = parse(Float64, readline(file))
+        syst = SystConstants(L, γ, g⁻², ν, f, β)
+        
+        lattice = Array{LatticeSite, 2}(L,L)
+        for h_pos = 1:L, v_pos = 1:L
+            ϕ_values = split(readline(file), ":")
+            A₁ = parse(Float64, ϕ_values[1])
+            A₂ = parse(Float64, ϕ_values[2])
+            θ⁺ = parse(Float64, ϕ_values[3])
+            θ⁻ = parse(Float64, ϕ_values[4])
+            u⁺ = parse(Float64, ϕ_values[5])
+            u⁻ = parse(Float64, ϕ_values[6])
+            lattice[v_pos,h_pos] = LatticeSite([A₁, A₂], θ⁺, θ⁻, u⁺, u⁻)
+        end
+        
+        nbl = latticeNeighbors(lattice,L)
+        nnbl = latticeNextNeighbors(lattice,L)
+        nnnbl = latticeNNNeighbors(lattice,L)
+        
+        return State(lattice, syst, nbl, nnbl, nnnbl)
+    end
 end
 
 ####################################################################################################
