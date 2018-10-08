@@ -1,0 +1,15 @@
+Added function for parallel thermalisation of N initial states.
+
+We thermalise one high T (reference) state along with N-1 low T (worker) states. Proper thermalisation is checked
+by comparing the energy of the worker states with the reference state. We require that the average energy difference
+between the worker and reference states is less than some number (typically 0.1) times the standard deviation over
+an interval of some MCS (4000), to achieve thermalisation.
+
+Testing:    -Seems to be working fine for lattices up to L=80 (havent tested higher)
+            -STD_NUMBER doesn't affect much when it is above 0.1 (the code sometimes struggles below this).
+            -Number of MCS does not rise dramatically with increasing lattice size (typically 10⁴ MCS for the testing 
+             parameters used)
+            -The thermalised (averaged) energies deviates (within the workers and reference state). However each energy
+             doesn't consequently increase or decrease over the average interval, and over several simulation they change role 
+             (i.e. the reference state can end up both abit below or above the worker states). This indicates thermalisation,
+             but the MC dynamics are quite slow (more than 4000MCS required to get good averages).       
