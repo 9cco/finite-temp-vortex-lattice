@@ -355,7 +355,7 @@ function parallelThermalisation!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
         
         #Check if for all processes dE < 0, and get largest step that it happens for
         for i=t₀+1:T+1
-            for w=1:3
+            for w=1:NWS
                 if ( E_ref[i] - E_w[w,i] <= 0.0 && E_check_workers[w] == 0 )
                     E_check_workers[w] = i
                     println("Worker $(w) initially thermalised after $(i) steps")
