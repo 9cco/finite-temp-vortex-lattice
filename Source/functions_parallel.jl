@@ -178,6 +178,7 @@ end
 # Same as above, but now prints progress to STDOUT
 function sfvlaMeasure!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Controls, M::Int64,
         Δt::Int64, option::AbstractString)
+	PROG_NUM = 10		# Adjusts the number of times progress is reported while measuring.
     L = ψ.consts.L
     L_k = size(ks, 1)
     # Setup measurement storage
@@ -195,12 +196,12 @@ function sfvlaMeasure!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Contr
     end
     
     # For each measurement
+	prog_int = floor(Int64, M/PROG_NUM)
     for m = 2:M
-		this_pr = Int(round(m/M*100,0))
-		if this_pr % 10 == 0
-        	println("Measurement progress: $(this_pr)%")
+		if m % prog_int == 0
+			println("Measurement progress: $(Int(round(m/M*100,0)))%")
+        	flush(STDOUT)
 		end
-        flush(STDOUT)
         
         # Take Δt MCS
         for i = 1:Δt
@@ -480,6 +481,7 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
         end
 
         if checkThermalization(E_ref/N, E_w./N, NWS, tₛ, T,STD_NUMBER)
+			println("Final thermalization time: $(T+adjustment_mcs)")
             return(T+adjustment_mcs, E_ref[1:T], E_w[:,1:T], ψ_ref, ψ_w, sim_ref, sim_w)
         end
         tₛ=T + 1

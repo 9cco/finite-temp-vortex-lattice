@@ -4,7 +4,6 @@
 # We also assume that the script is run from a work directory where we can put output
 # files.
 
-tic()
 
 # Setup variables
 #---------------------------------------------------------------------------------------------------
@@ -98,16 +97,19 @@ writeSimulationConstants(syst, sim, M, Δt)
 # Run simulation
 #---------------------------------------------------------------------------------------------------
 
-println("Running simulation..\n\nInitializing states
+println("Running simulation..\n\nThermalizing states from high energy
 --------------------------------------------------------------------------------------")
-(ψ₁, sim₁, ψ₂, sim₂, t₀) = initializeTwoStatesS(syst, sim)
-save(ψ₁, "state1")
-save(ψ₂, "state2")
-ψ_list = parallelMultiplyState(ψ₁, sim₁, t₀)
+
+(t₀, ψ_ref, sim_ref, ψ_w, sim_w) = initializeParallelStatesS(syst, sim)
+# Saving the reference state and the first worker state
+save(ψ_ref, "state_ref")
+save(ψ_w[1], "state_w")
+# Including ψ_ref in the list of states as the last state
+ψ_list = vcat(ψ_w, [ψ_ref])
+
 println("\nMeasuring structure function and vortex lattice
 --------------------------------------------------------------------------------------")
-(av_V⁺, err_V⁺, V⁺, av_V⁻, err_V⁻, V⁻, av_S⁺, err_S⁺, S⁺, av_S⁻, err_S⁻, S⁻) = parallelSFVLA!(k_matrix, ψ_list, sim₁, M, Δt)
+@time (av_V⁺, err_V⁺, V⁺, av_V⁻, err_V⁻, V⁻, av_S⁺, err_S⁺, S⁺, av_S⁻, err_S⁻, S⁻) = parallelSFVLA!(k_matrix, ψ_list, sim_ref, M, Δt)
 plotStructureFunctionVortexLatticeS(av_V⁺, av_V⁻, V⁺[rand(1:M)], V⁻[rand(1:M)], av_S⁺, av_S⁻, k_matrix)
 
 println("\nSimulation finished!  o(〃＾▽＾〃)o\n\nResults are found in \n$(pwd())")
-toc()
