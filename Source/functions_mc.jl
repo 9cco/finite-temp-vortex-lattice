@@ -8,10 +8,11 @@
 function proposeLocalUpdate(ϕ::LatticeSite, sim::Controls)
     
     u⁺ = mod(ϕ.u⁺ + rand(Uniform(-sim.umax,sim.umax)),1) # This does not allow u⁺ = 1, is this a problem?
+	u⁻ = mod(ϕ.u⁻ + rand(Uniform(-sim.umax,sim.umax)),1)
     # Construct new configuration at lattice site.
     return LatticeSite([ϕ.A[1]+rand(Uniform(-sim.Amax,sim.Amax)), ϕ.A[2]+rand(Uniform(-sim.Amax,sim.Amax))],
         mod(ϕ.θ⁺ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), mod(ϕ.θ⁻ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), 
-        u⁺, √(1-u⁺^2))
+        u⁺, u⁻)
 end
 
 # --------------------------------------------------------------------------------------------------

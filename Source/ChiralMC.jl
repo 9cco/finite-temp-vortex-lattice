@@ -26,7 +26,7 @@ include("functions_types.jl")
 
 export E, ΔE
 
-include("functions_energy.jl")
+include("functions_symmetric_energy.jl")
 
 export mcSweep!, mcProposalFraction!, mcProposalFraction, mcSweepEn!, mcSweepFrac!, adjustSimConstants!, findEquilibrium
 

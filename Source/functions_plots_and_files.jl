@@ -543,5 +543,94 @@ function initializeTwoStatesS(syst::SystConstants, sim::Controls)
     return (ψ₁, sim₁, ψ₂, sim₂, t₀)
 end
 
+# Similar to above, but now uses parallelThermalization
+function initializeParallelStatesS(syst::SystConstants, sim::Controls)
+	# Parameters
+	PLOT_FRACTION = 0.71
 
+	# Create initial states, reference at random and worker list from corrolation
+	n_workers = nprocs()-1
+	ψ_ref = State(2, syst)
+	ψ_w = [State(1,syst) for i = 1:n_workers]
+
+	# Thermalize these states.
+	println("Thermalizing $(n_workers+1) states")
+	@time t₀, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w = parallelThermalization!(ψ_ref, ψ_w, syst, sim)
+    flush(STDOUT)
+
+	# Plot the last PLOT_FRACTION fraction of the energy intervals
+	N = length(E_ref)
+	tₛ = N - floor(Int64, N*PLOT_FRACTION)
+	int = tₛ:N
+	n_workers == size(E_w,1) || throw(error("ERROR: Somehow the number of workers changed during thermalization"))
+
+	# Converting the misc. energies into an array of arrays of energies
+	energies = Array{Array{Float64, 1}, 1}(n_workers+1)
+	labels = Array{String, 1}(n_workers+1)
+	energies[n_workers+1] = E_ref[int]
+	labels[n_workers+1] = "reference"
+	for w = 1:n_workers
+		energies[w] = E_w[w,int]
+		labels[w] = "worker $(w)"
+	end
+
+	# Plotting the energies of reference and all workers
+	plt = plot(int, energies, label=labels, xlabel="MCS", ylabel="Energy", title="Thermalization energies");
+    savefig(plt, "ini_equi_E_plot.pdf")
+    
+	# Plot energy difference for first worker
+	dE = E_ref[int] - E_w[1,int]
+	plt = plot(1:length(dE), dE, title="Energy difference", xlabel="MCS");
+    savefig(plt, "ini_equi_dE_plot.pdf")
+    
+	ψ₁ = ψ_w[1]
+	ψ₂ = ψ_ref
+	sim₁ = sim_w[1]
+	sim₂ = sim_ref
+    println("Calculating energies and acceptance rates")
+    flush(STDOUT)
+    T = 2000
+    dE = zeros(2T)
+    E₁ = zeros(2T)
+    E₂ = zeros(2T)
+    p₁ = zeros(2T)
+    p₂ = zeros(2T)
+    for i = 1:T
+        E₁[i] = E(ψ₁)
+        E₂[i] = E(ψ₂)
+        dE[i] = E₂[i]-E₁[i]
+        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
+        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
+    end
+    adjustSimConstants!(sim₁, ψ₁)
+    adjustSimConstants!(sim₂, ψ₂)
+    for i = T+1:2T
+        E₁[i] = E(ψ₁)
+        E₂[i] = E(ψ₂)
+        dE[i] = E₂[i]-E₁[i]
+        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
+        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
+    end
+
+	# Making %
+	p₁ = 100 .* p₁
+	p₂ = 100 .* p₂
+
+	println("Saving plots to files")
+
+    # Plotting results
+	x_mcs = (2t₀+1):(2t₀+2T)
+    plt = plot(1:2T, dE, title="Energy difference", xlabel="MCS", xticks=x_mcs);
+    savefig(plt, "ini_extra_dE_plot.pdf")
+    plt = plot(1:2T, E₁, title="Internal energy 1", xlabel="MCS", xticks=x_mcs);
+    savefig(plt, "ini_extra_E1_plot.pdf")
+    plt = plot(1:2T, E₂, title="Internal energy 2", xlabel="MCS", xticks=x_mcs);
+    savefig(plt, "ini_extra_E2_plot.pdf")
+    plt = plot(1:2T, p₁, title="Accept probability 1", xlabel="MCS", ylabel="%", xticks=x_mcs);
+    savefig(plt, "ini_extra_AR1_plot.pdf")
+    plt = plot(1:2T, p₂, title="Accept probability 2", xlabel="MCS", ylabel="%", xticks=x_mcs);
+    savefig(plt, "ini_extra_AR2_plot.pdf")
+    
+	return (t₀, ψ_ref, sim_ref, ψ_w, sim_w)
+end
 

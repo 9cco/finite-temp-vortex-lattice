@@ -424,4 +424,41 @@ function structureFunctionVortexLatticeAvg!{T<:Real}(ks::Array{Array{T, 1}, 2},
     
     return (avV⁺, errV⁺, V⁺, avV⁻, errV⁻, V⁻, avS⁺, errS⁺, S⁺, avS⁻, errS⁻, S⁻)
 end
+###################################################################################################
+#                          Z₂ order parameter and dual gauge stiffness
+#
+###################################################################################################
+#Calculate the local Z₂ order parameter and store the values in Z₂Measure
+function Z₂MeasureLocal!(ψ::State, Z₂Measure::Array{Complex,2})
+    L = ψ.consts.L
+    if (L != size(Z₂Measure,1) || L != size(Z₂Measure,2))
+        error("Domain error in Z₂MeausureLocal()")
+    end
 
+    #Sum over the lattice
+    for i=1:L
+        for j=1:L
+            Z₂Measure[i,j] = exp(im*(ψ.lattice[i,j].θ⁺-ψ.lattice[i,j].θ⁻))
+        end
+    end
+end
+#--------------------------------------------------------------------------------------------------
+#Calculate the fourrier transformed structurefunction for one given k-vector
+function Z₂StructureFunction(k::Array{Float64,1}, ψ::State, Z₂::Array{Complex,2}, 
+        origo_h::Int64, origo_v::Int64, δ_max::Int64)
+    #TODO:Could change this to only sum over sites that are separated by δmax, this could save
+    #comp time when dealing with very large lattices.
+    sumZ₂ = Complex(0)
+    L = ψ.consts.L
+    Z₂mid = Z₂[origo_h, origo_v]
+
+    for h_pos=1:L
+        for v_pos=1:L
+            r=[h_pos-origo_h, v_pos-origo_v]
+            sumZ₂ += Z₂[h_pos, v_pos]*Z₂mid*exp(im*(k⋅r))
+            #We her assume that we get a normalised k/a, and use unit primitive lattice vectors
+            #when calculating kr
+        end
+    end
+    return sumZ₂/L^2
+end
