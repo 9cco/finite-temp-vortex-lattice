@@ -277,6 +277,20 @@ function readState(filename::AbstractString)
     end
 end
 
+# -------------------------------------------------------------------------------------------------
+# Return the average amplitudes in the system.
+function meanAmplitudes(ψ::State)
+	u⁺ = 0.0
+	u⁻ = 0.0
+	L = ψ.consts.L
+	for h_pos = 1:L, v_pos = 1:L
+		u⁺ += ψ.lattice[v_pos, h_pos].u⁺
+		u⁻ += ψ.lattice[v_pos, h_pos].u⁻
+	end
+
+	return u⁺/L^2, u⁻/L^2
+end
+
 ####################################################################################################
 #                            Functions for ::Controls
 #
