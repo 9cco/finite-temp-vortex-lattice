@@ -348,14 +348,14 @@ function firstZero{T<:Real}(E_high::Array{T, 1}, E_low::Array{T,1}, iₛ::Int64,
 end
 
 #--------------------------------------------------------------------------------------------------
-#Thermalises several states simultaneously on multiple cores. One high T state is thermalised
+# Thermalises several states simultaneously on multiple cores. One high T state is thermalised
 # along with (#available cores - 1) low T states, where energies are compared to ensure proper
 # convergence.
 function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystConstants,
         sim::Controls, T::Int64=1000, ex::Float64=1.8, STD_NUMBER::Float64=0.5)
     CUTOFF_MAX::Int64=4000000           #Max number of MCS before the function terminates
     ADJUST_INTERVAL=400                 #Number of MCS between each sim_const adjustment while finding dE<0
-    AVERAGING_INT=3000                 #Similiar for 2nd loop, also the interval that is averaged over
+    AVERAGING_INT_FRAC=1/5                 #Similiar for 2nd loop, also the interval that is averaged over
 
     #Initialisation
     NWS=length(ψ_w)                     #Number of states in ψ_list
@@ -449,7 +449,8 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
     end
 
     tₛ = T+1
-    T = tₛ + AVERAGING_INT - 1
+	averaging_int = ceil(Int64, T*AVERAGING_INT_FRAC)
+    T = tₛ + averaging_int - 1
     #Set this to A_I so that the simulation constants are only updated by energyDynamic at the END of each 
     #iteration in the while loop.
     #Increase simulation time by ADJUST_INT_THERM and try to find an interval with small average dE
@@ -473,9 +474,9 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
         
         # Do MCS to find average
         for w=1:NWS
-			ψ_future_list[w] = @spawn nMCSEnergy(ψ_w[w], sim_w[w], AVERAGING_INT, E_w[w,tₛ-1])
+			ψ_future_list[w] = @spawn nMCSEnergy(ψ_w[w], sim_w[w], averaging_int, E_w[w,tₛ-1])
         end
-		ψ_ref, E_ref[tₛ:T] = nMCSEnergy(ψ_ref, sim_ref, AVERAGING_INT, E_ref[tₛ-1])
+		ψ_ref, E_ref[tₛ:T] = nMCSEnergy(ψ_ref, sim_ref, averaging_int, E_ref[tₛ-1])
         for w=1:NWS
             ψ_w[w], E_w[w,tₛ:T] = fetch(ψ_future_list[w])
         end
@@ -485,7 +486,7 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
             return(T+adjustment_mcs, E_ref[1:T], E_w[:,1:T], ψ_ref, ψ_w, sim_ref, sim_w)
         end
         tₛ=T + 1
-        T = T + AVERAGING_INT - 1
+        T = T + averaging_int - 1
         println("Average too high, increasing simulation time to T = $(T)")
     end
     return -1, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w
