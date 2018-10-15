@@ -548,6 +548,11 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
 	# Parameters
 	PLOT_FRACTION = 0.71
 
+	# Parallel thermalization
+	START_T = 1000 		# Number of MCS to start with
+	EX = 1.8			# Factor to extend by if no dE<0 is found
+	STD_FACTOR = 2.0	# How many standard errors the average have to be within.
+
 	# Create initial states, reference at random and worker list from corrolation
 	n_workers = nprocs()-1
 	ψ_ref = State(2, syst)
@@ -555,7 +560,7 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
 
 	# Thermalize these states.
 	println("Thermalizing $(n_workers+1) states")
-	@time t₀, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w = parallelThermalization!(ψ_ref, ψ_w, syst, sim)
+	@time t₀, tᵢ, Tᵢ, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w = parallelThermalization!(ψ_ref, ψ_w, syst, sim, START_T, EX, STD_FACTOR)
     flush(STDOUT)
 
 	# Plot the last PLOT_FRACTION fraction of the energy intervals
@@ -580,8 +585,13 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
     
 	# Plot energy difference for first worker
 	dE = E_ref[int] - E_w[1,int]
-	plt = plot(1:length(dE), dE, title="Energy difference", xlabel="MCS");
+	plt = plot(int, dE, title="Energy difference", xlabel="MCS");
     savefig(plt, "ini_equi_dE_plot.pdf")
+
+	# Plot energy difference for all workers in averaging interval
+	dE_array = [E_ref[tᵢ:Tᵢ] - E_w[w,tᵢ:Tᵢ] for w = 1:n_workers]
+	plt = plot(tᵢ:Tᵢ, dE_array, title="Energy difference", xlabel="MCS", label=labels[1:n_workers], ylabel="En. diff.")
+	savefig(plt, "ini_equi_dE_avgint_plot.pdf")
     
 	ψ₁ = ψ_w[1]
 	ψ₂ = ψ_ref

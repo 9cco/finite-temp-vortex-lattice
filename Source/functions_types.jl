@@ -291,6 +291,31 @@ function meanAmplitudes(ψ::State)
 	return u⁺/L^2, u⁻/L^2
 end
 
+# -------------------------------------------------------------------------------------------------
+# Return the max and min amplitudes of the two components
+# max(u⁺), min(u⁺), max(u⁻), min(u⁻)
+function maxMinAmplitudes(ψ::State)
+	ϕ = ψ.lattice[1,1]
+	L = ψ.consts.L
+	ex_u⁺ = [ϕ.u⁺, ϕ.u⁺]
+	ex_u⁻ = [ϕ.u⁻, ϕ.u⁻]
+	for h_pos = 1:L, v_pos = 1:L
+		ϕ = ψ.lattice[v_pos,h_pos]
+		if ϕ.u⁺ > ex_u⁺[1]
+			ex_u⁺[1] = ϕ.u⁺
+		elseif ϕ.u⁺ < ex_u⁺[2]
+			ex_u⁺[2] = ϕ.u⁺
+		end
+		if ϕ.u⁻ > ex_u⁻[1]
+			ex_u⁻[1] = ϕ.u⁻
+		elseif
+			ϕ.u⁻ < ex_u⁻[2]
+			ex_u⁻[2] = ϕ.u⁻
+		end
+	end
+	return ex_u⁺[1], ex_u⁺[2], ex_u⁻[1], ex_u⁻[2]
+end
+
 ####################################################################################################
 #                            Functions for ::Controls
 #

@@ -68,7 +68,7 @@ end
 # Check if average from t_start to t_finish is the same in E_workers and E_ref where these
 # arrays are 
 function checkThermalization(E_ref::Array{Float64,1}, E_workers::Array{Float64,2}, n_workers::Int,
-        t_start::Int64, t_end::Int64, STD_NUMBER::Float64=0.1)
+        t_start::Int64, t_end::Int64, STD_NUMBER::Float64=0.5)
     max_av = 0.0
     max_std = 0.0
 
@@ -84,6 +84,8 @@ function checkThermalization(E_ref::Array{Float64,1}, E_workers::Array{Float64,2
 	end
 	for w = 1:n_workers
 		av[w], st[w] = fetch(future_array[w])
+		av[w] = abs(av[w])
+		st[w] = st[w]/√(t_end-t_start+1) # Calculates standard error.
 	end
 
 	# Check if av <= std for all arrays and calculate the worker with the
@@ -101,7 +103,7 @@ function checkThermalization(E_ref::Array{Float64,1}, E_workers::Array{Float64,2
     if thermalized
 		println("Thermalization successful between T = [$(t_start), $(t_end)]")
 		for w = 1:n_workers
-			println("Worker $(w): ΔE = $(abs(av[w])) ± $(st[w])")
+			println("Worker $(w): ΔE = $(av[w]) ± $(st[w])")
 		end
         return true
     else
@@ -355,7 +357,7 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
         sim::Controls, T::Int64=1000, ex::Float64=1.8, STD_NUMBER::Float64=0.5)
     CUTOFF_MAX::Int64=4000000           #Max number of MCS before the function terminates
     ADJUST_INTERVAL=400                 #Number of MCS between each sim_const adjustment while finding dE<0
-    AVERAGING_INT_FRAC=1/5                 #Similiar for 2nd loop, also the interval that is averaged over
+    AVERAGING_INT_FRAC=1/4                 #Similiar for 2nd loop, also the interval that is averaged over
 
     #Initialisation
     NWS=length(ψ_w)                     #Number of states in ψ_list
@@ -438,7 +440,7 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
 			flush(STDOUT)
             if T == CUTOFF_MAX
                 println("Failed to find a point where ΔE <= 0")
-                return (-1, E_ref[1:tₛ], E_w[:,1:tₛ], ψ_ref, ψ_w, sim_ref, sim_w)
+                return (-1, tₛ, T,  E_ref[1:tₛ], E_w[:,1:tₛ], ψ_ref, ψ_w, sim_ref, sim_w)
             end
         else
             tₛ = maximum(E_check_workers)
@@ -449,12 +451,13 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
     end
 
     tₛ = T+1
-	averaging_int = ceil(Int64, T*AVERAGING_INT_FRAC)
+	averaging_int = ceil(Int64, (T+adjustment_mcs)*AVERAGING_INT_FRAC)
     T = tₛ + averaging_int - 1
     #Set this to A_I so that the simulation constants are only updated by energyDynamic at the END of each 
     #iteration in the while loop.
     #Increase simulation time by ADJUST_INT_THERM and try to find an interval with small average dE
     while T<CUTOFF_MAX
+		println("Checking average ∈ [tₛ, T]") 
 
         #Start by updating the simulation constants
         for w=1:NWS
@@ -483,11 +486,11 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
 
         if checkThermalization(E_ref/N, E_w./N, NWS, tₛ, T,STD_NUMBER)
 			println("Final thermalization time: $(T+adjustment_mcs)")
-            return(T+adjustment_mcs, E_ref[1:T], E_w[:,1:T], ψ_ref, ψ_w, sim_ref, sim_w)
+            return(T+adjustment_mcs, tₛ, T, E_ref[1:T], E_w[:,1:T], ψ_ref, ψ_w, sim_ref, sim_w)
         end
         tₛ=T + 1
         T = T + averaging_int - 1
         println("Average too high, increasing simulation time to T = $(T)")
     end
-    return -1, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w
+    return -1, tₛ, T, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w
 end
