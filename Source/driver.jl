@@ -87,12 +87,6 @@ println("\n\n
 \nAll parameters seems to be in order, we are ready to begin\n
                        ｡･:*:･ﾟ★,｡･:*:･ﾟ☆ very d(*^▽^*)b good ｡･:*:･ﾟ★,｡･:*:･ﾟ☆\n\n")
 
-# Setup files
-#---------------------------------------------------------------------------------------------------
-
-println("Writing system:\ng\t=\t$(g)\nν\t=\t$(ν)\nH\t=\t$(H)\nL\t=\t$(L)\nT\t=\t$(T)")
-println("γ\t=\t$(γ)\nM\t=\t$(M)\nΔt\t=\t$(Δt)\nf\t=\t$(f)")
-writeSimulationConstants(syst, sim, M, Δt)
 
 # Run simulation
 #---------------------------------------------------------------------------------------------------
@@ -100,16 +94,33 @@ writeSimulationConstants(syst, sim, M, Δt)
 println("Running simulation..\n\nThermalizing states from high energy
 --------------------------------------------------------------------------------------")
 
-(t₀, ψ_ref, sim_ref, ψ_w, sim_w) = initializeParallelStatesS(syst, sim)
+@time (t₀, ψ_ref, sim_ref, ψ_w, sim_w) = initializeParallelStatesS(syst, sim)
+println("Initialization steps finished. Thermalization plots written to file.")
+
+av_u⁺, av_u⁻ = meanAmplitudes(ψ_ref)
+println("Average amplitude of thermalized reference-state: \n⟨u⁺⟩ = $(av_u⁺)\n⟨u⁻⟩ = $(av_u⁻)")
+max_u⁺, min_u⁺, max_u⁻, min_u⁻ = maxMinAmplitudes(ψ_ref)
+println("Amplitudes of reference state:\n⟨u⁺⟩ =\t$(av_u⁺)\t\t⟨u⁻⟩ =\t$(av_u⁻)\nmax(u⁺) =\t$(max_u⁺)\t\tmax(u⁻) =\t$(max_u⁻)
+min(u⁺) =\t$(min_u⁺)\t\tmin(u⁻) =\t$(min_u⁻)")
+
+# Setup files
+#---------------------------------------------------------------------------------------------------
+
+println("Writing system:\ng\t=\t$(g)\nν\t=\t$(ν)\nH\t=\t$(H)\nL\t=\t$(L)\nT\t=\t$(T)")
+println("γ\t=\t$(γ)\nM\t=\t$(M)\nΔt\t=\t$(t₀)\nf\t=\t$(f)")
+println("Note: We use t₀ as Δt and ignore the script variable")
+writeSimulationConstants(syst, sim, M, t₀)
+
 # Saving the reference state and the first worker state
 save(ψ_ref, "state_ref")
 save(ψ_w[1], "state_w")
 # Including ψ_ref in the list of states as the last state
 ψ_list = vcat(ψ_w, [ψ_ref])
 
+
 println("\nMeasuring structure function and vortex lattice
 --------------------------------------------------------------------------------------")
-@time (av_V⁺, err_V⁺, V⁺, av_V⁻, err_V⁻, V⁻, av_S⁺, err_S⁺, S⁺, av_S⁻, err_S⁻, S⁻) = parallelSFVLA!(k_matrix, ψ_list, sim_ref, M, Δt)
+@time (av_V⁺, err_V⁺, V⁺, av_V⁻, err_V⁻, V⁻, av_S⁺, err_S⁺, S⁺, av_S⁻, err_S⁻, S⁻) = parallelSFVLA!(k_matrix, ψ_list, sim_ref, M, t₀)
 plotStructureFunctionVortexLatticeS(av_V⁺, av_V⁻, V⁺[rand(1:M)], V⁻[rand(1:M)], av_S⁺, av_S⁻, k_matrix)
 
 println("\nSimulation finished!  o(〃＾▽＾〃)o\n\nResults are found in \n$(pwd())")

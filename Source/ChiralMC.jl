@@ -21,7 +21,7 @@ export checkNeighbors
 
 include("functions_neighbors.jl")
 
-export save, checkState, set!
+export save, checkState, set!, meanAmplitudes
 include("functions_types.jl")
 
 export E, ΔE

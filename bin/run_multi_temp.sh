@@ -20,7 +20,7 @@ NU="0.3"
 H="-0.72"
 L="80"
 GAMMA="1.0"
-M="2000"
+M="300"
 dt="5000"
 
 # For each of the values in TEMPS, we make a new name
@@ -29,7 +29,7 @@ declare -a names
 t_len=${#TEMPS[@]}
 for (( i=1; i<=${t_len}; i++ ));
 do
-	names+=("sfvl_low_$i")
+	names+=("sfvl3de_$i")
 done
 
 # For each of the temps we create a separate temp_single_job.pbs script
