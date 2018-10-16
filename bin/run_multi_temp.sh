@@ -13,7 +13,7 @@ error_exit()
 
 
 # First we need to input the temperature range
-TEMPS=(0.13 0.11 0.1 0.09)
+TEMPS=(0.11033 0.11037 0.1104 0.11043 0.11045 0.11047)
 # Then the other variables are set as before
 g="0.3"
 NU="0.3"
