@@ -6,9 +6,9 @@
 # --------------------------------------------------------------------------------------------------
 # Given a lattice site ϕ, propose a new lattice site with values in intervals around the existing ones.
 function proposeLocalUpdate(ϕ::LatticeSite, sim::Controls)
-    
-    u⁺ = mod(ϕ.u⁺ + rand(Uniform(-sim.umax,sim.umax)),1) # This does not allow u⁺ = 1, is this a problem?
-	u⁻ = mod(ϕ.u⁻ + rand(Uniform(-sim.umax,sim.umax)),1)
+    UMAX::Int64 = 2
+    u⁺ = mod(ϕ.u⁺ + rand(Uniform(-sim.umax,sim.umax)), UMAX) # This does not allow u⁺ = UMAX, is this a problem?
+	u⁻ = mod(ϕ.u⁻ + rand(Uniform(-sim.umax,sim.umax)), UMAX)
     # Construct new configuration at lattice site.
     return LatticeSite([ϕ.A[1]+rand(Uniform(-sim.Amax,sim.Amax)), ϕ.A[2]+rand(Uniform(-sim.Amax,sim.Amax))],
         mod(ϕ.θ⁺ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), mod(ϕ.θ⁻ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), 

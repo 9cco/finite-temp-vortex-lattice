@@ -308,8 +308,7 @@ function maxMinAmplitudes(ψ::State)
 		end
 		if ϕ.u⁻ > ex_u⁻[1]
 			ex_u⁻[1] = ϕ.u⁻
-		elseif
-			ϕ.u⁻ < ex_u⁻[2]
+		elseif ϕ.u⁻ < ex_u⁻[2]
 			ex_u⁻[2] = ϕ.u⁻
 		end
 	end
