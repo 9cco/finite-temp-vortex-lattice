@@ -29,7 +29,7 @@ declare -a names
 t_len=${#TEMPS[@]}
 for (( i=1; i<=${t_len}; i++ ));
 do
-	names+=("sfvl3de_$i")
+	names+=("sfvl5de_$i")
 done
 
 # For each of the temps we create a separate temp_single_job.pbs script
