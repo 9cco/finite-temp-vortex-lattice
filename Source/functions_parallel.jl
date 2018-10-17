@@ -85,15 +85,17 @@ function checkThermalization(E_ref::Array{Float64,1}, E_workers::Array{Float64,2
 	for w = 1:n_workers
 		av[w], st[w] = fetch(future_array[w])
 		av[w] = abs(av[w])
-		st[w] = st[w]/√(t_end-t_start+1) # Calculates standard error.
+#		st[w] = st[w]/√(t_end-t_start+1) # Calculates standard error.
 	end
 
 	# Check if av <= std for all arrays and calculate the worker with the
 	# maximum average
 	thermalized = true
+    therm_w = [true for i = 1:n_workers]
 	for w=1:n_workers
 		if av[w] > st[w]*STD_NUMBER
 			thermalized = false
+            therm_w[w] = false
 		elseif av[w] > max_av
 			max_av = av[w]
 			max_std = st[w]
@@ -107,6 +109,12 @@ function checkThermalization(E_ref::Array{Float64,1}, E_workers::Array{Float64,2
 		end
         return true
     else
+        for w=1:n_workers
+            if therm_w[w] == false
+                println("Problem for worker $(w): ΔE = $(av[w]) ± $(st[w])")
+                break
+            end
+        end
         return false
     end
 end
@@ -358,6 +366,7 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
     CUTOFF_MAX::Int64=4000000           #Max number of MCS before the function terminates
     ADJUST_INTERVAL=400                 #Number of MCS between each sim_const adjustment while finding dE<0
     AVERAGING_INT_FRAC=1/4                 #Similiar for 2nd loop, also the interval that is averaged over
+    AVERAGING_INT_EX = 1.4
 
     #Initialisation
     NWS=length(ψ_w)                     #Number of states in ψ_list
@@ -444,7 +453,7 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
             end
         else
             tₛ = maximum(E_check_workers)
-            println("All workers initially thermalized after $(tₛ) steps")
+            println("All workers initially thermalized after $(T) steps")
 			flush(STDOUT)
             thermalized_init = true
         end
@@ -484,13 +493,17 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
             ψ_w[w], E_w[w,tₛ:T] = fetch(ψ_future_list[w])
         end
 
-        if checkThermalization(E_ref, E_w, NWS, tₛ, T,STD_NUMBER)
+        if checkThermalization(E_ref./N, E_w./N, NWS, tₛ, T,STD_NUMBER)
 			println("Final thermalization time: $(T+adjustment_mcs)")
             return(T+adjustment_mcs, tₛ, T, E_ref[1:T], E_w[:,1:T], ψ_ref, ψ_w, sim_ref, sim_w)
         end
+        
+        # If we didn't find thermalization in this interval, we extend the interval by a fraction and go
+        # to this new interval.
+        averaging_int = ceil(Int64, averaging_int*AVERAGING_INT_EX)
         tₛ=T + 1
-        T = T + averaging_int - 1
-        println("Average too high, increasing simulation time to T = $(T)")
+        T = tₛ + averaging_int - 1
+        println("Increasing simulation time to T = $(T)")
     end
     return -1, tₛ, T, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w
 end

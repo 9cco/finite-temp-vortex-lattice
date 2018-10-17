@@ -98,9 +98,8 @@ println("Running simulation..\n\nThermalizing states from high energy
 println("Initialization steps finished. Thermalization plots written to file.")
 
 av_u⁺, av_u⁻ = meanAmplitudes(ψ_ref)
-println("Average amplitude of thermalized reference-state: \n⟨u⁺⟩ = $(av_u⁺)\n⟨u⁻⟩ = $(av_u⁻)")
 max_u⁺, min_u⁺, max_u⁻, min_u⁻ = maxMinAmplitudes(ψ_ref)
-println("Amplitudes of reference state:\n⟨u⁺⟩ =\t$(av_u⁺)\t\t⟨u⁻⟩ =\t$(av_u⁻)\nmax(u⁺) =\t$(max_u⁺)\t\tmax(u⁻) =\t$(max_u⁻)
+println("Amplitudes of reference state:\n⟨u⁺⟩ =\t$(av_u⁺)\t\t\t⟨u⁻⟩ =\t$(av_u⁻)\nmax(u⁺) =\t$(max_u⁺)\t\tmax(u⁻) =\t$(max_u⁻)
 min(u⁺) =\t$(min_u⁺)\t\tmin(u⁻) =\t$(min_u⁻)")
 
 # Setup files
