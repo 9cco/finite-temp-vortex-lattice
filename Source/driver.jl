@@ -8,6 +8,9 @@
 # Setup variables
 #---------------------------------------------------------------------------------------------------
 
+#const DT_MAX = 100000
+const THERM_FRAC = 1/10                 # The fraction the thermalization time is multiplied by to
+                                        # get time between measurements Δt
 # Go through argument list and check that we only have numbers
 const variables = ["g", "ν", "H", "L", "T", "γ", "M", "Δt"]
 @everywhere const two_pi = 2π
@@ -42,7 +45,7 @@ L = parse(Float64, ARGS[4])
 T = parse(Float64, ARGS[5])
 γ = parse(Float64, ARGS[6])
 M = parse(Int64, ARGS[7])
-Δt = parse(Int64, ARGS[8])
+Δt = parse(Int64, ARGS[8])      # Re-interpreted as the maximum value Δt can have.
 
 # Calculate remaining parameters
 
@@ -87,12 +90,6 @@ println("\n\n
 \nAll parameters seems to be in order, we are ready to begin\n
                        ｡･:*:･ﾟ★,｡･:*:･ﾟ☆ very d(*^▽^*)b good ｡･:*:･ﾟ★,｡･:*:･ﾟ☆\n\n")
 
-# Setup files
-#---------------------------------------------------------------------------------------------------
-
-println("Writing system:\ng\t=\t$(g)\nν\t=\t$(ν)\nH\t=\t$(H)\nL\t=\t$(L)\nT\t=\t$(T)")
-println("γ\t=\t$(γ)\nM\t=\t$(M)\nΔt\t=\t$(Δt)\nf\t=\t$(f)")
-writeSimulationConstants(syst, sim, M, Δt)
 
 # Run simulation
 #---------------------------------------------------------------------------------------------------
@@ -100,12 +97,29 @@ writeSimulationConstants(syst, sim, M, Δt)
 println("Running simulation..\n\nThermalizing states from high energy
 --------------------------------------------------------------------------------------")
 
-(t₀, ψ_ref, sim_ref, ψ_w, sim_w) = initializeParallelStatesS(syst, sim)
+@time (t₀, ψ_ref, sim_ref, ψ_w, sim_w) = initializeParallelStatesS(syst, sim)
+println("Initialization steps finished. Thermalization plots written to file.")
+
+# Changed from original behavior: use t₀ to determine Δt
+Δt = min(Δt, ceil(Int64, t₀*THERM_FRAC))
+av_u⁺, av_u⁻ = meanAmplitudes(ψ_ref)
+max_u⁺, min_u⁺, max_u⁻, min_u⁻ = maxMinAmplitudes(ψ_ref)
+println("Amplitudes of reference state:\n⟨u⁺⟩ =\t$(av_u⁺)\t\t\t⟨u⁻⟩ =\t$(av_u⁻)\nmax(u⁺) =\t$(max_u⁺)\t\tmax(u⁻) =\t$(max_u⁻)
+min(u⁺) =\t$(min_u⁺)\t\tmin(u⁻) =\t$(min_u⁻)")
+
+# Setup files
+#---------------------------------------------------------------------------------------------------
+
+println("Writing system:\ng\t=\t$(g)\nν\t=\t$(ν)\nH\t=\t$(H)\nL\t=\t$(L)\nT\t=\t$(T)")
+println("γ\t=\t$(γ)\nM\t=\t$(M)\nt₀\t=\t$(t₀)\nΔt\t=\t$(Δt)\nf\t=\t$(f)")
+writeSimulationConstants(syst, sim, M, t₀, Δt)
+
 # Saving the reference state and the first worker state
 save(ψ_ref, "state_ref")
 save(ψ_w[1], "state_w")
 # Including ψ_ref in the list of states as the last state
 ψ_list = vcat(ψ_w, [ψ_ref])
+
 
 println("\nMeasuring structure function and vortex lattice
 --------------------------------------------------------------------------------------")

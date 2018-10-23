@@ -299,7 +299,7 @@ end
 
 # -----------------------------------------------------------------------------------------------------------
 # In the current directory, writes the current system and simulations constants to a file system_values.data
-function writeSimulationConstants(syst::SystConstants, sim::Controls, M::Int64, Δt::Int64, 
+function writeSimulationConstants(syst::SystConstants, sim::Controls, M::Int64, t₀::Int64, Δt::Int64, 
         filename::AbstractString = "system_values.data")
     open(filename, "w") do f
         write(f, "L $(syst.L)\n")
@@ -314,6 +314,7 @@ function writeSimulationConstants(syst::SystConstants, sim::Controls, M::Int64, 
         write(f, "SIM_THETA_MAX $(sim.θmax)\n")
         write(f, "SIM_UMAX $(sim.umax)\n")
         write(f, "SIM_AMAX $(sim.Amax)\n")
+        write(f, "THERM_T $(t₀)\n")
     end
 end
 # -----------------------------------------------------------------------------------------------------------
@@ -547,6 +548,12 @@ end
 function initializeParallelStatesS(syst::SystConstants, sim::Controls)
 	# Parameters
 	PLOT_FRACTION = 0.71
+    PLOT_DE = 1e3
+
+	# Parallel thermalization
+	START_T = 1000 		# Number of MCS to start with
+	EX = 1.8			# Factor to extend by if no dE<0 is found
+	STD_FACTOR = 0.5	# How many standard errors the average have to be within.
 
 	# Create initial states, reference at random and worker list from corrolation
 	n_workers = nprocs()-1
@@ -555,12 +562,25 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
 
 	# Thermalize these states.
 	println("Thermalizing $(n_workers+1) states")
-	@time t₀, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w = parallelThermalization!(ψ_ref, ψ_w, syst, sim)
+	@time t₀, tᵢ, Tᵢ, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w = parallelThermalization!(ψ_ref, ψ_w, syst, sim, START_T, EX, STD_FACTOR)
     flush(STDOUT)
+    if t₀ == -1
+        throw(error("ERROR: Could not thermalize states."))
+    end
+
+	N = length(E_ref)
+    dE_array = [E_ref - E_w[w,:] for w = 1:n_workers]
+    # Plot from the point where the ref. energy and first worker is within PLOT_DE
+    tₛ = 1
+    for i = 1:N
+        if abs(dE_array[1][i]) < PLOT_FRACTION
+            tₛ = i
+            break
+        end
+    end
 
 	# Plot the last PLOT_FRACTION fraction of the energy intervals
-	N = length(E_ref)
-	tₛ = N - floor(Int64, N*PLOT_FRACTION)
+    #tₛ = min(ceil(Int64, EX*START_T), N - floor(Int64, N*PLOT_FRACTION))
 	int = tₛ:N
 	n_workers == size(E_w,1) || throw(error("ERROR: Somehow the number of workers changed during thermalization"))
 
@@ -573,15 +593,21 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
 		energies[w] = E_w[w,int]
 		labels[w] = "worker $(w)"
 	end
+    labels = reshape(labels, (1, n_workers+1))
 
 	# Plotting the energies of reference and all workers
 	plt = plot(int, energies, label=labels, xlabel="MCS", ylabel="Energy", title="Thermalization energies");
     savefig(plt, "ini_equi_E_plot.pdf")
     
 	# Plot energy difference for first worker
-	dE = E_ref[int] - E_w[1,int]
-	plt = plot(1:length(dE), dE, title="Energy difference", xlabel="MCS");
+    plt = plot(int, dE_array[1][int], title="Energy difference", xlabel="MCS");
     savefig(plt, "ini_equi_dE_plot.pdf")
+
+	# Plot energy difference for all workers in averaging interval
+    avg_int = tᵢ:Tᵢ
+    dE_array = [dE_array[w][avg_int] for w = 1:n_workers]
+	plt = plot(tᵢ:Tᵢ, dE_array, title="dE, average interval", xlabel="MCS", label=labels[1:n_workers], ylabel="En. diff.")
+	savefig(plt, "ini_equi_dE_avgint_plot.pdf")
     
 	ψ₁ = ψ_w[1]
 	ψ₂ = ψ_ref
@@ -622,14 +648,10 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
 	x_mcs = (2t₀+1):(2t₀+2T)
     plt = plot(1:2T, dE, title="Energy difference", xlabel="MCS", xticks=x_mcs);
     savefig(plt, "ini_extra_dE_plot.pdf")
-    plt = plot(1:2T, E₁, title="Internal energy 1", xlabel="MCS", xticks=x_mcs);
-    savefig(plt, "ini_extra_E1_plot.pdf")
-    plt = plot(1:2T, E₂, title="Internal energy 2", xlabel="MCS", xticks=x_mcs);
-    savefig(plt, "ini_extra_E2_plot.pdf")
-    plt = plot(1:2T, p₁, title="Accept probability 1", xlabel="MCS", ylabel="%", xticks=x_mcs);
-    savefig(plt, "ini_extra_AR1_plot.pdf")
-    plt = plot(1:2T, p₂, title="Accept probability 2", xlabel="MCS", ylabel="%", xticks=x_mcs);
-    savefig(plt, "ini_extra_AR2_plot.pdf")
+    plt = plot(1:2T, [E₁,E₂], title="Internal energies", xlabel="MCS", xticks=x_mcs);
+    savefig(plt, "ini_extra_E_plot.pdf")
+    plt = plot(1:2T, [p₁,p₂], title="Accept probabilities", xlabel="MCS", ylabel="%", xticks=x_mcs);
+    savefig(plt, "ini_extra_AR_plot.pdf")
     
 	return (t₀, ψ_ref, sim_ref, ψ_w, sim_w)
 end

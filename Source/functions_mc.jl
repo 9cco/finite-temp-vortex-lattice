@@ -6,9 +6,9 @@
 # --------------------------------------------------------------------------------------------------
 # Given a lattice site ϕ, propose a new lattice site with values in intervals around the existing ones.
 function proposeLocalUpdate(ϕ::LatticeSite, sim::Controls)
-    
-    u⁺ = mod(ϕ.u⁺ + rand(Uniform(-sim.umax,sim.umax)),1) # This does not allow u⁺ = 1, is this a problem?
-	u⁻ = mod(ϕ.u⁻ + rand(Uniform(-sim.umax,sim.umax)),1)
+    UMAX::Int64 = 2
+    u⁺ = mod(ϕ.u⁺ + rand(Uniform(-sim.umax,sim.umax)), UMAX) # This does not allow u⁺ = UMAX, is this a problem?
+	u⁻ = mod(ϕ.u⁻ + rand(Uniform(-sim.umax,sim.umax)), UMAX)
     # Construct new configuration at lattice site.
     return LatticeSite([ϕ.A[1]+rand(Uniform(-sim.Amax,sim.Amax)), ϕ.A[2]+rand(Uniform(-sim.Amax,sim.Amax))],
         mod(ϕ.θ⁺ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), mod(ϕ.θ⁻ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), 
@@ -28,10 +28,10 @@ function metropolisHastingUpdate!(ψ::State, pos::Array{Int64,1}, sim::Controls)
     δE = ΔE(ϕ′, ϕ, ψ.nb[pos...], ψ.nnb[pos...], ψ.nnnb[pos...], pos[2], ψ.consts)
     
     # Create random number ran ∈ (0,1].
-    ran = rand()
-    if ran==0
-        ran=1
-    end
+    ran = 1-rand()
+#    if ran==0.0
+#        ran=1.0
+#    end
     
     # Update state with probability min(1, e^{-β⋅δE})
     # and return the energy of final state regardless of whether it gets updated or not.

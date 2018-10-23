@@ -68,7 +68,7 @@ end
 # Check if average from t_start to t_finish is the same in E_workers and E_ref where these
 # arrays are 
 function checkThermalization(E_ref::Array{Float64,1}, E_workers::Array{Float64,2}, n_workers::Int,
-        t_start::Int64, t_end::Int64, STD_NUMBER::Float64=0.1)
+        t_start::Int64, t_end::Int64, STD_NUMBER::Float64=3.0)
     max_av = 0.0
     max_std = 0.0
 
@@ -84,14 +84,18 @@ function checkThermalization(E_ref::Array{Float64,1}, E_workers::Array{Float64,2
 	end
 	for w = 1:n_workers
 		av[w], st[w] = fetch(future_array[w])
+		av[w] = abs(av[w])
+#		st[w] = st[w]/√(t_end-t_start+1) # Calculates standard error.
 	end
 
 	# Check if av <= std for all arrays and calculate the worker with the
 	# maximum average
 	thermalized = true
+    therm_w = [true for i = 1:n_workers]
 	for w=1:n_workers
 		if av[w] > st[w]*STD_NUMBER
-			thermlized = false
+			thermalized = false
+            therm_w[w] = false
 		elseif av[w] > max_av
 			max_av = av[w]
 			max_std = st[w]
@@ -101,10 +105,16 @@ function checkThermalization(E_ref::Array{Float64,1}, E_workers::Array{Float64,2
     if thermalized
 		println("Thermalization successful between T = [$(t_start), $(t_end)]")
 		for w = 1:n_workers
-			println("Worker $(w): ΔE = $(abs(av[w])) ± $(st[w])")
+			println("Worker $(w): ΔE = $(av[w]) ± $(st[w])")
 		end
         return true
     else
+        for w=1:n_workers
+            if therm_w[w] == false
+                println("Problem for worker $(w): ΔE = $(av[w]) ± $(st[w])")
+                break
+            end
+        end
         return false
     end
 end
@@ -251,7 +261,7 @@ function parallelSFVLA!{T<:Real}(ks::Array{Array{T, 1}, 2},
     futures = [Future() for i=1:(np-1)]
     
     println("Starting $(M) measurements on $(np) processes doing max $(M_min + Int(ceil(nw/np))) measurements each
-on a $(L)×$(L) system.")
+on a $(L)×$(L) system, corresponding to $((M_min+ceil(Int64, nw/np))*Δt) MCS pr. process")
     
     # Start +1 workers
     for i = 1:nw
@@ -348,14 +358,15 @@ function firstZero{T<:Real}(E_high::Array{T, 1}, E_low::Array{T,1}, iₛ::Int64,
 end
 
 #--------------------------------------------------------------------------------------------------
-#Thermalises several states simultaneously on multiple cores. One high T state is thermalised
+# Thermalises several states simultaneously on multiple cores. One high T state is thermalised
 # along with (#available cores - 1) low T states, where energies are compared to ensure proper
 # convergence.
 function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystConstants,
         sim::Controls, T::Int64=1000, ex::Float64=1.8, STD_NUMBER::Float64=0.5)
-    CUTOFF_MAX::Int64=4000000           #Max number of MCS before the function terminates
+    CUTOFF_MAX::Int64=10000000           #Max number of MCS before the function terminates
     ADJUST_INTERVAL=400                 #Number of MCS between each sim_const adjustment while finding dE<0
-    AVERAGING_INT=3000                 #Similiar for 2nd loop, also the interval that is averaged over
+    AVERAGING_INT_FRAC=1/4                 #Similiar for 2nd loop, also the interval that is averaged over
+    AVERAGING_INT_EX = 1.4
 
     #Initialisation
     NWS=length(ψ_w)                     #Number of states in ψ_list
@@ -438,22 +449,25 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
 			flush(STDOUT)
             if T == CUTOFF_MAX
                 println("Failed to find a point where ΔE <= 0")
-                return (-1, E_ref[1:tₛ], E_w[:,1:tₛ], ψ_ref, ψ_w, sim_ref, sim_w)
+                return (-1, tₛ, T,  E_ref[1:tₛ], E_w[:,1:tₛ], ψ_ref, ψ_w, sim_ref, sim_w)
             end
         else
             tₛ = maximum(E_check_workers)
-            println("All workers initially thermalized after $(tₛ) steps")
+            println("All workers initially thermalized after $(T) steps")
 			flush(STDOUT)
             thermalized_init = true
         end
     end
 
     tₛ = T+1
-    T = tₛ + AVERAGING_INT - 1
+	averaging_int = ceil(Int64, (T+adjustment_mcs)*AVERAGING_INT_FRAC)
+    T = tₛ + averaging_int - 1
     #Set this to A_I so that the simulation constants are only updated by energyDynamic at the END of each 
     #iteration in the while loop.
     #Increase simulation time by ADJUST_INT_THERM and try to find an interval with small average dE
     while T<CUTOFF_MAX
+		println("Checking average ∈ [$tₛ, $T]")
+        flush(STDOUT)
 
         #Start by updating the simulation constants
         for w=1:NWS
@@ -473,20 +487,24 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
         
         # Do MCS to find average
         for w=1:NWS
-			ψ_future_list[w] = @spawn nMCSEnergy(ψ_w[w], sim_w[w], AVERAGING_INT, E_w[w,tₛ-1])
+			ψ_future_list[w] = @spawn nMCSEnergy(ψ_w[w], sim_w[w], averaging_int, E_w[w,tₛ-1])
         end
-		ψ_ref, E_ref[tₛ:T] = nMCSEnergy(ψ_ref, sim_ref, AVERAGING_INT, E_ref[tₛ-1])
+		ψ_ref, E_ref[tₛ:T] = nMCSEnergy(ψ_ref, sim_ref, averaging_int, E_ref[tₛ-1])
         for w=1:NWS
             ψ_w[w], E_w[w,tₛ:T] = fetch(ψ_future_list[w])
         end
 
-        if checkThermalization(E_ref/N, E_w./N, NWS, tₛ, T,STD_NUMBER)
+        if checkThermalization(E_ref, E_w, NWS, tₛ, T,STD_NUMBER)
 			println("Final thermalization time: $(T+adjustment_mcs)")
-            return(T+adjustment_mcs, E_ref[1:T], E_w[:,1:T], ψ_ref, ψ_w, sim_ref, sim_w)
+            return(T+adjustment_mcs, tₛ, T, E_ref[1:T], E_w[:,1:T], ψ_ref, ψ_w, sim_ref, sim_w)
         end
+        
+        # If we didn't find thermalization in this interval, we extend the interval by a fraction and go
+        # to this new interval.
+        averaging_int = ceil(Int64, averaging_int*AVERAGING_INT_EX)
         tₛ=T + 1
-        T = T + AVERAGING_INT - 1
-        println("Average too high, increasing simulation time to T = $(T)")
+        T = tₛ + averaging_int - 1
+        println("Increasing simulation time to T = $(T)")
     end
-    return -1, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w
+    return -1, tₛ, CUTOFF_MAX, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w
 end

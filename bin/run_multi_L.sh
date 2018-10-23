@@ -13,28 +13,28 @@ error_exit()
 
 
 # First we need to input the temperature range
-TEMPS=(0.11048 0.11049 0.1105 0.11051 0.11055 0.1106 0.2)
+T="0.07"
 # Then the other variables are set as before
 g="0.3"
 NU="0.3"
 H="-0.72"
-L="56"
+LS=(70 64 46 36 32)
 GAMMA="1.0"
 M="300"
-dt="5000"
+dt="100000"
 
 # For each of the values in TEMPS, we make a new name
 declare -a IDS
 declare -a names
-t_len=${#TEMPS[@]}
-for (( i=1; i<=${t_len}; i++ ));
+l_len=${#LS[@]}
+for (( i=1; i<=${l_len}; i++ ));
 do
-	names+=("sfvl5de_$i")
+	names+=("lowerT_$i")
 done
 
 # For each of the temps we create a separate temp_single_job.pbs script
 # which can be sent to the PBS scheduling system.
-for (( i=0; i<$t_len; i++ ));
+for (( i=0; i<$l_len; i++ ));
 do
 	cat << EOF > ${names[$i]}.pbs || error_exit "ERROR: Can't write PBS script $i"
 #!/bin/bash
@@ -42,9 +42,11 @@ do
 # Last-updated: `date`
 # PBS job script for launching chiral superconductivity calculation on the vilje
 # supercomputer. Based on a sample job script by Jabir Ali Ouassou.
+
 ##################################################################
 # Configure the PBS queue system
 ##################################################################
+
 #PBS -M fredrik.n.krohg@ntnu.no
 #PBS -N ${names[$i]}
 #PBS -A nn2819k
@@ -52,11 +54,13 @@ do
 #PBS -o ${names[$i]}.o
 #PBS -e ${names[$i]}.e
 #PBS -l select=1:ncpus=16
-#PBS -l walltime=62:00:00
+#PBS -l walltime=92:00:00
 #PBS -l pmem=1000MB
+
 ##################################################################
 # Prepare the simulation
 ##################################################################
+
 SOURCE_PATH="/work/fredrkro/finite-temp-vortex-lattice/Source"
 DATA_PATH="/work/fredrkro/finite-temp-vortex-lattice/Data"
 JULIA_PATH="/home/ntnu/fredrkro/bin/julia"
@@ -66,24 +70,29 @@ OUTPUT="${names[$i]}_julia.output"
 FOLDER_FILE="last_folder.txt"
 NEED_LATEX_FILE="need_latex.txt"
 REL_DATA_PATH="../Data"
+
 error_exit()
 {
 	echo "\$1" 1>&2
 	exit 1
 }
+
 # TODO: Use symbolic links for navigation references.
+
 # Making sure necessary paths and script exist.
 [ -d \$SOURCE_PATH ] || error_exit "ERROR: Could not find Source directory in \$SOURCE_PATH"
 [ -f \$SOURCE_PATH/\$JULIA_SCRIPT ] || error_exit "ERROR: Could not find julia script \$JULIA_SCRIPT in \$SOURCE_PATH"
+
 # Setup variables
 g="$g"
 NU="$NU"
 H="$H"
-L="$L"
-TEMP="${TEMPS[$i]}"
+L="${LS[$i]}"
+TEMP="$T"
 GAMMA="$GAMMA"
 M="$M"
 dt="$dt"
+
 # Setup work directory
 [ -d \$DATA_PATH ] || error_exit "ERROR: Could not find Data directory in \$DATA_PATH"
 cd \$DATA_PATH
@@ -99,9 +108,13 @@ echo "\$WORK_NAME" > \$FOLDER_FILE
 echo "\$WORK_NAME" >> \$NEED_LATEX_FILE
 # Change to directory
 cd \$WORK_NAME
+
 # Now we are in the correct work directory.
+
 echo "Handling control to julia script. Writing output to \$OUTPUT"
 \$JULIA_PATH -p \$CPUS \$SOURCE_PATH/\$JULIA_SCRIPT \$g \$NU \$H \$L \$TEMP \$GAMMA \$M \$dt > \$OUTPUT 2>&1
+
+
 echo "Job script finished without issue."
 EOF
 	# Make the script executable
@@ -113,4 +126,3 @@ EOF
 	echo "Job started: ${IDS[$i]}"
 done
 echo "All jobs started, exiting"
-
