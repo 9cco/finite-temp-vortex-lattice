@@ -113,6 +113,9 @@ do
 		"SIM_AMAX")
 			SIM_AMAX=${values[i]}
 			;;
+        "THERM_T")
+            THERM_T=${values[i]}
+            ;;
 		*)
 			echo "${keywords[i]} not defined as variable."
 			;;
@@ -163,6 +166,7 @@ cat << EOF > $TEX_FILE || error_exit "ERROR: Can't write LaTeX file"
 	\$T$ & $TEMP\\\\
 	\$\beta$ & $INV_TEMP\\\\
 	\$M$ & $NR_MEASUREMENTS\\\\
+    \$t_0$ & $THERM_T\\\\
 	\$\Delta t$ & $MEASUREMENT_INTERVAL\\\\
 	\$\theta_\text{max}$ & $SIM_THETA_MAX\\\\
 	\$u_\text{max}$ & $SIM_UMAX\\\\

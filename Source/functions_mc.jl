@@ -28,10 +28,10 @@ function metropolisHastingUpdate!(ψ::State, pos::Array{Int64,1}, sim::Controls)
     δE = ΔE(ϕ′, ϕ, ψ.nb[pos...], ψ.nnb[pos...], ψ.nnnb[pos...], pos[2], ψ.consts)
     
     # Create random number ran ∈ (0,1].
-    ran = rand()
-    if ran==0
-        ran=1
-    end
+    ran = 1-rand()
+#    if ran==0.0
+#        ran=1.0
+#    end
     
     # Update state with probability min(1, e^{-β⋅δE})
     # and return the energy of final state regardless of whether it gets updated or not.

@@ -261,7 +261,7 @@ function parallelSFVLA!{T<:Real}(ks::Array{Array{T, 1}, 2},
     futures = [Future() for i=1:(np-1)]
     
     println("Starting $(M) measurements on $(np) processes doing max $(M_min + Int(ceil(nw/np))) measurements each
-on a $(L)×$(L) system.")
+on a $(L)×$(L) system, corresponding to $((M_min+ceil(Int64, nw/np))*Δt) MCS pr. process")
     
     # Start +1 workers
     for i = 1:nw
@@ -363,7 +363,7 @@ end
 # convergence.
 function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystConstants,
         sim::Controls, T::Int64=1000, ex::Float64=1.8, STD_NUMBER::Float64=0.5)
-    CUTOFF_MAX::Int64=4000000           #Max number of MCS before the function terminates
+    CUTOFF_MAX::Int64=10000000           #Max number of MCS before the function terminates
     ADJUST_INTERVAL=400                 #Number of MCS between each sim_const adjustment while finding dE<0
     AVERAGING_INT_FRAC=1/4                 #Similiar for 2nd loop, also the interval that is averaged over
     AVERAGING_INT_EX = 1.4
@@ -466,7 +466,8 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
     #iteration in the while loop.
     #Increase simulation time by ADJUST_INT_THERM and try to find an interval with small average dE
     while T<CUTOFF_MAX
-		println("Checking average ∈ [$tₛ, $T]") 
+		println("Checking average ∈ [$tₛ, $T]")
+        flush(STDOUT)
 
         #Start by updating the simulation constants
         for w=1:NWS
@@ -493,7 +494,7 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
             ψ_w[w], E_w[w,tₛ:T] = fetch(ψ_future_list[w])
         end
 
-        if checkThermalization(E_ref./N, E_w./N, NWS, tₛ, T,STD_NUMBER)
+        if checkThermalization(E_ref, E_w, NWS, tₛ, T,STD_NUMBER)
 			println("Final thermalization time: $(T+adjustment_mcs)")
             return(T+adjustment_mcs, tₛ, T, E_ref[1:T], E_w[:,1:T], ψ_ref, ψ_w, sim_ref, sim_w)
         end
@@ -505,5 +506,5 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
         T = tₛ + averaging_int - 1
         println("Increasing simulation time to T = $(T)")
     end
-    return -1, tₛ, T, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w
+    return -1, tₛ, CUTOFF_MAX, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w
 end

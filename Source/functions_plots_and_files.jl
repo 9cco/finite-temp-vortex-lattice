@@ -299,7 +299,7 @@ end
 
 # -----------------------------------------------------------------------------------------------------------
 # In the current directory, writes the current system and simulations constants to a file system_values.data
-function writeSimulationConstants(syst::SystConstants, sim::Controls, M::Int64, Δt::Int64, 
+function writeSimulationConstants(syst::SystConstants, sim::Controls, M::Int64, t₀::Int64, Δt::Int64, 
         filename::AbstractString = "system_values.data")
     open(filename, "w") do f
         write(f, "L $(syst.L)\n")
@@ -314,6 +314,7 @@ function writeSimulationConstants(syst::SystConstants, sim::Controls, M::Int64, 
         write(f, "SIM_THETA_MAX $(sim.θmax)\n")
         write(f, "SIM_UMAX $(sim.umax)\n")
         write(f, "SIM_AMAX $(sim.Amax)\n")
+        write(f, "THERM_T $(t₀)\n")
     end
 end
 # -----------------------------------------------------------------------------------------------------------
@@ -563,6 +564,9 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
 	println("Thermalizing $(n_workers+1) states")
 	@time t₀, tᵢ, Tᵢ, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w = parallelThermalization!(ψ_ref, ψ_w, syst, sim, START_T, EX, STD_FACTOR)
     flush(STDOUT)
+    if t₀ == -1
+        throw(error("ERROR: Could not thermalize states."))
+    end
 
 	N = length(E_ref)
     dE_array = [E_ref - E_w[w,:] for w = 1:n_workers]
@@ -589,6 +593,7 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
 		energies[w] = E_w[w,int]
 		labels[w] = "worker $(w)"
 	end
+    labels = reshape(labels, (1, n_workers+1))
 
 	# Plotting the energies of reference and all workers
 	plt = plot(int, energies, label=labels, xlabel="MCS", ylabel="Energy", title="Thermalization energies");
