@@ -425,3 +425,5 @@ function structureFunctionVortexLatticeAvg!{T<:Real}(ks::Array{Array{T, 1}, 2},
     return (avV⁺, errV⁺, V⁺, avV⁻, errV⁻, V⁻, avS⁺, errS⁺, S⁺, avS⁻, errS⁻, S⁻)
 end
 
+# --------------------------------------------------------------------------------------------------
+# Build a histogram of amplitudes at all lattice sites.

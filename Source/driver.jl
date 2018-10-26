@@ -51,6 +51,8 @@ M = parse(Int64, ARGS[7])
 
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
 f = ceil(abs(H/(2π)*L))/L*sign(H)
+# Updating H to value given by f
+H = 2π*f
 # Calculate inverse temperature
 β = 1/T
 

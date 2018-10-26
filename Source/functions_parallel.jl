@@ -59,8 +59,12 @@ function adjustSimConstantsPar(sim::Controls, ψ::State, M::Int64=40)
     return ψ, sim, adjustment_mcs
 end
 
-function meanAndStd{T<:Real}(E₁::Array{T,1}, E₂::Array{T,1})
-	dE = E₁ - E₂
+function meanAndStd{T<:Real, I<:Int}(E_ref::Array{T,1}, E_w::Array{T,2}, w::I, t_start::I, t_end::I)
+    N = t_end-t_start+1
+    dE = Array{T,1}(N)
+    for i=1:N
+        dE[i] = E_ref[t_start+i-1] - E_w[w,t_start+i-1]
+    end
 	return mean(dE), std(dE)
 end
 
@@ -80,7 +84,8 @@ function checkThermalization(E_ref::Array{Float64,1}, E_workers::Array{Float64,2
 	st = Array{Float64,1}(n_workers)
 
 	for w = 1:n_workers
-		future_array[w] = @spawn meanAndStd(E_ref[t_start:t_end], E_workers[w,t_start:t_end])
+		#future_array[w] = @spawn meanAndStd(E_ref[t_start:t_end], E_workers[w,t_start:t_end])
+		future_array[w] = @spawn meanAndStd(E_ref, E_workers, w, t_start, t_end)
 	end
 	for w = 1:n_workers
 		av[w], st[w] = fetch(future_array[w])
@@ -363,7 +368,7 @@ end
 # convergence.
 function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystConstants,
         sim::Controls, T::Int64=1000, ex::Float64=1.8, STD_NUMBER::Float64=0.5)
-    CUTOFF_MAX::Int64=10000000           #Max number of MCS before the function terminates
+    CUTOFF_MAX::Int64=6000000           #Max number of MCS before the function terminates
     ADJUST_INTERVAL=400                 #Number of MCS between each sim_const adjustment while finding dE<0
     AVERAGING_INT_FRAC=1/4                 #Similiar for 2nd loop, also the interval that is averaged over
     AVERAGING_INT_EX = 1.4
@@ -377,7 +382,7 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
 	E_ref = Array{Float64, 1}(CUTOFF_MAX)           #Array to store energies of reference state
 	E_ref[1] = E(ψ_ref)
 
-	# Checking wheather reference or worker has highest energy.
+	# Checking whether reference or worker has highest energy.
 	ref_highest = [true for i = 1:NWS]
 	for w = 1:NWS
 		if E_w[w,1]>E_ref[1]

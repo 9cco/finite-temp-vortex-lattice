@@ -13,12 +13,12 @@ error_exit()
 
 
 # First we need to input the temperature range
-TEMPS=(0.11048 0.11049 0.1105 0.11051 0.11055 0.1106 0.2)
+TEMPS=(0.005 0.008 0.02 0.04 0.06)
 # Then the other variables are set as before
 g="0.3"
 NU="0.3"
-H="-0.72"
-L="56"
+H="0.005"
+L="64"
 GAMMA="1.0"
 M="300"
 dt="5000"
@@ -29,7 +29,7 @@ declare -a names
 t_len=${#TEMPS[@]}
 for (( i=1; i<=${t_len}; i++ ));
 do
-	names+=("sfvl5de_$i")
+	names+=("lowerT_$i")
 done
 
 # For each of the temps we create a separate temp_single_job.pbs script
