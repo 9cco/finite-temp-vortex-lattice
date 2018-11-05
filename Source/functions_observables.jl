@@ -65,18 +65,17 @@ end
 # Assuming we have a state ψ, we want to find the lattice of vortexes.
 function vortexSnapshot(ψ::State)
     L = ψ.consts.L
-    V⁺ = zeros(L,L)
-    V⁻ = zeros(L,L)
+    Lᵣ = ψ.consts.L₃
+    V⁺ = zeros(L,L,L₃)
+    V⁻ = zeros(L,L,L₃)
     
     # Sum over the lattice
-    for h_pos = 1:L
-        for v_pos = 1:L
-            ϕ = ψ.lattice[v_pos,h_pos]
-			ϕᵣ₊₁ = ψ.nb[v_pos,h_pos].ϕᵣ₊₁
-			ϕᵣ₊₂ = ψ.nb[v_pos,h_pos].ϕᵣ₊₂
-			ϕᵣ₊₁₊₂ = ψ.nnb[v_pos,h_pos].ϕᵣ₊₁₊₂
-            (V⁺[v_pos,h_pos], V⁻[v_pos, h_pos]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)
-        end
+    for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
+        ϕ = ψ.lattice[v_pos,h_pos,z_pos]
+        ϕᵣ₊₁ = ψ.nb[v_pos,h_pos,z_pos].ϕᵣ₊₁
+        ϕᵣ₊₂ = ψ.nb[v_pos,h_pos,z_pos].ϕᵣ₊₂
+        ϕᵣ₊₁₊₂ = ψ.nnb[v_pos,h_pos,z_pos].ϕᵣ₊₁₊₂
+        (V⁺[v_pos,h_pos,z_pos], V⁻[v_pos, h_pos, z_pos]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)
     end
     
     return (V⁺, V⁻)
@@ -121,9 +120,10 @@ function combineVortexLattices{T<:Real}(vortex_matrix⁺::Array{T, 2}, vortex_ma
 end
 
 # -----------------------------------------------------------------------------------------------------------
-# V⁺ and V⁻ are LxL matrices of plaquettes containing the vorticities nᵣ of the two components.
+# V⁺ and V⁻ are LxL matrices of plaquettes containing the vorticities nᵣ of the two components averaged over
+# the z-direction.
 # Returns the structure function at k of both vorticities.
-function structureFunction{T<:Real, I<:Real}(k::Array{T,1}, ψ::State, V⁺::Array{I,2}, V⁻::Array{I,2})
+function structureFunction{T<:Real, I<:Real}(k::Array{T,1}, ψ::State, V⁺::Array{I,3}, V⁻::Array{I,3})
     sum⁺ = Complex(0)
     sum⁻ = Complex(0)
     L = ψ.consts.L
@@ -193,135 +193,6 @@ end
 #                            Thermal averages
 #
 ####################################################################################################################
-
-# -----------------------------------------------------------------------------------------------------------
-function structureFunctionPlussAvg{T<:Real}(k::Array{T,1}, syst::SystConstants, M::Int64, Δt::Int64)
-    S = zeros(M)
-    secondMoment = 0
-    s_norm = 1/(sim.f*sim.L^2*two_pi)^2
-    # Finding a state that has reached thermal equilibrium
-    (t₀, dE, ψ, ψ₂) = findEquilibrium(syst)
-    
-    # Loop over M measurements
-    for m = 1:M
-        
-        # Take Δt MCS
-        for i = 1:Δt
-            mcSweep!(ψ)
-        end
-        
-        # Make a normalized measurement
-        secondMoment = (S[m] = s_norm*structureFunctionPluss(k, ψ))^2
-    end
-    
-    # Return average and error estimates
-    av = mean(S)
-    secondMoment = secondMoment/M
-    τₒ = autocorrTime(S, 5.0)
-    err = (1+2*τₒ)*(secondMoment - av^2)/(M-1)
-    
-    return (av, err, S)
-end
-# Take in a matrix of k-values and calculate both the vorticity of θ⁺ and θ⁻.
-function structureFunctionAvg{T<:Real}(ks::Array{Array{T, 1}, 2}, syst::SystConstants, M::Int64, Δt::Int64)
-    Lky = size(ks, 1)
-    Lkx = size(ks, 2)
-    S⁺ = [zeros(M) for y=1:Lky, x=1:Lkx]    # Matrix containing the series of measurements for each k
-    S⁻ = [zeros(M) for y=1:Lky, x=1:Lkx]
-    Sm⁺ = [0.0 for y=1:Lky, x=1:Lkx]
-    Sm⁻ = [0.0 for y=1:Lky, x=1:Lkx]
-    s_norm_inv = 1/(syst.f*syst.L^2*two_pi)^2
-    
-    # Finding a state that has eached thermal equilibrium
-    println("Finding equilibrium")
-    (t₀, dE, ψ, ψ₂) = findEquilibrium(syst)
-    
-    prinln("Making measurements")
-    # Loop over M measurements
-    for m = 1:M
-        print("Measurement progress: $(Int(round(m/M*100,0)))% \r")
-        flush(STDOUT)
-        
-        # Take Δt MCS
-        for i = 1:Δt
-            mcSweep!(ψ)
-        end
-        
-        # Make measurements 
-        for y = 1:Lky, x = 1:Lkx
-            (S⁺[y,x][m], S⁻[y,x][m]) = structureFunction(ks[y,x], ψ)
-            Sm⁺[y,x] += S⁺[y,x][m]^2
-            Sm⁻[y,x] += S⁻[y,x][m]^2
-        end
-    end
-    
-    # Return average and error estimates
-    avS⁺ = [mean(S⁺[y,x]) for y=1:Lky, x=1:Lkx]
-    avS⁻ = [mean(S⁻[y,x]) for y=1:Lky, x=1:Lkx]
-    τ⁺ = [autocorrTime(S⁺[y,x], 5.0) for y=1:Lky, x=1:Lkx]
-    τ⁻ = [autocorrTime(S⁻[y,x], 5.0) for y=1:Lky, x=1:Lkx]
-    errS⁺ = [0.0 for y=1:Lky, x=1:Lkx]
-    errS⁻ = [0.0 for y=1:Lky, x=1:Lkx]
-    
-    for y=1:Lky, x=1:Lkx
-        Sm⁺[y,x] /= M
-        Sm⁻[y,x] /= M
-        errS⁺[y,x] = (1+2*τ⁺[y,x])*(Sm⁺[y,x] - avS⁺[y,x]^2)/(M-1)
-        errS⁻[y,x] = (1+2*τ⁻[y,x])*(Sm⁻[y,x] - avS⁻[y,x]^2)/(M-1)
-    end
-    
-    return (avS⁺, errS⁺, avS⁻, errS⁻)
-end
-
-# --------------------------------------------------------------------------------------------------
-# Take in a matrix of k-values and calculate both the vorticity of θ⁺ and θ⁻.
-# Same as previous structureFunction, but now assumes the state is at equilibrium
-function structureFunctionAvg!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Controls, M::Int64, Δt::Int64)
-    syst = ψ.consts
-    Lky = size(ks, 1)
-    Lkx = size(ks, 2)
-    S⁺ = [zeros(M) for y=1:Lky, x=1:Lkx]    # Matrix containing the series of measurements for each k
-    S⁻ = [zeros(M) for y=1:Lky, x=1:Lkx]
-    Sm⁺ = [0.0 for y=1:Lky, x=1:Lkx]
-    Sm⁻ = [0.0 for y=1:Lky, x=1:Lkx]
-    s_norm_inv = 1/(syst.f*syst.L^2*two_pi)^2
-    
-    println("Making measurements over a $(Lkx)×$(Lky) matrix of ks.")
-    # Loop over M measurements
-    for m = 1:M
-        print("Measurement progress: $(Int(round(m/M*100,0)))% \r")
-        flush(STDOUT)
-        
-        # Take Δt MCS
-        for i = 1:Δt
-            mcSweep!(ψ, sim)
-        end
-        
-        # Make measurements 
-        for y = 1:Lky, x = 1:Lkx
-            (S⁺[y,x][m], S⁻[y,x][m]) = s_norm_inv.*structureFunction(ks[y,x], ψ)
-            Sm⁺[y,x] += S⁺[y,x][m]^2
-            Sm⁻[y,x] += S⁻[y,x][m]^2
-        end
-    end
-    
-    # Return average and error estimates
-    avS⁺ = [mean(S⁺[y,x]) for y=1:Lky, x=1:Lkx]
-    avS⁻ = [mean(S⁻[y,x]) for y=1:Lky, x=1:Lkx]
-    τ⁺ = [autocorrTime(S⁺[y,x], 5.0) for y=1:Lky, x=1:Lkx]
-    τ⁻ = [autocorrTime(S⁻[y,x], 5.0) for y=1:Lky, x=1:Lkx]
-    errS⁺ = [0.0 for y=1:Lky, x=1:Lkx]
-    errS⁻ = [0.0 for y=1:Lky, x=1:Lkx]
-    
-    for y=1:Lky, x=1:Lkx
-        Sm⁺[y,x] /= M
-        Sm⁻[y,x] /= M
-        errS⁺[y,x] = (1+2*τ⁺[y,x])*(Sm⁺[y,x] - avS⁺[y,x]^2)/(M-1)
-        errS⁻[y,x] = (1+2*τ⁻[y,x])*(Sm⁻[y,x] - avS⁻[y,x]^2)/(M-1)
-    end
-    
-    return (avS⁺, errS⁺, S⁺, avS⁻, errS⁻, S⁻)
-end
 
 # --------------------------------------------------------------------------------------------------
 # Take in a matrix of k-values and calculate both the vorticity of θ⁺ and θ⁻, as well as an average over the
