@@ -6,7 +6,7 @@ function copy(ϕ::LatticeSite)
     LatticeSite([ϕ.A[1],ϕ.A[2],ϕ.A[3]],ϕ.θ⁺,ϕ.θ⁻,ϕ.u⁺,ϕ.u⁻)
 end
 function copy(c::SystConstants)
-    SystConstants(c.L, c.γ, c.g⁻², c.ν, c.f, c.β)
+    SystConstants(c.L, c.L₃, c.γ, c.g⁻², c.ν, c.κ₅, c.f, c.β)
 end
 # Copy functions for Neighbors, NextNeighbors and NNNeighbors
 function copy(nb::Neighbors)
@@ -27,6 +27,15 @@ function copy(nbl::Array{Neighbors,2})
 	end
 	nbl_copy
 end
+function copy(nbl::Array{Neighbors,3})
+	L = size(nbl,2)
+    L₃ = size(nbl,3)
+	nbl_copy = Array{Neighbors,3}(L,L,L₃)
+	for z_pos=1:L₃, h_pos = 1:L, v_pos = 1:L
+		nbl_copy[v_pos,h_pos,z_pos] = copy(nbl[v_pos,h_pos,z_pos])
+	end
+	nbl_copy
+end
 function copy(nnbl::Array{NextNeighbors,2})
 	L = size(nnbl,2)
 	nnbl_copy = Array{NextNeighbors,2}(L,L)
@@ -35,6 +44,16 @@ function copy(nnbl::Array{NextNeighbors,2})
 	end
 	nnbl_copy
 end
+function copy(nnbl::Array{NextNeighbors,3})
+	L = size(nnbl,2)
+    L₃ = size(nnbl,3)
+	nnbl_copy = Array{NextNeighbors,3}(L,L,L₃)
+	for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
+		nnbl_copy[v_pos,h_pos,z_pos] = copy(nnbl[v_pos,h_pos,z_pos])
+	end
+	nnbl_copy
+end
+
 function copy(nnnbl::Array{NNNeighbors,2})
 	L = size(nnnbl,2)
 	nnnbl_copy = Array{NNNeighbors,2}(L,L)
@@ -43,6 +62,16 @@ function copy(nnnbl::Array{NNNeighbors,2})
 	end
 	nnnbl_copy
 end
+function copy(nnnbl::Array{NNNeighbors,3})
+	L = size(nnnbl,2)
+    L₃ = size(nnnbl,3)
+	nnnbl_copy = Array{NNNeighbors,3}(L,L,L₃)
+	for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
+		nnnbl_copy[v_pos,h_pos,z_pos] = copy(nnnbl[v_pos,h_pos,z_pos])
+	end
+	nnnbl_copy
+end
+
 function copy(ψ::State)
     Lx = size(ψ.lattice,2)
     Ly = size(ψ.lattice,1)
@@ -67,7 +96,8 @@ function ==(ϕ₁::LatticeSite, ϕ₂::LatticeSite)
         ϕ₁.θ⁻ == ϕ₂.θ⁻ && ϕ₁.u⁺ == ϕ₂.u⁺ && ϕ₁.u⁻ == ϕ₂.u⁻)
 end
 function ==(c₁::SystConstants, c₂::SystConstants)
-    return (c₁.L == c₂.L && c₁.L₃ == c₂.L₃ && c₁.γ == c₂.γ && c₁.g⁻² == c₂.g⁻² && c₁.ν == c₂.ν && c₁.f == c₂.f && c₁.β == c₂.β)
+    return (c₁.L == c₂.L && c₁.L₃ == c₂.L₃ && c₁.γ == c₂.γ && c₁.g⁻² == c₂.g⁻² && c₁.ν == c₂.ν
+            && c₁.κ₅ == c₂.κ₅ && c₁.f == c₂.f && c₁.β == c₂.β)
 end
 function ==(ψ₁::State, ψ₂::State)
     check = ψ₁.consts == ψ₂.consts
@@ -115,7 +145,7 @@ end
 function State(choice::Int64, L::Int64)
     L <= 4 && throw(DomainError())
 
-	consts = SystConstants(L, L, 1.0, 1/0.3^2, 0.3, 2.0/L, 0.5)
+	consts = SystConstants(L, L, 1.0, 1/0.3^2, 0.3, 1.0, 2.0/L, 0.5)
     # Construct ordered state 
     if choice == 1
         
@@ -238,6 +268,7 @@ function save(ψ::State, filename::AbstractString, mode::AbstractString="w")
         write(f, "$(ψ.consts.γ)\n")
         write(f, "$(ψ.consts.g⁻²)\n")
         write(f, "$(ψ.consts.ν)\n")
+        write(f, "$(ψ.consts.κ₅)\n")
         write(f, "$(ψ.consts.f)\n")
         write(f, "$(ψ.consts.β)\n")
         # Then starting writing the state lattice
@@ -264,6 +295,7 @@ function readState(filename::AbstractString)
         γ = parse(Float64, readline(file))
         g⁻² = parse(Float64, readline(file))
         ν = parse(Float64, readline(file))
+        κ₅ = parse(Float64, readline(file))
         f = parse(Float64, readline(file))
         β = parse(Float64, readline(file))
         syst = SystConstants(L, γ, g⁻², ν, f, β)

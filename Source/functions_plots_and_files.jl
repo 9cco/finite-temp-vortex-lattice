@@ -273,8 +273,8 @@ function mkcdSystemDirectory(syst::SystConstants, M::Int64, Δt::Int64)
     end
     
     # Make directory name based on system constants
-    DIR_NAME = "VORTEX_GAMMA_$(round(syst.γ,acc))_g_$(round(√(1/syst.g⁻²),acc))_NU_$(round(syst.ν,acc))"
-    DIR_NAME = DIR_NAME * "_f_$(round(syst.f,acc))_T_$(round(1/syst.β,acc))_L_$(syst.L)_M_$(M)"
+    DIR_NAME = "3D_L_$(syst.L)_M_$(M)_T_$(round(1/syst.β,acc))_GAMMA_$(round(syst.γ,acc))_g_$(round(√(1/syst.g⁻²),acc))"
+    DIR_NAME = DIR_NAME * "_NU_$(round(syst.ν,acc))_K_$(round(syst.κ₅,acc))_f_$(round(syst.f,acc))_T_$(round(1/syst.β,acc))"
     
     if isdir("./$(DIR_NAME)")
         print("The directory $(DIR_NAME) already exists.\nShould we delete it? [y/n]: ")
@@ -303,9 +303,11 @@ function writeSimulationConstants(syst::SystConstants, sim::Controls, M::Int64, 
         filename::AbstractString = "system_values.data")
     open(filename, "w") do f
         write(f, "L $(syst.L)\n")
+        write(f, "Lz $(syst.L₃)\n")
         write(f, "GAMMA $(syst.γ)\n")
         write(f, "g $(√(1/syst.g⁻²))\n")
         write(f, "NU $(syst.ν)\n")
+        write(f, "K $(syst.κ₅)\n")
         write(f, "f $(syst.f)\n")
         write(f, "TEMP $(1/syst.β)\n")
         write(f, "INV_TEMP $(syst.β)\n")
