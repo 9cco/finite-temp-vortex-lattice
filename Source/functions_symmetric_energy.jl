@@ -58,6 +58,11 @@ function fᵣ(ϕ::LatticeSite, nb::Neighbors, h_pos::Int64, c::SystConstants)
     energy = Fₖ + Fᵥ + Fₐₙ + Fₘ
 end
 
+function maxwell(ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₃, g⁻²)
+    return = ((ϕ.A[1] + ϕᵣ₊₁.A[2]-ϕᵣ₊₂.A[1]-ϕ.A[2])^2 + (ϕ.A[2] + ϕᵣ₊₂.A[3] - ϕᵣ₊₃.A[2] - ϕ.A[3])^2
+                   + (ϕ.A[3] + ϕᵣ₊₃.A[1] - ϕᵣ₊₁.A[3] - ϕ.A[1])^2)*g⁻²
+end
+
 # --------------------------------------------------------------------------------------------------
 # Loops over all positions of the lattice of a state and calculates the total energy from the
 # Higgs-field terms using the function fᵣ() + the energy from the gauge field.
@@ -67,14 +72,15 @@ function E(ψ::State)
 	g⁻² = ψ.consts.g⁻²
     
     # Contribution from the bulk of lattice sites
-    for h_pos=1:L, v_pos=1:L
-        ϕ = ψ.lattice[v_pos,h_pos]          # Lattice site at position r
-		ϕᵣ₊₁ = ψ.nb[v_pos,h_pos].ϕᵣ₊₁
-		ϕᵣ₊₂ = ψ.nb[v_pos,h_pos].ϕᵣ₊₂
-        h = fᵣ(ϕ,ψ.nb[v_pos,h_pos],h_pos,ψ.consts)              # Higgs terms
+    for z_pos=1:ψ.consts.L₃, h_pos=1:L, v_pos=1:L
+        ϕ = ψ.lattice[v_pos,h_pos,z_pos]          # Lattice site at position r
+		ϕᵣ₊₁ = ψ.nb[v_pos,h_pos,z_pos].ϕᵣ₊₁
+		ϕᵣ₊₂ = ψ.nb[v_pos,h_pos,z_pos].ϕᵣ₊₂
+        ϕᵣ₊₃ = ψ.nb[v_pos,h_pos,z_pos].ϕᵣ₊₃
+        h = fᵣ(ϕ,ψ.nb[v_pos,h_pos,z_pos],h_pos,ψ.consts)              # Higgs terms
 #		@test h == -0.5*(ϕ.u⁺^2+ϕ.u⁺^2+ϕ.u⁻^2+ϕ.u⁻^2) + (ϕ.u⁺*ϕ.u⁻)^2*(2+ψ.consts.ν) + 0.5*(ϕ.u⁺^4 + ϕ.u⁻^4)
 		energy += h
-        energy += (ϕ.A[1] + ϕᵣ₊₁.A[2]-ϕᵣ₊₂.A[1]-ϕ.A[2])^2*g⁻²
+        energy += maxwell(ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₃, g⁻²)
     end
     energy
 end
@@ -195,7 +201,7 @@ function ΔE(ϕ′::LatticeSite, ϕ::LatticeSite, nb::Neighbors, nnb::NextNeighb
     
     # Then calculate the Gauge field contribution
     # First contribution from current position
-    δE += ((ϕ′.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ′.A[2])^2 - (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])^2)*c.g⁻²
+    δE += maxwell(ϕ′, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₃, c.g⁻²) - maxwell(ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₃, c.g⁻²)
     # Then from position r-x
     δE += ((ϕᵣ₋₁.A[1] + ϕ′.A[2] - ϕᵣ₋₁₊₂.A[1] - ϕᵣ₋₁.A[2])^2 - (ϕᵣ₋₁.A[1] + ϕ.A[2] - ϕᵣ₋₁₊₂.A[1] - ϕᵣ₋₁.A[2])^2)*c.g⁻²
     # Then from position r-y

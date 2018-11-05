@@ -149,23 +149,40 @@ function parallelMultiplyState(ψ::State, sim::Controls, t₀::Int64)
     return ψ_list
 end
 
+function avgVort{T<:Real}(V::Array{T,3})
+    L = size(V,1)
+    L₃ = size(V,3)
+    avg_V = zeros(L,L)
+    for h_pos = 1:L, v_pos = 1:L
+        for z_pos = 1:L₃
+            avg_V[v_pos,h_pos] += V[v_pos,h_pos,z_pos]
+        end
+        avg_V[v_pos,h_pos] /= L₃
+    end
+end
+
+
+
 # --------------------------------------------------------------------------------------------------
 # Makes M measurements of both the vortex lattice and the structure factor.
 function sfvlaMeasure!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Controls, M::Int64, Δt::Int64)
     L = ψ.consts.L
+    L₃ = ψ.consts.L₃
     L_k = size(ks, 1)
     # Setup measurement storage
     S⁺ = [zeros(L_k,L_k) for i=1:M]
     S⁻ = [zeros(L_k,L_k) for i=1:M]
-    V⁺ = [zeros(L,L) for i=1:M]
-    V⁻ = [zeros(L,L) for i=1:M]
+    V⁺ = [zeros(L,L,L₃) for i=1:M]
+    V⁻ = [zeros(L,L,L₃) for i=1:M]
+    avg_V⁺ = zeros(L,L)
+    avg_V⁻ = zeros(L,L)
     
     # The first measurement is of the initial ψ
     (V⁺[1], V⁻[1]) = vortexSnapshot(ψ)
     
     # Then we use this to measure the structure factor
     for x=1:L_k, y=1:L_k
-        (S⁺[1][y,x], S⁻[1][y,x]) = structureFunction(ks[y,x], ψ, V⁺[1], V⁻[1])
+        (S⁺[1][y,x], S⁻[1][y,x]) = structureFunction(ks[y,x], ψ, avgVort(V⁺[1]), avgVort(V⁻[1]))
     end
     
     # For each measurement
@@ -182,7 +199,7 @@ function sfvlaMeasure!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Contr
         (V⁺[m], V⁻[m]) = vortexSnapshot(ψ)
         # Find structure factor. 
         for x=1:L_k, y=1:L_k
-            (S⁺[m][y,x], S⁻[m][y,x]) = structureFunction(ks[y,x], ψ, V⁺[m], V⁻[m])
+            (S⁺[m][y,x], S⁻[m][y,x]) = structureFunction(ks[y,x], ψ, avgVort(V⁺[m]), avgVort(V⁻[m]))
         end
     end
     
@@ -195,19 +212,20 @@ function sfvlaMeasure!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Contr
         Δt::Int64, option::AbstractString)
 	PROG_NUM = 10		# Adjusts the number of times progress is reported while measuring.
     L = ψ.consts.L
+    L₃ = ψ.consts.L₃
     L_k = size(ks, 1)
     # Setup measurement storage
     S⁺ = [zeros(L_k,L_k) for i=1:M]
     S⁻ = [zeros(L_k,L_k) for i=1:M]
-    V⁺ = [zeros(L,L) for i=1:M]
-    V⁻ = [zeros(L,L) for i=1:M]
+    V⁺ = [zeros(L,L,L₃) for i=1:M]
+    V⁻ = [zeros(L,L,L₃) for i=1:M]
     
     # The first measurement is of the initial ψ
     (V⁺[1], V⁻[1]) = vortexSnapshot(ψ)
     
     # Then we use this to measure the structure factor
     for x=1:L_k, y=1:L_k
-        (S⁺[1][y,x], S⁻[1][y,x]) = structureFunction(ks[y,x], ψ, V⁺[1], V⁻[1])
+        (S⁺[1][y,x], S⁻[1][y,x]) = structureFunction(ks[y,x], ψ, avgVort(V⁺[1]), avgVort(V⁻[1]))
     end
     
     # For each measurement
@@ -228,7 +246,7 @@ function sfvlaMeasure!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Contr
         
         # Find structure factor. 
         for x=1:L_k, y=1:L_k
-            (S⁺[m][y,x], S⁻[m][y,x]) = structureFunction(ks[y,x], ψ, V⁺[m], V⁻[m])
+            (S⁺[m][y,x], S⁻[m][y,x]) = structureFunction(ks[y,x], ψ, avgVort(V⁺[m]), avgVort(V⁻[m]))
         end
     end
     
