@@ -3,98 +3,103 @@
 #
 ####################################################################################################
 
-function latticeNeighbors(lattice:Array{LatticeSite, 3}, L::Int64, L₃::Int64)
-    nb = Arrray{NearestNeighbors,3}(L,L,L₃)
-
-    for z_pos = 1:L₃, v_pos=1:L, h_pos=1:L
-        ϕᵣ₊₁ = lattice[1,1,z_pos]
-        ϕᵣ₋₁ = lattice[1,L-1,z_pos]
-        ϕᵣ₊₂ = lattice[L,L,z_pos]
-        ϕᵣ₋₂ = lattice[2,L,z_pos]
-        ϕᵣ₊₃ = lattice[v_pos, h_pos, z_pos-1]
-        ϕᵣ₋₃ = lattice[v_pos, h_pos, z_pos+1]
-        nb[1,L,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂, ϕᵣ₊₃, ϕᵣ₋₃)
-
 # --------------------------------------------------------------------------------------------------
 # Constructs mirror lattice of lattice, where each element consists of a Neighbor object listing all the
 # nearest neighbor LatticeSites of the LatticeSite in the mirror lattice that is at the corresponding position
 # of the Neighbor object.
-function latticeNeighbors(lattice::Array{LatticeSite, 3}, L::Int64, L₃::Int64)
-    nb = Array{NearestNeighbors,3}(L,L,L₃)
-    
-    # All layers should be set in the same way.
-    for z_pos = 1:L₃
-        # Set neighbors of upper right corner
-        ϕᵣ₊₁ = lattice[1,1,z_pos]
-        ϕᵣ₋₁ = lattice[1,L-1,z_pos]
-        ϕᵣ₊₂ = lattice[L,L,z_pos]
-        ϕᵣ₋₂ = lattice[2,L,z_pos]
-        nb[1,L,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
-        
-        # Set neighbors of upper left corner
-        ϕᵣ₊₁ = lattice[1,2,z_pos]
-        ϕᵣ₋₁ = lattice[1,L,z_pos]
-        ϕᵣ₊₂ = lattice[L,1,z_pos]
-        ϕᵣ₋₂ = lattice[2,1,z_pos]
-        nb[1,1,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
-        
-        # Set neighbors of lower right corner
-        ϕᵣ₊₁ = lattice[L,1,z_pos]
-        ϕᵣ₋₁ = lattice[L,L-1,z_pos]
-        ϕᵣ₊₂ = lattice[L-1,L,z_pos]
-        ϕᵣ₋₂ = lattice[1,L,z_pos]
-        nb[L,L,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
-        
-        # Set neighbors of lower left corner
-        ϕᵣ₊₁ = lattice[L,2,z_pos]
-        ϕᵣ₋₁ = lattice[L,L,z_pos]
-        ϕᵣ₊₂ = lattice[L-1,1,z_pos]
-        ϕᵣ₋₂ = lattice[1,1,z_pos]
-        nb[L,1,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
-        
-        # Set neighbors of borders except for corners
-        for i=2:L-1
-            # Right y-boundary
-            ϕᵣ₊₁ = lattice[i,1,z_pos]
-            ϕᵣ₋₁ = lattice[i,L-1,z_pos]
-            ϕᵣ₊₂ = lattice[i-1,L,z_pos]
-            ϕᵣ₋₂ = lattice[i+1,L,z_pos]
-            nb[i,L,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
-            
-            # Left y-boundary
-            ϕᵣ₊₁ = lattice[i,2,z_pos]
-            ϕᵣ₋₁ = lattice[i,L,z_pos]
-            ϕᵣ₊₂ = lattice[i-1,1,z_pos]
-            ϕᵣ₋₂ = lattice[i+1,1,z_pos]
-            nb[i,1,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
-            
-            # Lower x-boundary
-            ϕᵣ₊₁ = lattice[L,i+1,z_pos]
-            ϕᵣ₋₁ = lattice[L,i-1,z_pos]
-            ϕᵣ₊₂ = lattice[L-1,i,z_pos]
-            ϕᵣ₋₂ = lattice[1,i,z_pos]
-            nb[L,i,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
-            
-            # Upper x-boundary
-            ϕᵣ₊₁ = lattice[1,i+1,z_pos]
-            ϕᵣ₋₁ = lattice[1,i-1,z_pos]
-            ϕᵣ₊₂ = lattice[L,i,z_pos]
-            ϕᵣ₋₂ = lattice[2,i,z_pos]
-            nb[1,i,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
-        end
-        
-        # Contribution from the bulk of lattice sites
-        for x=2:(L-1), y=2:(L-1)
-            ϕ = lattice[y,x,z_pos]          # Lattice site at position r
-            ϕᵣ₊₁ = lattice[y,x+1,z_pos]       # Nearest neighbor at r+x
-            ϕᵣ₋₁ = lattice[y,x-1,z_pos]
-            ϕᵣ₊₂ = lattice[y-1,x,z_pos]       # Nearest neighbor at r+y
-            ϕᵣ₋₂ = lattice[y+1,x,z_pos]
-            nb[y,x,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
-        end
+function latticeNeighbors(lattice:Array{LatticeSite, 3}, L::Int64, L₃::Int64)
+    nb = Arrray{NearestNeighbors,3}(L,L,L₃)
+
+    for z_pos = 1:L₃, v_pos=1:L, h_pos=1:L
+        ϕᵣ₊₁ = lattice[v_pos, mod(h_pos+1-1,L)+1, z_pos]
+        ϕᵣ₋₁ = lattice[v_pos, mod(h_pos-1-1,L)+1, z_pos]
+        ϕᵣ₊₂ = lattice[mod(v_pos-1-1,L)+1, h_pos, z_pos]
+        ϕᵣ₋₂ = lattice[mod(v_pos+1-1,L)+1, h_pos, z_pos]
+        ϕᵣ₊₃ = lattice[v_pos, h_pos, mod(z_pos-1-1,L₃)+1]
+        ϕᵣ₋₃ = lattice[v_pos, h_pos, mod(z_pos+1-1,L₃)+1]
+        nb[v_pos, h_pos, z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂, ϕᵣ₊₃, ϕᵣ₋₃)
     end
     nb
 end
+
+# --------------------------------------------------------------------------------------------------
+# Old version of the above, depricated.
+#function latticeNeighbors(lattice::Array{LatticeSite, 3}, L::Int64, L₃::Int64)
+#    nb = Array{NearestNeighbors,3}(L,L,L₃)
+#    
+#    # All layers should be set in the same way.
+#    for z_pos = 1:L₃
+#        # Set neighbors of upper right corner
+#        ϕᵣ₊₁ = lattice[1,1,z_pos]
+#        ϕᵣ₋₁ = lattice[1,L-1,z_pos]
+#        ϕᵣ₊₂ = lattice[L,L,z_pos]
+#        ϕᵣ₋₂ = lattice[2,L,z_pos]
+#        nb[1,L,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
+#        
+#        # Set neighbors of upper left corner
+#        ϕᵣ₊₁ = lattice[1,2,z_pos]
+#        ϕᵣ₋₁ = lattice[1,L,z_pos]
+#        ϕᵣ₊₂ = lattice[L,1,z_pos]
+#        ϕᵣ₋₂ = lattice[2,1,z_pos]
+#        nb[1,1,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
+#        
+#        # Set neighbors of lower right corner
+#        ϕᵣ₊₁ = lattice[L,1,z_pos]
+#        ϕᵣ₋₁ = lattice[L,L-1,z_pos]
+#        ϕᵣ₊₂ = lattice[L-1,L,z_pos]
+#        ϕᵣ₋₂ = lattice[1,L,z_pos]
+#        nb[L,L,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
+#        
+#        # Set neighbors of lower left corner
+#        ϕᵣ₊₁ = lattice[L,2,z_pos]
+#        ϕᵣ₋₁ = lattice[L,L,z_pos]
+#        ϕᵣ₊₂ = lattice[L-1,1,z_pos]
+#        ϕᵣ₋₂ = lattice[1,1,z_pos]
+#        nb[L,1,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
+#        
+#        # Set neighbors of borders except for corners
+#        for i=2:L-1
+#            # Right y-boundary
+#            ϕᵣ₊₁ = lattice[i,1,z_pos]
+#            ϕᵣ₋₁ = lattice[i,L-1,z_pos]
+#            ϕᵣ₊₂ = lattice[i-1,L,z_pos]
+#            ϕᵣ₋₂ = lattice[i+1,L,z_pos]
+#            nb[i,L,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
+#            
+#            # Left y-boundary
+#            ϕᵣ₊₁ = lattice[i,2,z_pos]
+#            ϕᵣ₋₁ = lattice[i,L,z_pos]
+#            ϕᵣ₊₂ = lattice[i-1,1,z_pos]
+#            ϕᵣ₋₂ = lattice[i+1,1,z_pos]
+#            nb[i,1,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
+#            
+#            # Lower x-boundary
+#            ϕᵣ₊₁ = lattice[L,i+1,z_pos]
+#            ϕᵣ₋₁ = lattice[L,i-1,z_pos]
+#            ϕᵣ₊₂ = lattice[L-1,i,z_pos]
+#            ϕᵣ₋₂ = lattice[1,i,z_pos]
+#            nb[L,i,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
+#            
+#            # Upper x-boundary
+#            ϕᵣ₊₁ = lattice[1,i+1,z_pos]
+#            ϕᵣ₋₁ = lattice[1,i-1,z_pos]
+#            ϕᵣ₊₂ = lattice[L,i,z_pos]
+#            ϕᵣ₋₂ = lattice[2,i,z_pos]
+#            nb[1,i,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
+#        end
+#        
+#        # Contribution from the bulk of lattice sites
+#        for x=2:(L-1), y=2:(L-1)
+#            ϕ = lattice[y,x,z_pos]          # Lattice site at position r
+#            ϕᵣ₊₁ = lattice[y,x+1,z_pos]       # Nearest neighbor at r+x
+#            ϕᵣ₋₁ = lattice[y,x-1,z_pos]
+#            ϕᵣ₊₂ = lattice[y-1,x,z_pos]       # Nearest neighbor at r+y
+#            ϕᵣ₋₂ = lattice[y+1,x,z_pos]
+#            nb[y,x,z_pos] = NearestNeighbors(ϕᵣ₊₁, ϕᵣ₋₁, ϕᵣ₊₂, ϕᵣ₋₂)
+#        end
+#    end
+#    nb
+#end
 
 # --------------------------------------------------------------------------------------------------
 # Constructs lattice of next nearest negihbors sites of the corresponding lattice LatticeSites

@@ -28,6 +28,8 @@ struct NearestNeighbors
 	ϕᵣ₋₁::LatticeSite
 	ϕᵣ₊₂::LatticeSite
 	ϕᵣ₋₂::LatticeSite
+    ϕᵣ₊₃::LatticeSite
+    ϕᵣ₋₃::LatticeSite
 end
 struct NextNeighbors
 	ϕᵣ₊₁₊₂::LatticeSite
