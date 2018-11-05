@@ -462,3 +462,18 @@ function Z₂StructureFunction(k::Array{Float64,1}, ψ::State, Z₂::Array{Compl
     end
     return sumZ₂/L^2
 end
+#--------------------------------------------------------------------------------------------------
+#Calculate the dual gauge stiffness
+function gaugeStiffnessMeasure{T<:Real}(k::Array{T,1}, ψ::State)
+    sumGS = Complex(0)
+    L = ψ.consts.L
+
+    for h_pos=1:L, v_pos=1:L
+        r = [h_pos-1, L-v_pos]
+        ϕ = ψ.lattice[v_pos,h_pos]
+        ϕᵣ₊₁ = ψ.nb[v_pos,h_pos].ϕᵣ₊₁
+        ϕᵣ₊₂ = ψ.nb[v_pos,h_pos].ϕᵣ₊₂
+        sumGS += (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])*exp(im*(k⋅r))
+    end
+    return (abs(sumGS))^2/(2*π*L)^2
+end

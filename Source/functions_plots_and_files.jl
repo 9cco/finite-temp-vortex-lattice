@@ -95,16 +95,24 @@ end
 # Plotting and saving result of structureFunctionVortexLatticeAvg!
 # Should be run inside of designated directory.
 function plotStructureFunctionVortexLatticeS{T<:Real, R<:Real}(avV⁺::Array{T, 2}, avV⁻::Array{T, 2}, 
-        V⁺::Array{R, 2}, V⁻::Array{R,2}, avS⁺::Array{T, 2}, avS⁻::Array{T,2}, ks::Array{Array{T,1}, 2})
+        V⁺::Array{R, 2}, V⁻::Array{R,2}, avS⁺::Array{T, 2}, avS⁻::Array{T,2}, ks::Array{Array{T,1}, 2},
+        dir::String="")
+    #Create directory for saving results
+    if (dir != "")
+        makeDirRec(dir)
+        dir_name = dir*"/"
+    else
+        dir_name = ""
+    end
     L = size(avV⁺,1)
     # Plotting structure factor
     L_k = size(ks, 1)
 	k_x = [ks[L_k,x][1] for x=1:L_k]
     k_y = [ks[y,1][2] for y=1:L_k]
     plt = heatmap(k_x, k_y, avS⁺, title="average S+", xlabel="k_x", ylabel="k_y", aspect_ratio=1)
-    savefig(plt, "sfvl_avg_S+_plot.pdf")
+    savefig(plt, dir_name*"sfvl_avg_S+_plot.pdf")
     plt = heatmap(k_x, k_y, avS⁻, title="average S-", xlabel="k_x", ylabel="k_y", aspect_ratio=1)
-    savefig(plt, "sfvl_avg_S-_plot.pdf")
+    savefig(plt, dir_name*"sfvl_avg_S-_plot.pdf")
     
     # Removing middle-point
     println("S⁺(0) ≈ $(avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))])")
@@ -117,10 +125,10 @@ function plotStructureFunctionVortexLatticeS{T<:Real, R<:Real}(avV⁺::Array{T, 
     # And then re-plotting
     plt = heatmap(k_x, k_y, avS⁺, 
         title="average S+ with S(0) removed", xlabel="k_x", ylabel="k_y", aspect_ratio=1)
-    savefig(plt, "sfvl_avg_S+_removed_plot.pdf")
+    savefig(plt, dir_name*"sfvl_avg_S+_removed_plot.pdf")
     plt = heatmap(k_x, k_y, avS⁻, 
         title="average S- with S(0) removed", xlabel="k_x", ylabel="k_y", aspect_ratio=1)
-    savefig(plt, "sfvl_avg_S-_removed_plot.pdf")
+    savefig(plt, dir_name*"sfvl_avg_S-_removed_plot.pdf")
     
     # Restoring middle point
     avS⁺[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))] = temp⁺
@@ -128,14 +136,14 @@ function plotStructureFunctionVortexLatticeS{T<:Real, R<:Real}(avV⁺::Array{T, 
     
     # Plotting vortex snapshots
     plt = heatmap(1:L, 1:L, V⁺, title="Snapshot of + component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
-    savefig(plt, "sfvl_V+_snapshot_plot.pdf")
+    savefig(plt, dir_name*"sfvl_V+_snapshot_plot.pdf")
     plt = heatmap(1:L, 1:L, V⁻, title="Snapshot of - component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
-    savefig(plt, "sfvl_V-_snapshot_plot.pdf")
+    savefig(plt, dir_name*"sfvl_V-_snapshot_plot.pdf")
     
     # Combining matrices
     combined_lattice = combineVortexLattices(V⁺, V⁻)
     plt = heatmap(1:L, 1:L, combined_lattice, title="Combination of snapshots", xlabel="x", ylabel="y", aspect_ratio=1)
-    savefig(plt, "sfvl_comb_snapshort_plot.pdf")
+    savefig(plt, dir_name*"sfvl_comb_snapshort_plot.pdf")
     
     # Finding the proportion of the different kinds of vortices in combined matrix
     av_vortex_kinds = zeros(9)
@@ -169,21 +177,36 @@ function plotStructureFunctionVortexLatticeS{T<:Real, R<:Real}(avV⁺::Array{T, 
     
     # Plotting vortex averages
     plt = heatmap(1:L, 1:L, avV⁺, title="Average + component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
-    savefig(plt, "sfvl_avg_V+_plot.pdf")
+    savefig(plt, dir_name*"sfvl_avg_V+_plot.pdf")
     plt = heatmap(1:L, 1:L, avV⁻, title="Average - component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
-    savefig(plt, "sfvl_avg_V-_plot.pdf")
+    savefig(plt, dir_name*"sfvl_avg_V-_plot.pdf")
     
     # Saving average matrices to file
-    writedlm("avg_S+.data", avS⁺, ":")
-    writedlm("avg_S-.data", avS⁻, ":")
-    writedlm("avg_V+.data", avV⁺, ":")
-    writedlm("avg_V-.data", avV⁻, ":")
-    writedlm("k_x_range.data", k_x, ":")
-    writedlm("k_y_range.data", k_y, ":")
+    writedlm(dir_name*"avg_S+.data", avS⁺, ":")
+    writedlm(dir_name*"avg_S-.data", avS⁻, ":")
+    writedlm(dir_name*"avg_V+.data", avV⁺, ":")
+    writedlm(dir_name*"avg_V-.data", avV⁻, ":")
+    writedlm(dir_name*"k_x_range.data", k_x, ":")
+    writedlm(dir_name*"k_y_range.data", k_y, ":")
     
     return 1
 end 
+#-------------------------------------------------------------------------------------------------#
+function plotStructureFunctionZ₂{T<:Real}(Z₂::Array{T, 2}, ks::Array{Array{T,1}, 2}, dir::String="")
+         #Create directory for saving results
+        if (dir != "")
+            makeDirRec(dir)
+            dir_name = dir*"/"
+        else
+            dir_name = ""
+        end
 
+        L_k = size(ks, 1)
+        k_x = [ks[L_k,x][1] for x=1:L_k]
+        k_y = [ks[y,1][2] for y=1:L_k]
+        plt = heatmap(k_x, k_y, Z₂, title = "Z2 structure funtion", xlabel = "k_x", ylabel = "k_y", aspect_ratio = 1)
+        savefig(plt, dir_name*"Z2StructFunc_plot.pdf")
+end
 
 ####################################################################################################################
 #                            Diagnostic functions
@@ -300,8 +323,14 @@ end
 # -----------------------------------------------------------------------------------------------------------
 # In the current directory, writes the current system and simulations constants to a file system_values.data
 function writeSimulationConstants(syst::SystConstants, sim::Controls, M::Int64, t₀::Int64, Δt::Int64, 
-        filename::AbstractString = "system_values.data")
-    open(filename, "w") do f
+        filename::AbstractString = "system_values.data", dirname::AbstractString="")
+    if (dirname != "")
+        makeDirRec(dirname)
+        dir_name = dirname*"/"
+    else
+        dir_name = ""
+    end     
+    open(dir_name*filename, "w") do f
         write(f, "L $(syst.L)\n")
         write(f, "GAMMA $(syst.γ)\n")
         write(f, "g $(√(1/syst.g⁻²))\n")
@@ -545,7 +574,7 @@ function initializeTwoStatesS(syst::SystConstants, sim::Controls)
 end
 
 # Similar to above, but now uses parallelThermalization
-function initializeParallelStatesS(syst::SystConstants, sim::Controls)
+function initializeParallelStatesS(syst::SystConstants, sim::Controls, dir::String="")
 	# Parameters
 	PLOT_FRACTION = 0.71
     PLOT_DE = 1e3
@@ -594,20 +623,28 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
 		labels[w] = "worker $(w)"
 	end
     labels = reshape(labels, (1, n_workers+1))
-
+    
+    #Create directories to save plots in
+    if (dir != "")
+        makeDirRec(dir)
+        dir_name = dir*"/"
+    else
+        dir_name = ""
+    end
+    
 	# Plotting the energies of reference and all workers
 	plt = plot(int, energies, label=labels, xlabel="MCS", ylabel="Energy", title="Thermalization energies");
-    savefig(plt, "ini_equi_E_plot.pdf")
+    savefig(plt, dir_name*"ini_equi_E_plot.pdf")
     
 	# Plot energy difference for first worker
     plt = plot(int, dE_array[1][int], title="Energy difference", xlabel="MCS");
-    savefig(plt, "ini_equi_dE_plot.pdf")
+    savefig(plt, dir_name*"ini_equi_dE_plot.pdf")
 
 	# Plot energy difference for all workers in averaging interval
     avg_int = tᵢ:Tᵢ
     dE_array = [dE_array[w][avg_int] for w = 1:n_workers]
 	plt = plot(tᵢ:Tᵢ, dE_array, title="dE, average interval", xlabel="MCS", label=labels[1:n_workers], ylabel="En. diff.")
-	savefig(plt, "ini_equi_dE_avgint_plot.pdf")
+	savefig(plt, dir_name*"ini_equi_dE_avgint_plot.pdf")
     
 	ψ₁ = ψ_w[1]
 	ψ₂ = ψ_ref
@@ -647,12 +684,28 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
     # Plotting results
 	x_mcs = (2t₀+1):(2t₀+2T)
     plt = plot(1:2T, dE, title="Energy difference", xlabel="MCS", xticks=x_mcs);
-    savefig(plt, "ini_extra_dE_plot.pdf")
+    savefig(plt, dir_name*"ini_extra_dE_plot.pdf")
     plt = plot(1:2T, [E₁,E₂], title="Internal energies", xlabel="MCS", xticks=x_mcs);
-    savefig(plt, "ini_extra_E_plot.pdf")
+    savefig(plt, dir_name*"ini_extra_E_plot.pdf")
     plt = plot(1:2T, [p₁,p₂], title="Accept probabilities", xlabel="MCS", ylabel="%", xticks=x_mcs);
-    savefig(plt, "ini_extra_AR_plot.pdf")
+    savefig(plt, dir_name*"ini_extra_AR_plot.pdf")
     
 	return (t₀, ψ_ref, sim_ref, ψ_w, sim_w)
 end
 
+#-------------------------------------------------------------------------------------------------#
+#Function to check if directory exists and make if it doesnt
+function makeDirRec(dir_name::String)
+    folders = split(dir_name, "/")
+    temp_string = folders[1]
+    if !isdir(temp_string)
+        mkdir(temp_string)
+    end
+
+    for i=2:length(folders)
+        temp_string = temp_string*"/"*folders[i]
+        if !isdir(temp_string)
+            mkdir(temp_string)
+        end
+    end
+end        
