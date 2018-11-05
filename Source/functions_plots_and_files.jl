@@ -317,234 +317,12 @@ function writeSimulationConstants(syst::SystConstants, sim::Controls, M::Int64, 
         write(f, "THERM_T $(t₀)\n")
     end
 end
-# -----------------------------------------------------------------------------------------------------------
-# Plotting result of structureFunctionVortexLatticeAvg! and saving it to .pdf files in current directory.
-function plotStructureFunctionVortexLatticeS{T<:Real}(avV⁺::Array{T, 2}, avV⁻::Array{T, 2}, 
-        V⁺::Array{T, 2}, V⁻::Array{T,2}, avS⁺::Array{T, 2}, avS⁻::Array{T,2})
-    L = size(avV⁺,1)
-    # Plotting structure factor
-    k_int = -π:2π/L:π*(L-1)/L
-    plt = heatmap(k_int, k_int, avS⁺, title="average S+", xlabel="k_x", ylabel="k_y")
-    savefig(plt, "sfvl_avg_S+_plot.pdf")
-    plt = heatmap(k_int, k_int, avS⁻, title="average S-", xlabel="k_x", ylabel="k_y")
-    savefig(plt, "sfvl_avg_S-_plot.pdf")
-    
-    # Removing middle-point
-    println("S⁺(0) ≈ $(avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))])")
-    temp⁺ = avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))]
-    avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))] = avS⁺[Int(ceil(1+L/2)), Int(ceil(L/2))]
-    println("S⁻(0) ≈ $(avS⁻[Int(ceil(L/2)), Int(ceil(1+L/2))])")
-    temp⁻ = avS⁻[Int(ceil(L/2)), Int(ceil(1+L/2))]
-    avS⁻[Int(ceil(L/2)), Int(ceil(1+L/2))] = avS⁻[Int(ceil(1+L/2)), Int(ceil(L/2))]
-    
-    # And then re-plotting
-    plt = heatmap(k_int, k_int, avS⁺, 
-        title="average S+ with S(0) removed", xlabel="k_x", ylabel="k_y")
-    savefig(plt, "sfvl_avg_S+_removed_plot.pdf")
-    plt = heatmap(k_int, k_int, avS⁻, 
-        title="average S- with S(0) removed", xlabel="k_x", ylabel="k_y")
-    savefig(plt, "sfvl_avg_S-_removed_plot.pdf")
-    
-    # Restoring middle point
-    avS⁺[Int(ceil(L/2)), Int(ceil(1+L/2))] = temp⁺
-    avS⁻[Int(ceil(L/2)), Int(ceil(1+L/2))] = temp⁻
-    
-    # Plotting vortex snapshots
-    plt = heatmap(1:L, 1:L, V⁺, title="Snapshot of + component vorticity", xlabel="x", ylabel="y")
-    savefig(plt, "sfvl_V+_snapshot_plot.pdf")
-    plt = heatmap(1:L, 1:L, V⁻, title="Snapshot of - component vorticity", xlabel="x", ylabel="y")
-    savefig(plt, "sfvl_V-_snapshot_plot.pdf")
-    
-    # Combining matrices
-    combined_lattice = combineVortexLattices(V⁺, V⁻)
-    plt = heatmap(1:L, 1:L, combined_lattice, title="Combination of snapshots", xlabel="x", ylabel="y")
-    savefig(plt, "sfvl_comb_snapshort_plot.pdf")
-    
-    # Finding the proportion of the different kinds of vortices in combined matrix
-    av_vortex_kinds = zeros(9)
-    for v_pos = 1:L, h_pos = 1:L
-        if combined_lattice[v_pos, h_pos] >= 0
-            av_vortex_kinds[combined_lattice[v_pos, h_pos]+1] += 1
-        end
-    end
-	av_vortex_kinds *= 100/L^2
-    println("The proportion of vortices (n⁺, n⁻) in snapshot")
-    println("% of vortex kind (-1, -1): \t$(Int(round(av_vortex_kinds[1],0)))")
-    println("% of vortex kind (-1, 0): \t$(Int(round(av_vortex_kinds[2],0)))")
-    println("% of vortex kind (-1, 1): \t$(Int(round(av_vortex_kinds[3],0)))")
-    println("% of vortex kind (0, -1): \t$(Int(round(av_vortex_kinds[4],0)))")
-    println("% of vortex kind (0, 0): \t$(Int(round(av_vortex_kinds[5],0)))")
-    println("% of vortex kind (0, 1): \t$(Int(round(av_vortex_kinds[6],0)))")
-    println("% of vortex kind (1, -1): \t$(Int(round(av_vortex_kinds[7],0)))")
-    println("% of vortex kind (1, 0): \t$(Int(round(av_vortex_kinds[8],0)))")
-    println("% of vortex kind (1, 1): \t$(Int(round(av_vortex_kinds[9],0)))\n")
-    
-    # Calculating the sum of vortices of snapshot
-    sum⁺ = 0.0
-    sum⁻ = 0.0
-    for h_pos = 1:L, v_pos = 1:L
-        sum⁺ += V⁺[v_pos, h_pos]
-        sum⁻ += V⁻[v_pos, h_pos]
-    end
-    println("Sum of + component vorticity in the snapshot: $(sum⁺)")
-    println("Sum of - component vorticity in the snapshot: $(sum⁻)")
-    flush(STDOUT)
-    
-    # Plotting vortex averages
-    plt = heatmap(1:L, 1:L, avV⁺, title="Average + component vorticity", xlabel="x", ylabel="y")
-    savefig(plt, "sfvl_avg_V+_plot.pdf")
-    plt = heatmap(1:L, 1:L, avV⁻, title="Average - component vorticity", xlabel="x", ylabel="y")
-    savefig(plt, "sfvl_avg_V-_plot.pdf")
-end 
+
 
 # -----------------------------------------------------------------------------------------------------------
 # Performing common initialization checks and plots for making sure the states are correctly
 # thermalized.
-function initializeTwoStates(syst::SystConstants, sim::Controls)
-    (t₀, E₁, E₂, dE, ψ₁, ψ₂, sim₁, sim₂) = findEquilibrium(syst, sim);
-    flush(STDOUT)
-    
-    N = size(dE, 1)
-    int = 1:N
-    plt = plot(int, dE[int], title="Energy difference", xlabel="MCS");
-    display(plt)
-    plt = plot(int, E₁[int], title="Internal energy 1", xlabel="MCS");
-    display(plt)
-    plt = plot(int, E₂[int], title="Internal energy 2", xlabel="MCS");
-    display(plt)
-    
-    println("Performing extra MCS")
-	last_pr = -1
-    for i = 1:t₀
-        mcSweep!(ψ₂)
-        mcSweep!(ψ₁)
-		this_pr = Int(round(i/t₀*100,0))
-		# Only print to STDOUT when a new whole percentage is reached so that STDOUT is not
-		# flooded and only print at 10% increments
-		if (this_pr > last_pr && this_pr % 10 == 0)
-			println("$(this_pr)%")
-			last_pr = this_pr
-		end
-    end
-    
-    println("Calculating energies and acceptance rates")
-    flush(STDOUT)
-    T = 4000
-    dE = zeros(2T)
-    E₁ = zeros(2T)
-    E₂ = zeros(2T)
-    p₁ = zeros(2T)
-    p₂ = zeros(2T)
-    for i = 1:T
-        E₁[i] = E(ψ₁)
-        E₂[i] = E(ψ₂)
-        dE[i] = E₂[i]-E₁[i]
-        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
-        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
-    end
-    adjustSimConstants!(sim₁, ψ₁)
-    adjustSimConstants!(sim₂, ψ₂)
-    for i = T+1:2T
-        E₁[i] = E(ψ₁)
-        E₂[i] = E(ψ₂)
-        dE[i] = E₂[i]-E₁[i]
-        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
-        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
-    end
-
-	# Making %
-	p₁ = 100 .* p₁
-	p₂ = 100 .* p₂
-
-    # Plotting results
-    plt = plot(1:2T, dE, title="Energy difference", xlabel="MCS");
-    display(plt)
-    plt = plot(1:2T, E₁, title="Internal energy 1", xlabel="MCS");
-    display(plt)
-    plt = plot(1:2T, E₂, title="Internal energy 2", xlabel="MCS");
-    display(plt)
-    plt = plot(1:2T, p₁, title="Accept probability 1", xlabel="MCS", ylabel="%");
-    display(plt)
-    plt = plot(1:2T, p₂, title="Accept probability 2", xlabel="MCS", ylabel="%");
-    display(plt)
-    
-    return (ψ₁, sim₁, ψ₂, sim₂, t₀)
-end
-# Same as above, but now saves to .pdf files in current directory instead of displaying the
-# plots.
-function initializeTwoStatesS(syst::SystConstants, sim::Controls)
-    (t₀, E₁, E₂, dE, ψ₁, ψ₂, sim₁, sim₂) = findEquilibrium(syst, sim);
-    flush(STDOUT)
-    
-    N = size(dE, 1)
-    int = 1:N
-    plt = plot(int, dE[int], title="Energy difference", xlabel="MCS");
-    savefig(plt, "ini_equi_dE_plot.pdf")
-    plt = plot(int, E₁[int], title="Internal energy 1", xlabel="MCS");
-    savefig(plt, "ini_equi_E1_plot.pdf")
-    plt = plot(int, E₂[int], title="Internal energy 2", xlabel="MCS");
-    savefig(plt, "ini_equi_E2_plot.pdf")
-    
-    println("Performing extra MCS")
-	last_pr = -1
-    for i = 1:t₀
-        mcSweep!(ψ₂)
-        mcSweep!(ψ₁)
-		this_pr = Int(round(i/t₀*100,0))
-		# Only print to STDOUT when a new whole percentage is reached so that STDOUT is not
-		# flooded and only print at 10% increments
-		if (this_pr > last_pr && this_pr % 10 == 0)
-			println("$(this_pr)%")
-			last_pr = this_pr
-		end
-    end
-    
-    println("Calculating energies and acceptance rates")
-    flush(STDOUT)
-    T = 4000
-    dE = zeros(2T)
-    E₁ = zeros(2T)
-    E₂ = zeros(2T)
-    p₁ = zeros(2T)
-    p₂ = zeros(2T)
-    for i = 1:T
-        E₁[i] = E(ψ₁)
-        E₂[i] = E(ψ₂)
-        dE[i] = E₂[i]-E₁[i]
-        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
-        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
-    end
-    adjustSimConstants!(sim₁, ψ₁)
-    adjustSimConstants!(sim₂, ψ₂)
-    for i = T+1:2T
-        E₁[i] = E(ψ₁)
-        E₂[i] = E(ψ₂)
-        dE[i] = E₂[i]-E₁[i]
-        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
-        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
-    end
-
-	# Making %
-	p₁ = 100 .* p₁
-	p₂ = 100 .* p₂
-
-    # Plotting results
-	x_mcs = (2t₀+1):(2t₀+2T)
-    plt = plot(1:2T, dE, title="Energy difference", xlabel="MCS", xticks=x_mcs);
-    savefig(plt, "ini_extra_dE_plot.pdf")
-    plt = plot(1:2T, E₁, title="Internal energy 1", xlabel="MCS", xticks=x_mcs);
-    savefig(plt, "ini_extra_E1_plot.pdf")
-    plt = plot(1:2T, E₂, title="Internal energy 2", xlabel="MCS", xticks=x_mcs);
-    savefig(plt, "ini_extra_E2_plot.pdf")
-    plt = plot(1:2T, p₁, title="Accept probability 1", xlabel="MCS", ylabel="%", xticks=x_mcs);
-    savefig(plt, "ini_extra_AR1_plot.pdf")
-    plt = plot(1:2T, p₂, title="Accept probability 2", xlabel="MCS", ylabel="%", xticks=x_mcs);
-    savefig(plt, "ini_extra_AR2_plot.pdf")
-    
-    return (ψ₁, sim₁, ψ₂, sim₂, t₀)
-end
-
-# Similar to above, but now uses parallelThermalization
+# Saves to .pdf files in current directory.
 function initializeParallelStatesS(syst::SystConstants, sim::Controls)
 	# Parameters
 	PLOT_FRACTION = 0.71
@@ -655,4 +433,79 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
     
 	return (t₀, ψ_ref, sim_ref, ψ_w, sim_w)
 end
+
+# -----------------------------------------------------------------------------------------------------------
+# Same as above, but now assuming only one process.
+function initializeTwoStatesS(syst::SystConstants, sim::Controls)
+    (t₀, E₁, E₂, dE, ψ₁, ψ₂, sim₁, sim₂) = findEquilibrium(syst, sim);
+    flush(STDOUT)
+    
+    N = size(dE, 1)
+    int = 1:N
+    plt = plot(int, dE[int], title="Energy difference", xlabel="MCS");
+    savefig(plt, "ini_equi_dE_plot.pdf")
+    plt = plot(int, E₁[int], title="Internal energy 1", xlabel="MCS");
+    savefig(plt, "ini_equi_E1_plot.pdf")
+    plt = plot(int, E₂[int], title="Internal energy 2", xlabel="MCS");
+    savefig(plt, "ini_equi_E2_plot.pdf")
+    
+    println("Performing extra MCS")
+	last_pr = -1
+    for i = 1:t₀
+        mcSweep!(ψ₂)
+        mcSweep!(ψ₁)
+		this_pr = Int(round(i/t₀*100,0))
+		# Only print to STDOUT when a new whole percentage is reached so that STDOUT is not
+		# flooded and only print at 10% increments
+		if (this_pr > last_pr && this_pr % 10 == 0)
+			println("$(this_pr)%")
+			last_pr = this_pr
+		end
+    end
+    
+    println("Calculating energies and acceptance rates")
+    flush(STDOUT)
+    T = 4000
+    dE = zeros(2T)
+    E₁ = zeros(2T)
+    E₂ = zeros(2T)
+    p₁ = zeros(2T)
+    p₂ = zeros(2T)
+    for i = 1:T
+        E₁[i] = E(ψ₁)
+        E₂[i] = E(ψ₂)
+        dE[i] = E₂[i]-E₁[i]
+        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
+        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
+    end
+    adjustSimConstants!(sim₁, ψ₁)
+    adjustSimConstants!(sim₂, ψ₂)
+    for i = T+1:2T
+        E₁[i] = E(ψ₁)
+        E₂[i] = E(ψ₂)
+        dE[i] = E₂[i]-E₁[i]
+        p₁[i] = mcSweepFrac!(ψ₁, sim₁)
+        p₂[i] = mcSweepFrac!(ψ₂, sim₂)
+    end
+
+	# Making %
+	p₁ = 100 .* p₁
+	p₂ = 100 .* p₂
+
+    # Plotting results
+	x_mcs = (2t₀+1):(2t₀+2T)
+    plt = plot(1:2T, dE, title="Energy difference", xlabel="MCS", xticks=x_mcs);
+    savefig(plt, "ini_extra_dE_plot.pdf")
+    plt = plot(1:2T, E₁, title="Internal energy 1", xlabel="MCS", xticks=x_mcs);
+    savefig(plt, "ini_extra_E1_plot.pdf")
+    plt = plot(1:2T, E₂, title="Internal energy 2", xlabel="MCS", xticks=x_mcs);
+    savefig(plt, "ini_extra_E2_plot.pdf")
+    plt = plot(1:2T, p₁, title="Accept probability 1", xlabel="MCS", ylabel="%", xticks=x_mcs);
+    savefig(plt, "ini_extra_AR1_plot.pdf")
+    plt = plot(1:2T, p₂, title="Accept probability 2", xlabel="MCS", ylabel="%", xticks=x_mcs);
+    savefig(plt, "ini_extra_AR2_plot.pdf")
+    
+    return (ψ₁, sim₁, ψ₂, sim₂, t₀)
+end
+
 
