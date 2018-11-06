@@ -57,7 +57,7 @@ end
 
 println("Testing latticeNeighbors")
 for v_pos=1:L, h_pos=1:L, z_pos = 1:L₃
-    @test nbl[v_pos, h_pos, z_pos].ϕᵣ₊₁.θ⁺ == Float64(v_pos)
+    @test nbl[v_pos, h_pos, z_pos].ϕᵣ₊₁.θ⁺ == Float64(v_pos)  
     @test nbl[v_pos, h_pos, z_pos].ϕᵣ₊₁.θ⁻ == Float64(mod(h_pos,L)+1)
     @test nbl[v_pos, h_pos, z_pos].ϕᵣ₋₁.θ⁺ == Float64(v_pos)
     @test nbl[v_pos, h_pos, z_pos].ϕᵣ₋₁.θ⁻ == Float64(mod(h_pos-2,L)+1)
@@ -77,48 +77,48 @@ end #Fra gammel kode, disse funker
 @test nbl[L,L,L₃].ϕᵣ₊₁.θ⁻ == 1
 
 #TODO: Test for NNeighbors i z-retning, må implenteres før de kan testes
-#println("\nTesting LaticeNextNeighbors")
-#for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
+println("\nTesting LaticeNextNeighbors")
+for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₊₃.u⁺ == Float64(mod(z_pos-2,L₃)+1)
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₃.u⁺ == Float64(mod(z_pos,L₃)+1)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₃.u⁺ == Float64(mod(z_pos,L₃)+1)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₊₃.u⁺ == Float64(mod(z_pos-2,L₃)+1)
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₋₃.u⁺ == Float64(mod(z_pos,L₃)+1)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₋₃.u⁺ == Float64(mod(z_pos,L₃)+1)
 
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₊₃.u⁺ == Float64(mod(z_pos-2,L₃)+1)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₊₃.u⁺ == Float64(mod(z_pos-2,L₃)+1)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₋₃.u⁺ == Float64(mod(z_pos,L₃)+1)
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₊₃.u⁺ == Float64(mod(z_pos-2,L₃)+1)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₊₃.u⁺ == Float64(mod(z_pos-2,L₃)+1)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₋₃.u⁺ == Float64(mod(z_pos,L₃)+1)
 
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₊₂.u⁺ == Float64(z_pos)
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₂.u⁺ == Float64(z_pos)
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₊₂.u⁺ == Float64(z_pos)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₂.u⁺ == Float64(z_pos)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₊₂.u⁺ == Float64(z_pos)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₋₂.u⁺ == Float64(z_pos)
 
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₊₁.u⁺ == Float64(z_pos)
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₁.u⁺ == Float64(z_pos)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₋₁.u⁺ == Float64(z_pos)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₊₁.u⁺ == Float64(z_pos)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₋₁.u⁺ == Float64(z_pos)
 
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₊₃.θ⁺ == Float64(v_pos)
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₃.θ⁺ == Float64(v_pos)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₃.θ⁺ == Float64(v_pos)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₊₃.θ⁺ == Float64(mod(v_pos-2,L)+1)
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₋₃.θ⁺ == Float64(mod(v_pos-2,L)+1)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₋₃.θ⁺ == Float64(mod(v_pos-2,L)+1)
 
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₊₃.θ⁺ == Float64(v_pos)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₊₃.θ⁺ == Float64(v_pos)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₋₃.θ⁺ == Float64(v_pos)
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₊₃.θ⁺ == Float64(mod(v_pos,L)+1)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₊₃.θ⁺ == Float64(mod(v_pos,L)+1)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₋₃.θ⁺ == Float64(mod(v_pos,L)+1)
 
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₊₃.θ⁻ == Float64(mod(h_pos,L)+1)
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₃.θ⁻ == Float64(mod(h_pos,L)+1)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₃.θ⁻ == Float64(mod(h_pos,L)+1)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₊₃.θ⁻ == Float64(h_pos)
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₋₃.θ⁻ == Float64(h_pos)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₋₃.θ⁻ == Float64(h_pos)
 
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₊₃.θ⁻ == Float64(mod(h_pos-2,L)+1)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₊₃.θ⁻ == Float64(mod(h_pos-2,L)+1)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₋₃.θ⁻ == Float64(mod(h_pos-2,L)+1)
-#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₊₃.θ⁻ == Float64(h_pos)
+    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₊₃.θ⁻ == Float64(h_pos)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₋₃.θ⁻ == Float64(h_pos)
-#end
+end
 
 
 println("\nTesting LatticeNNNeighbors")
@@ -185,5 +185,70 @@ f = 1/L*(rand()+1)
 syst = SystConstants(L,L₃,gm,g,ν,κ₅,f,0.0)
 ψ = State(1,syst)
 
+energy_theoretical = L^2*L₃*(-gm^2 + gm^4/2)
+for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
+    energy_theoretical += gm^2*(1 - cos(-2*2*π*f*(h_pos-1)))/2
+end
+println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
+
+
+###################################################################################################
+#Test the Maxwell terms
+L = 5
+L₃= 4
+gm = 0.3
+g = 0.3
+ν = 0.3
+κ₅ = 0.7
+f = 0.00
+syst = SystConstants(L, L₃, gm, g, ν, κ₅, f, 0.0)
+ψ = State(1,syst)
+
+
+println("\nTesting maxwell and kinetic terms with fluctuating plaquette gauge field")
+#State with u⁻ = 1, f ≢ 0 and everything else zero. We also have a fluctuationg gauge field at one plaquette
+A_max = 3.0
+ψ.lattice[2,2,2].A[1] = rand(Uniform(-A_max, A_max))
+ψ.lattice[2,2,2].A[2] = rand(Uniform(-A_max, A_max))
+ψ.lattice[2,2,2].A[3] = rand(Uniform(-A_max, A_max))
+ψ.lattice[1,2,2].A[3] = rand(Uniform(-A_max, A_max))
+ψ.lattice[2,2,1].A[2] = rand(Uniform(-A_max, A_max))
+ψ.lattice[2,2,1].A[1] = rand(Uniform(-A_max, A_max))
+ψ.lattice[2,3,2].A[3] = rand(Uniform(-A_max, A_max))
+ψ.lattice[2,3,2].A[2] = rand(Uniform(-A_max, A_max))
+ψ.lattice[1,2,2].A[1] = rand(Uniform(-A_max, A_max))
+
+#Calculation of the theoretical energies
+#First the cosine terms in the kin energy from sites where A has been changed. Each term here has a factor
+#2 since we have one contribution from r and one from r-μ (where μ || the A component that contributes).
+energy_theoretical = -0.5*gm^2*( 2*cos(ψ.lattice[2,2,2].A[1]) + 2*cos(ψ.lattice[2,2,2].A[2] + 2*π*f) + 
+    2*κ₅*cos(ψ.lattice[2,2,2].A[3]) + 2*κ₅*cos(ψ.lattice[1,2,2].A[3]) + 2*cos(ψ.lattice[2,2,1].A[2] + 2*π*f) + 
+    2*cos(ψ.lattice[2,2,1].A[1]) + 2*κ₅*cos(ψ.lattice[2,3,2].A[3]) + 2*cos(ψ.lattice[2,3,2].A[2] + 2*2π*f) +
+    2*cos(ψ.lattice[1,2,2].A[1]) )
+#Now have to sum over the rest of the cosine terms
+#In the x,z direction A has been changed at 6 sites for each. Thus remains a factor
+energy_theoretical += -0.5*gm^2*(L^2*L₃-6)*(1+κ₅)
+#In the y-direction, we have to consider the uniform A-field. This has been changed at sites (2,2,2), (2,3,2) and (2,2,1)
+#Compute the total contribution and subtract these both from the r terms and r-μ terms
+for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
+    energy_theoretical += -0.5*gm^2*cos(2*2*π*f*(h_pos-1))
+end
+
+energy_theoretical += 4*0.5*gm^2*cos(2*π*f) + 2*0.5*gm^2*cos(2*2π*f)
+
+#Then the contribution from the non-cosine terms:
+energy_theoretical += L^2*L₃*gm^2*( (1 + 0.5*κ₅) + (-1+0.5*gm^2) )
+
+#Now the contribution from the Maxwell terms
+energy_theoretical += ( (ψ.lattice[1,2,2].A[3] - ψ.lattice[2,2,2].A[3] - ψ.lattice[2,2,1].A[2] + ψ.lattice[2,2,2].A[2])^2
+    + (ψ.lattice[2,2,1].A[1] - ψ.lattice[2,2,2].A[1] - ψ.lattice[2,3,2].A[3] + ψ.lattice[2,2,2].A[3])^2
+    + (ψ.lattice[2,3,2].A[2] - ψ.lattice[2,2,2].A[2] - ψ.lattice[1,2,2].A[1] + ψ.lattice[2,2,2].A[1])^2
+    + 2.0*(ψ.lattice[2,2,2].A[1]^2 + ψ.lattice[2,2,2].A[2]^2 + ψ.lattice[2,2,2].A[3]^2 + ψ.lattice[1,2,2].A[3]^2 +
+        ψ.lattice[2,2,1].A[2]^2 + ψ.lattice[2,2,1].A[1]^2 + ψ.lattice[2,3,2].A[3]^2 + ψ.lattice[2,3,2].A[2]^2 +
+        ψ.lattice[1,2,2].A[1]^2) 
+    + (ψ.lattice[2,3,2].A[2] - ψ.lattice[2,3,2].A[3])^2 + (ψ.lattice[2,2,1].A[1] - ψ.lattice[2,2,1].A[2])^2
+        + (ψ.lattice[1,2,2].A[1] - ψ.lattice[1,2,2].A[3])^2)*g
+
+println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
 
 
