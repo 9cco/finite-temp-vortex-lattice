@@ -4,37 +4,6 @@
 ####################################################################################################################
 
 # -----------------------------------------------------------------------------------------------------------
-# Returns the un-normalized local vorticity by preforming a plaquette sum using the gauge-invariant
-# difference of the θ field.
-function n⁺(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, h_pos::Int64)
-	return (mod(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺, two_pi) - ϕ.A[1] + mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₁.θ⁺, two_pi) - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos)  
-			- mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₂.θ⁺, two_pi) + ϕᵣ₊₂.A[1]
-			- mod(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺, two_pi) + (ϕ.A[2] + two_pi*c.f*(h_pos-1)))
-end
-function n⁻(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, h_pos::Int64)
-    return (mod(ϕᵣ₊₁.θ⁻ - ϕ.θ⁻, two_pi) - ϕ.A[1] + mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₁.θ⁻, two_pi) - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos) 
-        - mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₂.θ⁻, two_pi) + ϕᵣ₊₂.A[1] 
-        - mod(ϕᵣ₊₂.θ⁻ - ϕ.θ⁻, two_pi) + (ϕ.A[2] + two_pi*c.f*(h_pos-1)))
-end
-# Returns both vorticities of the gauge-invariant phase difference.
-function nᵣGaugeInv(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, h_pos::Int64)
-    vort_θ⁺ = (mod(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺ - ϕ.A[1], two_pi) + mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₁.θ⁺ - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos), two_pi)
-        - mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₂.θ⁺ - ϕᵣ₊₂.A[1], two_pi) 
-        - mod(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺ - (ϕ.A[2] + two_pi*c.f*(h_pos-1)), two_pi))
-    vort_θ⁻ = (mod(ϕᵣ₊₁.θ⁻ - ϕ.θ⁻ - ϕ.A[1], two_pi) + mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₁.θ⁻ - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos), two_pi)
-        - mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₂.θ⁻ - ϕᵣ₊₂.A[1], two_pi) 
-        - mod(ϕᵣ₊₂.θ⁻ - ϕ.θ⁻ - (ϕ.A[2] + two_pi*c.f*(h_pos-1)), two_pi))
-    return vort_θ⁺, vort_θ⁻
-end
-#function nᵣ(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, h_pos::Int64)
-#    vort_θ⁺ = (mod(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺, two_pi) - ϕ.A[1] + mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₁.θ⁺, two_pi) - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos)
-#        - mod(ϕᵣ₊₁₊₂.θ⁺ - ϕᵣ₊₂.θ⁺, two_pi)  + ϕᵣ₊₂.A[1]
-#        - mod(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺, two_pi)  + (ϕ.A[2] + two_pi*c.f*(h_pos-1)))
-#    vort_θ⁻ = (mod(ϕᵣ₊₁.θ⁻ - ϕ.θ⁻, two_pi) - ϕ.A[1] + mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₁.θ⁻, two_pi) - (ϕᵣ₊₁.A[2] + two_pi*c.f*h_pos)
-#        - mod(ϕᵣ₊₁₊₂.θ⁻ - ϕᵣ₊₂.θ⁻, two_pi)  + ϕᵣ₊₂.A[1]
-#        - mod(ϕᵣ₊₂.θ⁻ - ϕ.θ⁻, two_pi)  + (ϕ.A[2] + two_pi*c.f*(h_pos-1)))
-#    return vort_θ⁺, vort_θ⁻
-#end
 # New version of nᵣ based on suggestion by Troels. We are drawing the gauge-invariant phase
 # difference back to [-π, π) instead of [0, 2π) and also adding 2πf so that we are measuring
 # n instead of (n-f) which we would do by just doing the gauge-invariant phase difference.
@@ -120,6 +89,7 @@ function combineVortexLattices{T<:Real}(vortex_matrix⁺::Array{T, 2}, vortex_ma
 end
 
 # --------------------------------------------------------------------------------------------------
+# Projects 3D vorticity space down on 2D through an averaging over the z-dimension.
 function avgVort{T<:Real}(V::Array{T,3})
     L = size(V,1)
     L₃ = size(V,3)
@@ -164,6 +134,7 @@ function structureFunction{T<:Real}(k::Array{T,1}, ψ::State)
     sum⁺ = Complex(0)
     sum⁻ = Complex(0)
     L = ψ.consts.L
+    L₃ = ψ.consts.L₃
     
     # Sum over lattice
     for h_pos = 1:L, v_pos = 1:L
@@ -171,11 +142,18 @@ function structureFunction{T<:Real}(k::Array{T,1}, ψ::State)
               # Note that r is the same as pos (found previously) with y-axis flipped and -1 in each direction.
               # Additionally we define it such that we get the usual r = [x,y] order of dimensions.
 
-        ϕ = ψ.lattice[v_pos,h_pos]
-        ϕᵣ₊₁ = ψ.nb[v_pos,h_pos].ϕᵣ₊₁
-        ϕᵣ₊₂ = ψ.nb[v_pos,h_pos].ϕᵣ₊₂
-        ϕᵣ₊₁₊₂ = ψ.nnb[v_pos,h_pos].ϕᵣ₊₁₊₂
-        vort_θ⁺, vort_θ⁻ = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)
+        vort_θ⁺ = 0.0; vort_θ⁻ = 0.0
+        for z_pos = 1:L₃
+            ϕ = ψ.lattice[v_pos,h_pos]
+            ϕᵣ₊₁ = ψ.nb[v_pos,h_pos].ϕᵣ₊₁
+            ϕᵣ₊₂ = ψ.nb[v_pos,h_pos].ϕᵣ₊₂
+            ϕᵣ₊₁₊₂ = ψ.nnb[v_pos,h_pos].ϕᵣ₊₁₊₂
+            n⁺, n⁻ = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)
+            vort_θ⁺ += n⁺
+            vort_θ⁻ += n⁻
+        end
+        vort_θ⁺ /= L₃
+        vort_θ⁻ /= L₃
         sum⁺ += vort_θ⁺*exp(im*(k⋅r))
         sum⁻ += vort_θ⁻*exp(im*(k⋅r))
     end

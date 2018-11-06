@@ -190,13 +190,16 @@ end
 #--------------------------------------------------------------------------------------------------
 # Check if average from t_start to t_finish is the same in E_workers and E_ref where these
 # arrays are 
-function checkThermalization(E_ref::Array{Float64,1}, E_workers::Array{Float64,2}, n_workers::Int,
+function checkThermalization(E_ref::Array{Float64,1}, E_workers::Array{Float64,2},
         t_start::Int64, t_end::Int64, STD_NUMBER::Float64=3.0)
     max_av = 0.0
     max_std = 0.0
+    n_workers = size(E_workers,1)
 
 	# Check that we have enough available processes
-	nprocs()-1 >= n_workers || throw(error("ERROR: Not enough workers"))
+    if nprocs()-1 >= n_workers
+        println("Warning: Not enough worker processes")
+    end
 
 	future_array = [Future() for i = 1:n_workers]
 	av = Array{Float64,1}(n_workers)
@@ -393,7 +396,7 @@ Thermalization will be ×$(floor(Int64, (NWS+1)/(np+1))) as long.")
             ψ_w[w], E_w[w,tₛ:T] = fetch(ψ_future_list[w])
         end
 
-        if checkThermalization(E_ref, E_w, NWS, tₛ, T,STD_NUMBER)
+        if checkThermalization(E_ref, E_w, tₛ, T,STD_NUMBER)
 			println("Final thermalization time: $(T+adjustment_mcs)")
             return(T+adjustment_mcs, tₛ, T, E_ref[1:T], E_w[:,1:T], ψ_ref, ψ_w, sim_ref, sim_w)
         end

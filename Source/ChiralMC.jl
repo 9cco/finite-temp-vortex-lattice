@@ -29,7 +29,12 @@ export E, ΔE
 include("functions_symmetric_energy.jl")
 
 export mcSweep!, mcProposalFraction!, mcProposalFraction, mcSweepEn!, mcSweepFrac!, adjustSimConstants!, findEquilibrium
+export nMCSEnergyDynamic, adjustSimConstantsPar
 
 include("functions_mc.jl")
+
+export parallelThermalization!, findEquilibrium
+
+include("functions_thermalization.jl")
 
 end # Module ChiralMC
