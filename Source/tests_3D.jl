@@ -2,7 +2,6 @@ include("ChiralMC.jl")
 using ChiralMC
 
 include("functions_mc.jl")
-include("functions_observables.jl")
 include("functions_symmetric_energy.jl")
 
 using Base.Test
@@ -183,7 +182,7 @@ println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
 #Include a constant gauge field (uniform background), only u⁻ non-zero otherwise.
 f = 1/L*(rand()+1)
 
-syst = Systconstants(L,L₃,gm,g,ν,κ₅,f,0.0)
+syst = SystConstants(L,L₃,gm,g,ν,κ₅,f,0.0)
 ψ = State(1,syst)
 
 
