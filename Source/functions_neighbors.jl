@@ -7,8 +7,8 @@
 # Constructs mirror lattice of lattice, where each element consists of a Neighbor object listing all the
 # nearest neighbor LatticeSites of the LatticeSite in the mirror lattice that is at the corresponding position
 # of the Neighbor object.
-function latticeNeighbors(lattice:Array{LatticeSite, 3}, L::Int64, L₃::Int64)
-    nb = Arrray{NearestNeighbors,3}(L,L,L₃)
+function latticeNeighbors(lattice::Array{LatticeSite, 3}, L::Int64, L₃::Int64)
+    nb = Array{NearestNeighbors,3}(L,L,L₃)
 
     for z_pos = 1:L₃, v_pos=1:L, h_pos=1:L
         ϕᵣ₊₁ = lattice[v_pos, mod(h_pos+1-1,L)+1, z_pos]
@@ -187,8 +187,8 @@ function latticeNNNeighbors(lattice::Array{LatticeSite, 3}, L::Int64, L₃::Int6
         ϕᵣ₋₁₁ = lattice[v_pos, mod(h_pos-2-1,L)+1, z_pos]
         ϕᵣ₊₂₂ = lattice[mod(v_pos-2-1,L)+1, h_pos, z_pos]
         ϕᵣ₋₂₂ = lattice[mod(v_pos+2-1,L)+1, h_pos, z_pos]
-        ϕᵣ₊₃₃ = lattice[v_pos, h_pos, mod(z_pos-3-1,L)+1]
-        ϕᵣ₋₃₃ = lattice[v_pos, h_pos, mod(z_pos+3-1,L)+1]
+        ϕᵣ₊₃₃ = lattice[v_pos, h_pos, mod(z_pos-2-1,L₃)+1]
+        ϕᵣ₋₃₃ = lattice[v_pos, h_pos, mod(z_pos+2-1,L₃)+1]
         nnnb[v_pos, h_pos, z_pos] = NNNeighbors(ϕᵣ₊₁₁, ϕᵣ₋₁₁, ϕᵣ₊₂₂, ϕᵣ₋₂₂, ϕᵣ₊₃₃, ϕᵣ₋₃₃)
     end
     nnnb

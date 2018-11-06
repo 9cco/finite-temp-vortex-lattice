@@ -89,7 +89,45 @@ end #Fra gammel kode, disse funker
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₋₃.u⁺ == Float64(mod(z_pos,L₃)+1)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₊₃.u⁺ == Float64(mod(z_pos-2,L₃)+1)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₋₃.u⁺ == Float64(mod(z_pos,L₃)+1)
-end
+
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₊₂.u⁺ == Float64(z_pos)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₂.u⁺ == Float64(z_pos)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₊₂.u⁺ == Float64(z_pos)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₋₂.u⁺ == Float64(z_pos)
+
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₊₁.u⁺ == Float64(z_pos)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₁.u⁺ == Float64(z_pos)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₊₁.u⁺ == Float64(z_pos)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₋₁.u⁺ == Float64(z_pos)
+
+#end
+
+#for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₊₃.θ⁺ == Float64(v_pos)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₃.θ⁺ == Float64(v_pos)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₊₃.θ⁺ == Float64(mod(v_pos-2,L)+1)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₋₃.θ⁺ == Float64(mod(v_pos-2,L)+1)
+
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₊₃.θ⁺ == Float64(v_pos)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₋₃.θ⁺ == Float64(v_pos)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₊₃.θ⁺ == Float64(mod(v_pos,L)+1)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₋₃.θ⁺ == Float64(mod(v_pos,L)+1)
+
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₊₃.θ⁻ == Float64(mod(h_pos,L)+1)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₃.θ⁻ == Float64(mod(h_pos,L)+1)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₊₃.θ⁻ == Float64(h_pos)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₋₃.θ⁻ == Float64(h_pos)
+
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₊₃.θ⁻ == Float64(mod(h_pos-2,L)+1)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₋₃.θ⁻ == Float64(mod(h_pos-2,L)+1)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₊₃.θ⁻ == Float64(h_pos)
+#    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₋₃.θ⁻ == Float64(h_pos)
+#end
+
+
+println("\nTesting LatticeNNNeighbors")
+for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
+    nnnbl
 
 
 #########################################################################################

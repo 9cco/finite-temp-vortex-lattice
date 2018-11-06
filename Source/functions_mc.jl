@@ -10,7 +10,7 @@ function proposeLocalUpdate(ϕ::LatticeSite, sim::Controls)
     u⁺ = mod(ϕ.u⁺ + rand(Uniform(-sim.umax,sim.umax)), UMAX) # This does not allow u⁺ = UMAX, is this a problem?
 	u⁻ = mod(ϕ.u⁻ + rand(Uniform(-sim.umax,sim.umax)), UMAX)
     # Construct new configuration at lattice site.
-    return LatticeSite([ϕ.A[1]+rand(Uniform(-sim.Amax,sim.Amax)), ϕ.A[2]+rand(Uniform(-sim.Amax,sim.Amax))
+    return LatticeSite([ϕ.A[1]+rand(Uniform(-sim.Amax,sim.Amax)), ϕ.A[2]+rand(Uniform(-sim.Amax,sim.Amax)),
                         ϕ.A[3]+rand(Uniform(-sim.Amax,sim.Amax))],
         mod(ϕ.θ⁺ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), mod(ϕ.θ⁻ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), 
         u⁺, u⁻)
@@ -52,7 +52,7 @@ function mcSweep!(ψ::State, sim::Controls = Controls(π/3, 0.4, 3.0))
    
     # Find size of the lattice L
     L::Int64 = ψ.consts.L
-    L::Int64 = ψ.consts.L₃
+    L₃::Int64 = ψ.consts.L₃
     
     for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
         metropolisHastingUpdate!(ψ, [v_pos,h_pos,z_pos], sim)
