@@ -100,9 +100,6 @@ end #Fra gammel kode, disse funker
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₊₁.u⁺ == Float64(z_pos)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₋₁.u⁺ == Float64(z_pos)
 
-#end
-
-#for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₊₃.θ⁺ == Float64(v_pos)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₋₃.θ⁺ == Float64(v_pos)
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₊₃.θ⁺ == Float64(mod(v_pos-2,L)+1)
@@ -127,8 +124,18 @@ end #Fra gammel kode, disse funker
 
 println("\nTesting LatticeNNNeighbors")
 for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
-    nnnbl
+    nnnbl[v_pos, h_pos, z_pos].ϕᵣ₊₃₃.u⁺ == Float64(mod(z_pos-3,L₃)+1)
+    nnnbl[v_pos, h_pos, z_pos].ϕᵣ₋₃₃.u⁺ == Float64(mod(z_pos+1,L₃)+1)
+    nnnbl[v_pos, h_pos, z_pos].ϕᵣ₊₃₃.θ⁺ == Float64(v_pos)
+    nnnbl[v_pos, h_pos, z_pos].ϕᵣ₋₃₃.θ⁺ == Float64(v_pos)
+    nnnbl[v_pos, h_pos, z_pos].ϕᵣ₊₃₃.θ⁻ == Float64(h_pos)
+    nnnbl[v_pos, h_pos, z_pos].ϕᵣ₋₃₃.θ⁻ == Float64(h_pos)
 
+    nnnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₁.u⁺ == Float64(z_pos)
+    nnnbl[v_pos, h_pos, z_pos].ϕᵣ₋₁₁.u⁺ == Float64(z_pos)
+    nnnbl[v_pos, h_pos, z_pos].ϕᵣ₊₂₂.u⁺ == Float64(z_pos)
+    nnnbl[v_pos, h_pos, z_pos].ϕᵣ₋₂₂.u⁺ == Float64(z_pos)
+end
 
 #########################################################################################
 #       Testing energy functions for 3D case
@@ -137,19 +144,47 @@ for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
 
 println("\nTesting energy functions\n")
 #First test the kinetic and potential energies for a state with no gauge field
+# (no fluctuating field and no external)
 # fluctuations and phases set to zero
 
-L = 100
-L₃ = 60
-f = 1/L*(rand()+1)
-gm = 1.0
+L = 5
+L₃ = 4
+f = 0.0
+gm = 0.3
 g = 0.3
-ν = rand()
+ν = 0.5
 κ₅ = 1.0
 
 syst = SystConstants(L, L₃, gm, g, ν, κ₅, f, 0.0)
 ψ = State(1, syst)
 
+energy_theoretical = L^2*L₃*(-gm^2 + gm^4/2) 
+println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
+
+#Set the u⁺ amplitudes to one as well
+for v_pos=1:L, h_pos=1:L, z_pos = 1:L₃
+    ψ.lattice[v_pos,h_pos,z_pos].u⁺ = 1.0
+end
+
+energy_theoretical = L*L*L₃*gm^2*(gm^2*(3+ν)-2)
+println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
+
+#Non-zero angles 
+θ⁺ = π/2
+θ⁻ = π/7
+for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
+    ψ.lattice[v_pos,h_pos,z_pos].θ⁺ = θ⁺
+    ψ.lattice[v_pos,h_pos,z_pos].θ⁻ = θ⁻
+end
+
+energy_theoretical = L*L*L₃*gm^2*(gm^2*(3+ν*cos(2*(θ⁺-θ⁻)))-2)
+println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
+
+#Include a constant gauge field (uniform background), only u⁻ non-zero otherwise.
+f = 1/L*(rand()+1)
+
+syst = Systconstants(L,L₃,gm,g,ν,κ₅,f,0.0)
+ψ = State(1,syst)
 
 
 

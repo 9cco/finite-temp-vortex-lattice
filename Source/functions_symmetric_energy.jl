@@ -5,7 +5,7 @@
 
 # ---------------------------------------------------------------------------------------------------
 # Calculate energy contribution from a single term in the energy sum of the Higgs terms.
-function fᵣ(ϕ::LatticeSite, nb::Neighbors, h_pos::Int64, c::SystConstants)
+function fᵣ(ϕ::LatticeSite, nb::NearestNeighbors, h_pos::Int64, c::SystConstants)
     energy = 0.0
     Aᵣ = two_pi*c.f*(h_pos-1)
 #    Aᵣ₋₁ = two_pi*c.f*(h_pos-2)
@@ -22,15 +22,18 @@ function fᵣ(ϕ::LatticeSite, nb::Neighbors, h_pos::Int64, c::SystConstants)
         + ϕᵣ₊₂.u⁺*ϕᵣ₋₂.u⁺*cos(ϕᵣ₊₂.θ⁺-ϕᵣ₋₂.θ⁺ - (ϕ.A[2]+2*Aᵣ+ϕᵣ₋₂.A[2]))
         + ϕᵣ₊₁.u⁻*ϕᵣ₋₁.u⁻*cos(ϕᵣ₊₁.θ⁻-ϕᵣ₋₁.θ⁻ - (ϕ.A[1]+ϕᵣ₋₁.A[1]))
         + ϕᵣ₊₂.u⁻*ϕᵣ₋₂.u⁻*cos(ϕᵣ₊₂.θ⁻-ϕᵣ₋₂.θ⁻ - (ϕ.A[2]+2*Aᵣ+ϕᵣ₋₂.A[2])))
+    println("Fk = $(Fₖ)")
     # 3D z-term
-    Fₖ += -c.κ₅*0.5*(ϕᵣ₊₃.u⁺*ϕᵣ₋₃.u⁺*cos(ϕᵣ₊₃.θ⁺-ϕᵣ₋₃.θ⁺ - (ϕ.A[3]+ϕᵣ₋₃.A[3]))
+    Fₖ += -c.κ₅*c.γ^2*0.5*(ϕᵣ₊₃.u⁺*ϕᵣ₋₃.u⁺*cos(ϕᵣ₊₃.θ⁺-ϕᵣ₋₃.θ⁺ - (ϕ.A[3]+ϕᵣ₋₃.A[3]))
         + ϕᵣ₊₃.u⁻*ϕᵣ₋₃.u⁻*cos(ϕᵣ₊₃.θ⁻-ϕᵣ₋₃.θ⁻ - (ϕ.A[3]+ϕᵣ₋₃.A[3]))
         - ϕ.u⁺^2 - ϕ.u⁻^2)
+    println("Fₖ₃ + Fₖ = $(Fₖ)")
 #	@test ϕᵣ₊₂.u⁺ == ϕ.u⁺ == ϕᵣ₊₁.u⁺ == ϕᵣ₋₁.u⁺ == ϕᵣ₋₂.u⁺
 #	@test ϕᵣ₊₂.u⁻ == ϕ.u⁻ == ϕᵣ₊₁.u⁻ == ϕᵣ₋₁.u⁻ == ϕᵣ₋₂.u⁻
 #	@test Fₖ == -(ϕ.u⁺^2+ϕ.u⁻^2)
     # Potential energy Fᵥ
     Fᵥ = c.γ^4*((ϕ.u⁺*ϕ.u⁻)^2*(2+c.ν*cos(2*(ϕ.θ⁺-ϕ.θ⁻))) + 0.5*(ϕ.u⁺^4 + ϕ.u⁻^4))
+    println("Fᵥ = $(Fᵥ)")
 #	@test Fᵥ == (ϕ.u⁺*ϕ.u⁻)^2*(2+c.ν) + 0.5*(ϕ.u⁺^4 + ϕ.u⁻^4)
     # Band-anisotropy terms
     Fₐₙ = (c.ν+1)/4*c.γ^2*(
@@ -38,6 +41,7 @@ function fᵣ(ϕ::LatticeSite, nb::Neighbors, h_pos::Int64, c::SystConstants)
         - ϕᵣ₊₁.u⁺*ϕᵣ₋₁.u⁻*cos(ϕᵣ₊₁.θ⁺-ϕᵣ₋₁.θ⁻ - (ϕ.A[1] + ϕᵣ₋₁.A[1])) 
         + ϕᵣ₊₂.u⁻*ϕᵣ₋₂.u⁺*cos(ϕᵣ₊₂.θ⁻-ϕᵣ₋₂.θ⁺ - (ϕ.A[2] + 2*Aᵣ + ϕᵣ₋₂.A[2])) 
         - ϕᵣ₊₁.u⁻*ϕᵣ₋₁.u⁺*cos(ϕᵣ₊₁.θ⁻-ϕᵣ₋₁.θ⁺ - (ϕ.A[1] + ϕᵣ₋₁.A[1])))
+    println("Fₐₙ = $(Fₐₙ)")
 #	@test Fₐₙ == 0
     # Mixed gradient terms
     Fₘ = c.γ^2*(c.ν-1)/4*(
@@ -49,6 +53,7 @@ function fᵣ(ϕ::LatticeSite, nb::Neighbors, h_pos::Int64, c::SystConstants)
         + ϕᵣ₋₁.u⁻*ϕᵣ₋₂.u⁺*sin(ϕᵣ₋₂.θ⁺-ϕᵣ₋₁.θ⁻ - (ϕᵣ₋₁.A[1]-ϕᵣ₋₂.A[2]-Aᵣ)) 
         + ϕᵣ₊₂.u⁻*ϕᵣ₋₁.u⁺*sin(ϕᵣ₊₂.θ⁻-ϕᵣ₋₁.θ⁺ - (ϕᵣ₋₁.A[1]+ϕ.A[2]+Aᵣ)) 
         + ϕᵣ₊₁.u⁻*ϕᵣ₋₂.u⁺*sin(ϕᵣ₊₁.θ⁻-ϕᵣ₋₂.θ⁺ - (ϕ.A[1]+ϕᵣ₋₂.A[2]+Aᵣ))))
+    println("Fₘ = $(Fₘ)")
 #	if ! isapprox(Fₘ, 0.0, atol=5e-13, rtol=1e-13)
 #		println("MGT at h_pos:\t$(h_pos),:\t$(Fₘ)!")
 #		t = (c.ν-1)/4*ϕ.u⁺*ϕ.u⁻*(sin(ϕᵣ₊₁.θ⁻-two_pi*c.f*(h_pos+1)) + sin(ϕᵣ₊₁.θ⁺+2π*c.f*(h_pos+1)) - sin(ϕᵣ₊₁.θ⁺-2π*c.f*(h_pos+1)) - sin(ϕᵣ₊₁.θ⁻+2π*c.f*(h_pos+1)))
