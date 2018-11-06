@@ -126,6 +126,52 @@ function mcProposalFraction!(ψ::State, sim::Controls=Controls(π/2, 0.4, 3.0), 
     return (av, stdev)
 end
 
+# --------------------------------------------------------------------------------------------------
+function nMCS(ψ::State, sim::Controls, n::Int64)
+    for i=1:n
+        mcSweep!(ψ, sim)
+    end
+    return ψ
+end
+
+# --------------------------------------------------------------------------------------------------
+# Perform n MCsweeps and return the final state and an array with energies after each sweep
+function nMCSEnergy(ψ::State, sim::Controls, n::Int64, E₀::Float64)
+	E_array = Array{Float64,1}(n)
+	E_array[1] = E₀ + mcSweepEn!(ψ,sim)
+    for i=2:n
+        E_array[i] = E_array[i-1] + mcSweepEn!(ψ,sim)
+        #Have checked that this energy matches E(ψ) for each step
+    end
+    return ψ, E_array
+end
+
+#---------------------------------------------------------------------------------------------------
+# Perform n MCsweeps and return the final state and an array with energies after each sweep
+# and updates simulation constants dynamically
+function nMCSEnergyDynamic(ψ::State, sim::Controls, n::Int64, adjust_int::Int64, E₀::Float64)
+	Es = Array{Float64,1}(n)
+    adjustment_mcs = 0
+
+	Es[1] = E₀ + mcSweepEn!(ψ,sim)
+    
+    for i=2:n
+        Es[i] = Es[i-1] + mcSweepEn!(ψ,sim)
+        
+        #Every adjust_int steps, update simulation constants if needed
+        if i % adjust_int == 0
+            #Testing
+            (ar, mcs) = adjustSimConstants!(sim, ψ)
+            adjustment_mcs += mcs
+            
+            #Update energy (since we do MCS in the update steps)
+            Es[i] = E(ψ)
+        end
+    end
+    return ψ, Es, sim, adjustment_mcs
+end    
+
+
 
 # -----------------------------------------------------------------------------------------------------------
 # Adjusts the simulation controls such that ψ has an AR larger than LOWER. Tries to find the simulation controls
@@ -246,180 +292,13 @@ function adjustSimConstants!(sim::Controls, ψ::State, M::Int64 = 40)
     # Return the acceptance ratio of the new sim and the number of Monte-Carlo Sweeps done during this adjustment.
 end
 
-
-# ---------------------------------------------------------------------------------------------------
-# Version of find Equilibrium that doesn't waste MCS when adjusting sim Constants and also calculates energy based
-# on return value of mcSweepEn! as well as gets rid of the use of dynamic arrays.
-# ---------------------------------------------------------------------------------------------------
-# Given values for the physical constants of the system as well as the system size, we find the number of MC-sweeps it
-# takes until the internal energy of the system reaches a more or less constant value.
-function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 3.0), 
-        T::Int64=1000, ex::Float64=1.5, di::Int64=8)
-    CUTOFF_MAX::Int64 = 8000000
-    ADJUST_INTERVAL::Int64 = 2000
-    STD_NUMBER::Int64 = 1
-    println("Finding Equilibrium of\n$(c)\n$(sim₁)")
-    
-    ψ₂ = State(2, c)
-    sim₂ = copy(sim₁)
-    ψ₁ = State(1, c)
-    dE = zeros(CUTOFF_MAX)
-    E₁ = zeros(CUTOFF_MAX)
-    E₂ = zeros(CUTOFF_MAX)
-    adjustment_mcs = 0
-    
-    # Check that the un-correllated state has higher energy than the correlated
-    if E(ψ₂) <= E(ψ₁)
-        error("Correlated state has higher energy than un-correlated")
-    end
-    
-    tₛ = 0    # The wanted t₀ does not exist at or before this position.
-    t₀ = T
-
-	println("Performing initial $(T) MCS")
-	flush(STDOUT)
-    
-    E₁[1] = E(ψ₁)
-    E₂[1] = E(ψ₂)
-    dE[1] = E₂[1] - E₁[1]
-    for i = 2:T
-        E₁[i] = E₁[i-1] + mcSweepEn!(ψ₁, sim₁)
-        E₂[i] = E₂[i-1] + mcSweepEn!(ψ₂, sim₂)
-        dE[i] = E₂[i] - E₁[i]
-    end
-    
-    # Adjust simulation constants as needed
-    (ar, mcs1) = adjustSimConstants!(sim₁, ψ₁)
-    (ar, mcs2) = adjustSimConstants!(sim₂, ψ₂)
-    adjustment_mcs += max(mcs1, mcs2)   # Adds the max number of monte-carlo sweeps done for the two
-    # adjustments to the number of adjustments used for finding the equilibrium time.
-    
-    E₁[T] = E(ψ₁)
-    E₂[T] = E(ψ₂)
-    dE[T] = E₂[T] - E₁[T]
-    
-    while tₛ < CUTOFF_MAX
-        # Find the first occurence of dE <= 0 if it exists
-        println("Searching for ΔE <= 0..")
-		flush(STDOUT)
-        t₀ = T
-        for i = (tₛ+1):T
-            if dE[i] <= 0
-                t₀ = i
-                break
-            end
-        end
-        
-        while T <= t₀ && T < CUTOFF_MAX
-            # If we couldn't find a t₀ in dE we have to try and increase simulation time
-            tₛ = T
-            T = min(Int(ceil(T*ex)), CUTOFF_MAX)
-            for i = (tₛ+1):T
-                E₁[i] = E₁[i-1] + mcSweepEn!(ψ₁, sim₁)
-                E₂[i] = E₂[i-1] + mcSweepEn!(ψ₂, sim₂)
-                dE[i] = E₂[i] - E₁[i]
-                
-                # After ADJUST_INTERVAL # MCS we see if adjusting the simulations constants is neccessary.
-                if i % ADJUST_INTERVAL == 0
-                    ar, mcs1 = adjustSimConstants!(sim₁, ψ₁)
-                    ar, mcs2 = adjustSimConstants!(sim₂, ψ₂)
-                    adjustment_mcs += max(mcs1, mcs2)
-                    
-                    # Then we also go over an extra time to get energy correct
-                    E₁[i] = E(ψ₁)
-                    E₂[i] = E(ψ₂)
-                    dE[i] = E₂[i] - E₁[i]
-                end
-            end
-            
-            # Then we again see if we can find the first occurrence of dE <= 0 after tₛ
-            t₀ = T
-            for i = tₛ:T
-                if dE[i] <= 0
-                    t₀ = i
-                    break
-                end
-            end
-            
-            if t₀ == T == CUTOFF_MAX # We have not found any dE < 0 and we have reached the max number of sweeps
-                println("Failed to find a point where ΔE <= 0")
-                return (-1, E₁, E₂, dE, ψ₁, ψ₂, sim₁, sim₂)
-            end
-            
-            # When the loop ends we should have the situation that T > t₀ where t₀ is the first occurrence
-            # in dE where dE[t₀] <= 0
-        end
-        println("ΔE <= 0 found at t₀ = $(t₀)!\nChecking if average is close to 0..")
-		println("$(Int(round(T/CUTOFF_MAX*100,0)))% of max") # Debug
-		flush(STDOUT)
-        
-        # Now we make sure that T is large enough such that [1,T] includes an interval [t₀, t₀+t₀/div]
-        # so that an average can be performed
-        t_end = min(t₀ + Int(ceil(t₀/di)), CUTOFF_MAX)
-        while T < t_end
-            T += 1
-            E₁[T] = E₁[T-1] + mcSweepEn!(ψ₁, sim₁)
-            E₂[T] = E₂[T-1] + mcSweepEn!(ψ₂, sim₂)
-            dE[T] = E₂[T] - E₁[T]
-
-            # After ADJUST_INTERVAL # MCS we see if adjusting the simulations constants is neccessary.
-            if T % ADJUST_INTERVAL == 0
-                ar, mcs1 = adjustSimConstants!(sim₁, ψ₁)
-                ar, mcs2 = adjustSimConstants!(sim₂, ψ₂)
-                adjustment_mcs += max(mcs1, mcs2)
-                
-                # Then we also go over an extra time to get energy correct
-                E₁[T] = E(ψ₁)
-                E₂[T] = E(ψ₂)
-                dE[T] = E₂[T] - E₁[T]
-            end
-        end
-        
-        # Now we calculate the average and standard deviation of dE over [t₀, T] and check if the
-        # average is within STD_NUMBER of standard deviations of 0 at which point we declare the equilibrium
-        # time to have been found.
-        int = dE[t₀:T]
-        av = mean(int)
-        st = std(int)
-        if abs(av) <= STD_NUMBER*st
-            println("Equilibrium found at time $(T+adjustment_mcs)
-over the interval [$(t₀), $(T)]
-s.t. <ΔE> = $(round(av,2)) ± $(round(st/sqrt(size(int,1)), 1))
-std(ΔE) = $(round(st, 1))")
-            return (T+adjustment_mcs, E₁[1:T], E₂[1:T], dE[1:T], ψ₁, ψ₂, sim₁, sim₂)
-        end
-        
-        println("Average was not close to 0. Increasing interval.")
-        
-        # If we didn't find an interval that had an average close to 0 we assume this interval is ahead of us
-        # and start again with an increased T, setting the starting point tₛ to the end of the interval.
-        tₛ = T
-        T = min(Int(ceil(T*ex)), CUTOFF_MAX)
-        
-        # Simulating new MCS
-        for i = (tₛ+1):T
-            E₁[i] = E₁[i-1] + mcSweepEn!(ψ₁, sim₁)
-            E₂[i] = E₂[i-1] + mcSweepEn!(ψ₂, sim₂)
-            dE[i] = E₂[i] - E₁[i]
-
-            # After ADJUST_INTERVAL # MCS we see if adjusting the simulations constants is neccessary.
-            if i % ADJUST_INTERVAL == 0
-                ar, mcs1 = adjustSimConstants!(sim₁, ψ₁)
-                ar, mcs2 = adjustSimConstants!(sim₂, ψ₂)
-                adjustment_mcs += max(mcs1, mcs2)
-                
-                # Then we also go over an extra time to get energy correct
-                E₁[i] = E(ψ₁)
-                E₂[i] = E(ψ₂)
-                dE[i] = E₂[i] - E₁[i]
-            end
-        end
-    end
-    return (-1, E₁, E₂, dE, ψ₁, ψ₂, sim₁, sim₂)
+#--------------------------------------------------------------------------------------------------
+# Cannot use adjustSimConstant in a paralell, process since it does not return ψ and sim, so have to
+# make a dummy function to help send variables between processes.
+function adjustSimConstantsPar(sim::Controls, ψ::State, M::Int64=40)
+    accept_ratio, adjustment_mcs = adjustSimConstants!(sim, ψ, M)
+    return ψ, sim, adjustment_mcs
 end
-# IDEA: We could have sim be controlled as a Metropolis Update where the internal energy equivalent could be the number of
-# accepts pr proposal over mcSweep and how close that is to 1/2.
-
 
 
 
