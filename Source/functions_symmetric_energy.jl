@@ -201,10 +201,13 @@ function ΔE(ϕ′::LatticeSite, ϕ::LatticeSite, nb::Neighbors, nnb::NextNeighb
     
     # Then calculate the Gauge field contribution
     # First contribution from current position
+    #δE += ((ϕ′.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ′.A[2])^2 - (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])^2)*c.g⁻²
     δE += maxwell(ϕ′, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₃, c.g⁻²) - maxwell(ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₃, c.g⁻²)
     # Then from position r-x
-    δE += ((ϕᵣ₋₁.A[1] + ϕ′.A[2] - ϕᵣ₋₁₊₂.A[1] - ϕᵣ₋₁.A[2])^2 - (ϕᵣ₋₁.A[1] + ϕ.A[2] - ϕᵣ₋₁₊₂.A[1] - ϕᵣ₋₁.A[2])^2)*c.g⁻²
+    δE += maxwell(ϕᵣ₋₁, ϕ′, ϕᵣ₋₁₊₂, ϕᵣ₋₁₊₃, c.g⁻²) - maxwell(ϕᵣ₋₁, ϕ, ϕᵣ₋₁₊₃, c.g⁻²)
+    #δE += ((ϕᵣ₋₁.A[1] + ϕ′.A[2] - ϕᵣ₋₁₊₂.A[1] - ϕᵣ₋₁.A[2])^2 - (ϕᵣ₋₁.A[1] + ϕ.A[2] - ϕᵣ₋₁₊₂.A[1] - ϕᵣ₋₁.A[2])^2)*c.g⁻²
     # Then from position r-y
-    δE += ((ϕᵣ₋₂.A[1] + ϕᵣ₊₁₋₂.A[2] - ϕ′.A[1] - ϕᵣ₋₂.A[2])^2 - (ϕᵣ₋₂.A[1] + ϕᵣ₊₁₋₂.A[2] - ϕ.A[1] - ϕᵣ₋₂.A[2])^2)*c.g⁻²
+    δE += maxwell(ϕᵣ₋₂, ϕᵣ₊₁₋₂, ϕ′, ϕᵣ₋₂₊₃, c.g⁻²) - maxwell(ϕᵣ₋₂, ϕᵣ₊₁₋₂, ϕ, ϕᵣ₋₂₊₃, c.g⁻²)
+    #δE += ((ϕᵣ₋₂.A[1] + ϕᵣ₊₁₋₂.A[2] - ϕ′.A[1] - ϕᵣ₋₂.A[2])^2 - (ϕᵣ₋₂.A[1] + ϕᵣ₊₁₋₂.A[2] - ϕ.A[1] - ϕᵣ₋₂.A[2])^2)*c.g⁻²
     δE
 end

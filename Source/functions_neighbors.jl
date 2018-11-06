@@ -101,82 +101,99 @@ end
 #    nb
 #end
 
+
 # --------------------------------------------------------------------------------------------------
-# Constructs lattice of next nearest negihbors sites of the corresponding lattice LatticeSites
 function latticeNextNeighbors(lattice::Array{LatticeSite,3}, L::Int64, L₃::Int64)
     nnb = Array{NextNeighbors,3}(L,L,L₃)
-    
-    for z_pos = 1:L₃
-        # Contribution from upper right corner
-        ϕᵣ₊₁₊₂ = lattice[L,1,z_pos]
-        ϕᵣ₊₁₋₂ = lattice[2,1,z_pos]
-        ϕᵣ₋₁₊₂ = lattice[L,L-1,z_pos]
-        ϕᵣ₋₁₋₂ = lattice[2,L-1,z_pos]
-        nnb[1,L,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
-        
-        # Contribution from upper left corner
-        ϕᵣ₊₁₊₂ = lattice[L,2,z_pos]
-        ϕᵣ₊₁₋₂ = lattice[2,2,z_pos]
-        ϕᵣ₋₁₊₂ = lattice[L,L,z_pos]
-        ϕᵣ₋₁₋₂ = lattice[2,L,z_pos]
-        nnb[1,1,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
-        
-        # Contribution from lower right corner
-        ϕᵣ₊₁₊₂ = lattice[L-1,1,z_pos]
-        ϕᵣ₊₁₋₂ = lattice[1,1,z_pos]
-        ϕᵣ₋₁₊₂ = lattice[L-1,L-1,z_pos]
-        ϕᵣ₋₁₋₂ = lattice[1,L-1,z_pos]
-        nnb[L,L,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
-        
-        # Contribution from lower left corner
-        ϕᵣ₊₁₊₂ = lattice[L-1,2,z_pos]
-        ϕᵣ₊₁₋₂ = lattice[1,2,z_pos]
-        ϕᵣ₋₁₊₂ = lattice[L-1,L,z_pos]
-        ϕᵣ₋₁₋₂ = lattice[1,L,z_pos]
-        nnb[L,1,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
-        
-        # Set next nearest neighbors of borders except for corners
-        for i = 2:(L-1)
-            # Right y-boundary
-            ϕᵣ₊₁₊₂ = lattice[i-1,1,z_pos]
-            ϕᵣ₊₁₋₂ = lattice[i+1,1,z_pos]
-            ϕᵣ₋₁₊₂ = lattice[i-1,L-1,z_pos]
-            ϕᵣ₋₁₋₂ = lattice[i+1,L-1,z_pos]
-            nnb[i,L,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
-            
-            # Left y-boundary
-            ϕᵣ₊₁₊₂ = lattice[i-1,2,z_pos]
-            ϕᵣ₊₁₋₂ = lattice[i+1,2,z_pos]
-            ϕᵣ₋₁₊₂ = lattice[i-1,L,z_pos]
-            ϕᵣ₋₁₋₂ = lattice[i+1,L,z_pos]
-            nnb[i,1,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
-            
-            # Lower x-boundary
-            ϕᵣ₊₁₊₂ = lattice[L-1,i+1,z_pos]
-            ϕᵣ₊₁₋₂ = lattice[1,i+1,z_pos]
-            ϕᵣ₋₁₊₂ = lattice[L-1,i-1,z_pos]
-            ϕᵣ₋₁₋₂ = lattice[1,i-1,z_pos]
-            nnb[L,i,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
-            
-            # Upper x-boundary
-            ϕᵣ₊₁₊₂ = lattice[L,i+1,z_pos]
-            ϕᵣ₊₁₋₂ = lattice[2,i+1,z_pos]
-            ϕᵣ₋₁₊₂ = lattice[L,i-1,z_pos]
-            ϕᵣ₋₁₋₂ = lattice[2,i-1,z_pos]
-            nnb[1,i,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
-        end
-        
-        # Contributions from bulk positions
-        for h_pos = 2:(L-1), v_pos=2:(L-1)
-            ϕᵣ₊₁₊₂ = lattice[v_pos-1,h_pos+1,z_pos]
-            ϕᵣ₊₁₋₂ = lattice[v_pos+1,h_pos+1,z_pos]
-            ϕᵣ₋₁₊₂ = lattice[v_pos-1,h_pos-1,z_pos]
-            ϕᵣ₋₁₋₂ = lattice[v_pos+1,h_pos-1,z_pos]
-            nnb[v_pos,h_pos,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
-        end
+
+    for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
+        ϕᵣ₊₁₊₂ = lattice[mod(v_pos-1-1,L)+1,mod(h_pos+1-1,L)+1,z_pos]
+        ϕᵣ₊₁₋₂ = lattice[mod(v_pos+1-1,L)+1,mod(h_pos+1-1,L)+1,z_pos]
+        ϕᵣ₋₁₊₂ = lattice[mod(v_pos-1-1,L)+1,mod(h_pos-1-1,L)+1,z_pos]
+        ϕᵣ₋₁₋₂ = lattice[mod(v_pos+1-1,L)+1,mod(h_pos-1-1,L)+1,z_pos]
+        ϕᵣ₋₁₊₃ = lattice[v_pos, mod(h_pos-1-1,L)+1, mod(z_pos-1-1,L₃)+1]
+        ϕᵣ₋₂₊₃ = lattice[mod(v_pos+1-1,L)+1, h_pos, mod(z_pos-1-1,L₃)+1]
+        nnb[v_pos,h_pos,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₋₁₊₃, ϕᵣ₋₂₊₃)
     end
     nnb
 end
+
+# --------------------------------------------------------------------------------------------------
+# Constructs lattice of next nearest negihbors sites of the corresponding lattice LatticeSites
+#function latticeNextNeighbors(lattice::Array{LatticeSite,3}, L::Int64, L₃::Int64)
+#    nnb = Array{NextNeighbors,3}(L,L,L₃)
+#    
+#    for z_pos = 1:L₃
+#        # Contribution from upper right corner
+#        ϕᵣ₊₁₊₂ = lattice[L,1,z_pos]
+#        ϕᵣ₊₁₋₂ = lattice[2,1,z_pos]
+#        ϕᵣ₋₁₊₂ = lattice[L,L-1,z_pos]
+#        ϕᵣ₋₁₋₂ = lattice[2,L-1,z_pos]
+#        nnb[1,L,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
+#        
+#        # Contribution from upper left corner
+#        ϕᵣ₊₁₊₂ = lattice[L,2,z_pos]
+#        ϕᵣ₊₁₋₂ = lattice[2,2,z_pos]
+#        ϕᵣ₋₁₊₂ = lattice[L,L,z_pos]
+#        ϕᵣ₋₁₋₂ = lattice[2,L,z_pos]
+#        nnb[1,1,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
+#        
+#        # Contribution from lower right corner
+#        ϕᵣ₊₁₊₂ = lattice[L-1,1,z_pos]
+#        ϕᵣ₊₁₋₂ = lattice[1,1,z_pos]
+#        ϕᵣ₋₁₊₂ = lattice[L-1,L-1,z_pos]
+#        ϕᵣ₋₁₋₂ = lattice[1,L-1,z_pos]
+#        nnb[L,L,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
+#        
+#        # Contribution from lower left corner
+#        ϕᵣ₊₁₊₂ = lattice[L-1,2,z_pos]
+#        ϕᵣ₊₁₋₂ = lattice[1,2,z_pos]
+#        ϕᵣ₋₁₊₂ = lattice[L-1,L,z_pos]
+#        ϕᵣ₋₁₋₂ = lattice[1,L,z_pos]
+#        nnb[L,1,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
+#        
+#        # Set next nearest neighbors of borders except for corners
+#        for i = 2:(L-1)
+#            # Right y-boundary
+#            ϕᵣ₊₁₊₂ = lattice[i-1,1,z_pos]
+#            ϕᵣ₊₁₋₂ = lattice[i+1,1,z_pos]
+#            ϕᵣ₋₁₊₂ = lattice[i-1,L-1,z_pos]
+#            ϕᵣ₋₁₋₂ = lattice[i+1,L-1,z_pos]
+#            nnb[i,L,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
+#            
+#            # Left y-boundary
+#            ϕᵣ₊₁₊₂ = lattice[i-1,2,z_pos]
+#            ϕᵣ₊₁₋₂ = lattice[i+1,2,z_pos]
+#            ϕᵣ₋₁₊₂ = lattice[i-1,L,z_pos]
+#            ϕᵣ₋₁₋₂ = lattice[i+1,L,z_pos]
+#            nnb[i,1,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
+#            
+#            # Lower x-boundary
+#            ϕᵣ₊₁₊₂ = lattice[L-1,i+1,z_pos]
+#            ϕᵣ₊₁₋₂ = lattice[1,i+1,z_pos]
+#            ϕᵣ₋₁₊₂ = lattice[L-1,i-1,z_pos]
+#            ϕᵣ₋₁₋₂ = lattice[1,i-1,z_pos]
+#            nnb[L,i,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
+#            
+#            # Upper x-boundary
+#            ϕᵣ₊₁₊₂ = lattice[L,i+1,z_pos]
+#            ϕᵣ₊₁₋₂ = lattice[2,i+1,z_pos]
+#            ϕᵣ₋₁₊₂ = lattice[L,i-1,z_pos]
+#            ϕᵣ₋₁₋₂ = lattice[2,i-1,z_pos]
+#            nnb[1,i,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
+#        end
+#        
+#        # Contributions from bulk positions
+#        for h_pos = 2:(L-1), v_pos=2:(L-1)
+#            ϕᵣ₊₁₊₂ = lattice[v_pos-1,h_pos+1,z_pos]
+#            ϕᵣ₊₁₋₂ = lattice[v_pos+1,h_pos+1,z_pos]
+#            ϕᵣ₋₁₊₂ = lattice[v_pos-1,h_pos-1,z_pos]
+#            ϕᵣ₋₁₋₂ = lattice[v_pos+1,h_pos-1,z_pos]
+#            nnb[v_pos,h_pos,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂)
+#        end
+#    end
+#    nnb
+#end
 
 # --------------------------------------------------------------------------------------------------
 # Constructs lattice of next next nearest neighbor sites of the corresponding lattice LatticeSites
