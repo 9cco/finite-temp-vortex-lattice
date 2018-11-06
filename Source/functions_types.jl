@@ -363,6 +363,10 @@ end
 #
 ####################################################################################################
 
+function Controls()
+    return Controls(π/3, 0.4, 3.0)
+end
+
 # -------------------------------------------------------------------------------------------------
 function setValues!(sim_target::Controls, sim_source::Controls)
     sim_target.θmax = sim_source.θmax

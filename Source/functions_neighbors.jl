@@ -111,9 +111,11 @@ function latticeNextNeighbors(lattice::Array{LatticeSite,3}, L::Int64, L₃::Int
         ϕᵣ₊₁₋₂ = lattice[mod(v_pos+1-1,L)+1,mod(h_pos+1-1,L)+1,z_pos]
         ϕᵣ₋₁₊₂ = lattice[mod(v_pos-1-1,L)+1,mod(h_pos-1-1,L)+1,z_pos]
         ϕᵣ₋₁₋₂ = lattice[mod(v_pos+1-1,L)+1,mod(h_pos-1-1,L)+1,z_pos]
+        ϕᵣ₊₁₋₃ = lattice[v_pos, mod(h_pos+1-1,L)+1, mod(z_pos+1-1,L₃)+1]
         ϕᵣ₋₁₊₃ = lattice[v_pos, mod(h_pos-1-1,L)+1, mod(z_pos-1-1,L₃)+1]
+        ϕᵣ₊₂₋₃ = lattice[mod(v_pos-1-1,L)+1, h_pos, mod(z_pos+1-1,L₃)+1]
         ϕᵣ₋₂₊₃ = lattice[mod(v_pos+1-1,L)+1, h_pos, mod(z_pos-1-1,L₃)+1]
-        nnb[v_pos,h_pos,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₋₁₊₃, ϕᵣ₋₂₊₃)
+        nnb[v_pos,h_pos,z_pos] = NextNeighbors(ϕᵣ₊₁₊₂, ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
     end
     nnb
 end

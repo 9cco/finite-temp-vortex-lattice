@@ -5,7 +5,7 @@
 
 # ---------------------------------------------------------------------------------------------------
 # Calculate energy contribution from a single term in the energy sum of the Higgs terms.
-function fᵣ(ϕ::LatticeSite, nb::Neighbors, h_pos::Int64, c::SystConstants)
+function fᵣ(ϕ::LatticeSite, nb::NearestNeighbors, h_pos::Int64, c::SystConstants)
     energy = 0.0
     Aᵣ = two_pi*c.f*(h_pos-1)
 #    Aᵣ₋₁ = two_pi*c.f*(h_pos-2)
@@ -88,7 +88,7 @@ end
 # --------------------------------------------------------------------------------------------------
 # Find the energy difference between two states; one that has ϕ′ in position r with ϕᵣ... as neighbors,
 # and one that has ϕ in position r. the position along the x-axis is needed for the constant Gauge field.
-function ΔE(ϕ′::LatticeSite, ϕ::LatticeSite, nb::Neighbors, nnb::NextNeighbors, nnnb::NNNeighbors,
+function ΔE(ϕ′::LatticeSite, ϕ::LatticeSite, nb::NearestNeighbors, nnb::NextNeighbors, nnnb::NNNeighbors,
         h_pos::Int64, c::SystConstants)
     δE::Float64 = 0.0
     
@@ -200,14 +200,20 @@ function ΔE(ϕ′::LatticeSite, ϕ::LatticeSite, nb::Neighbors, nnb::NextNeighb
 + ϕᵣ₊₁₊₂.u⁻*ϕ′.u⁺*sin(ϕᵣ₊₁₊₂.θ⁻-ϕ′.θ⁺-(ϕᵣ₊₂.A[1]+ϕ′.A[2]+Aᵣ)) - ϕᵣ₊₁₊₂.u⁻*ϕ.u⁺*sin(ϕᵣ₊₁₊₂.θ⁻-ϕ.θ⁺-(ϕᵣ₊₂.A[1]+ϕ.A[2]+Aᵣ))))
     
     # Then calculate the Gauge field contribution
+    ϕᵣ₊₁₋₃ = nnb.ϕᵣ₊₁₋₃
+    ϕᵣ₋₁₊₃ = nnb.ϕᵣ₋₁₊₃
+    ϕᵣ₊₂₋₃ = nnb.ϕᵣ₊₂₋₃
+    ϕᵣ₋₂₊₃ = nnb.ϕᵣ₋₂₊₃
     # First contribution from current position
     #δE += ((ϕ′.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ′.A[2])^2 - (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])^2)*c.g⁻²
     δE += maxwell(ϕ′, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₃, c.g⁻²) - maxwell(ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₃, c.g⁻²)
     # Then from position r-x
-    δE += maxwell(ϕᵣ₋₁, ϕ′, ϕᵣ₋₁₊₂, ϕᵣ₋₁₊₃, c.g⁻²) - maxwell(ϕᵣ₋₁, ϕ, ϕᵣ₋₁₊₃, c.g⁻²)
+    δE += maxwell(ϕᵣ₋₁, ϕ′, ϕᵣ₋₁₊₂, ϕᵣ₋₁₊₃, c.g⁻²) - maxwell(ϕᵣ₋₁, ϕ, ϕᵣ₋₁₊₂, ϕᵣ₋₁₊₃, c.g⁻²)
     #δE += ((ϕᵣ₋₁.A[1] + ϕ′.A[2] - ϕᵣ₋₁₊₂.A[1] - ϕᵣ₋₁.A[2])^2 - (ϕᵣ₋₁.A[1] + ϕ.A[2] - ϕᵣ₋₁₊₂.A[1] - ϕᵣ₋₁.A[2])^2)*c.g⁻²
     # Then from position r-y
     δE += maxwell(ϕᵣ₋₂, ϕᵣ₊₁₋₂, ϕ′, ϕᵣ₋₂₊₃, c.g⁻²) - maxwell(ϕᵣ₋₂, ϕᵣ₊₁₋₂, ϕ, ϕᵣ₋₂₊₃, c.g⁻²)
     #δE += ((ϕᵣ₋₂.A[1] + ϕᵣ₊₁₋₂.A[2] - ϕ′.A[1] - ϕᵣ₋₂.A[2])^2 - (ϕᵣ₋₂.A[1] + ϕᵣ₊₁₋₂.A[2] - ϕ.A[1] - ϕᵣ₋₂.A[2])^2)*c.g⁻²
+    # Then we also have to include the position r-z
+    δE += maxwell(ϕᵣ₋₃, ϕᵣ₊₁₋₃, ϕᵣ₊₂₋₃, ϕ′, c.g⁻²) - maxwell(ϕᵣ₋₃, ϕᵣ₊₁₋₃, ϕᵣ₊₂₋₃, ϕ, c.g⁻²)
     δE
 end
