@@ -36,7 +36,9 @@ struct NextNeighbors
 	ϕᵣ₊₁₋₂::LatticeSite
 	ϕᵣ₋₁₊₂::LatticeSite
 	ϕᵣ₋₁₋₂::LatticeSite
+    ϕᵣ₊₁₋₃::LatticeSite
     ϕᵣ₋₁₊₃::LatticeSite
+    ϕᵣ₊₂₋₃::LatticeSite
     ϕᵣ₋₂₊₃::LatticeSite
 end
 struct NNNeighbors
