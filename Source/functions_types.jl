@@ -326,13 +326,13 @@ end
 function meanAmplitudes(ψ::State)
 	u⁺ = 0.0
 	u⁻ = 0.0
-	L = ψ.consts.L
+    N = length(ψ.lattice)
     for ϕ in ψ.lattice
 		u⁺ += ϕ.u⁺
 		u⁻ += ϕ.u⁻
 	end
 
-	return u⁺/L^2, u⁻/L^2
+	return u⁺/N, u⁻/N
 end
 
 # -------------------------------------------------------------------------------------------------

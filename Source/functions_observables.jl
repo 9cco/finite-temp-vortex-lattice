@@ -34,7 +34,7 @@ end
 # Assuming we have a state ψ, we want to find the lattice of vortices.
 function vortexSnapshot(ψ::State)
     L = ψ.consts.L
-    Lᵣ = ψ.consts.L₃
+    L₃ = ψ.consts.L₃
     V⁺ = zeros(L,L,L₃)
     V⁻ = zeros(L,L,L₃)
     
@@ -100,6 +100,7 @@ function avgVort{T<:Real}(V::Array{T,3})
         end
         avg_V[v_pos,h_pos] /= L₃
     end
+    return avg_V
 end
 
 ####################################################################################################################

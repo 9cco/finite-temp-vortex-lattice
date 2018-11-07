@@ -29,7 +29,7 @@ export E, ΔE
 include("functions_symmetric_energy.jl")
 
 export mcSweep!, mcProposalFraction!, mcProposalFraction, mcSweepEn!, mcSweepFrac!, adjustSimConstants!, findEquilibrium
-export nMCSEnergyDynamic, adjustSimConstantsPar
+export nMCSEnergyDynamic, adjustSimConstantsPar, nMCSEnergy
 
 include("functions_mc.jl")
 
