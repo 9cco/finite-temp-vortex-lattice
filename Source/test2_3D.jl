@@ -10,11 +10,11 @@ using Distributions
 
 L = 20
 L₃ = 20
-gm = 1.0
+gm = 0.3
 g = 0.3
 ν = 0.2
 κ₅ = 1.0
-f = 0.03
+f = 0.00
 syst = SystConstants(L, L₃, gm, g, ν, κ₅, f, 1.2)
 for v=1:L, h=1:L, z=1:L₃
     ψ1 = State(1,syst)
