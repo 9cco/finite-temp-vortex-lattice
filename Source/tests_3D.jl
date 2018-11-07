@@ -157,7 +157,7 @@ syst = SystConstants(L, L₃, gm, g, ν, κ₅, f, 0.0)
 ψ = State(1, syst)
 
 energy_theoretical = L^2*L₃*(-gm^2 + gm^4/2) 
-println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
+#println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
 
 #Set the u⁺ amplitudes to one as well
 for v_pos=1:L, h_pos=1:L, z_pos = 1:L₃
@@ -165,7 +165,7 @@ for v_pos=1:L, h_pos=1:L, z_pos = 1:L₃
 end
 
 energy_theoretical = L*L*L₃*gm^2*(gm^2*(3+ν)-2)
-println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
+#println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
 
 #Non-zero angles 
 θ⁺ = π/2
@@ -176,7 +176,7 @@ for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
 end
 
 energy_theoretical = L*L*L₃*gm^2*(gm^2*(3+ν*cos(2*(θ⁺-θ⁻)))-2)
-println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
+#println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
 
 #Include a constant gauge field (uniform background), only u⁻ non-zero otherwise.
 f = 1/L*(rand()+1)
@@ -188,7 +188,7 @@ energy_theoretical = L^2*L₃*(-gm^2 + gm^4/2)
 for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
     energy_theoretical += gm^2*(1 - cos(-2*2*π*f*(h_pos-1)))/2
 end
-println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
+#println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
 
 
 ###################################################################################################
@@ -224,11 +224,15 @@ energy_theoretical = -0.5*gm^2*( 2*cos(ψ.lattice[2,2,2].A[1]) + 2*cos(ψ.lattic
     2*κ₅*cos(ψ.lattice[2,2,2].A[3]) + 2*κ₅*cos(ψ.lattice[1,2,2].A[3]) + 2*cos(ψ.lattice[2,2,1].A[2] + 2*2*π*f) + 
     2*cos(ψ.lattice[2,2,1].A[1]) + 2*κ₅*cos(ψ.lattice[2,3,2].A[3]) + 2*cos(ψ.lattice[2,3,2].A[2] + 2*2*2π*f) +
     2*cos(ψ.lattice[1,2,2].A[1]) )
+
 #Now have to sum over the rest of the cosine terms
 #In the x,z direction A has been changed at 6 sites for each. Thus remains a factor
+
 energy_theoretical += -0.5*gm^2*(L^2*L₃-6)*(1+κ₅)
+
 #In the y-direction, we have to consider the uniform A-field. This has been changed at sites (2,2,2), (2,3,2) and (2,2,1)
 #Compute the total contribution and subtract these both from the r terms and r-μ terms
+
 for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
     energy_theoretical += -0.5*gm^2*cos(2*2*π*f*(h_pos-1))
 end
@@ -248,22 +252,23 @@ energy_theoretical += ( (ψ.lattice[1,2,2].A[3] - ψ.lattice[2,2,2].A[3] - ψ.la
     + (ψ.lattice[2,3,2].A[2] - ψ.lattice[2,3,2].A[3])^2 + (ψ.lattice[2,2,1].A[1] - ψ.lattice[2,2,1].A[2])^2
         + (ψ.lattice[1,2,2].A[1] - ψ.lattice[1,2,2].A[3])^2)*g
 
-println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
+#println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
 
 ###################################################################################################
 #Testing the energy difference function
 
 println("Testing ΔE function in mcSweep")
-mcsweeps = 100
-L = 20
-L₃ = 14
-gm = 0.7
-g = 0.3
+mcsweeps = 1
+L = 5
+L₃ = 5
+gm = 1.0
+g = 0.3 
 ν = 0.2
 κ₅ = 0.6
 f = 0.03
 syst = SystConstants(L, L₃, gm, g, ν, κ₅, f, 1.2)
 ψ1 = State(1,syst)
+
 ψ2 = State(2,syst)
 E1_old = E(ψ1)
 E2_old = E(ψ2)
@@ -275,7 +280,8 @@ for i=1:mcsweeps
 end
 
 println("Low T state: ΔE = $(ΔE1), E - E0 = $(E(ψ1) - E1_old)")
+println("Difference: $(ΔE1 - (E(ψ1)-E1_old))")
 println("High T state: ΔE = $(ΔE2), E - E0 = $(E(ψ2) - E2_old)")
-println(@test isapprox(E(ψ2)-E2_old, ΔE2, atol = 0, rtol = (1e-13)*L^2*L₃*mcsweeps))
+#println(@test isapprox(E(ψ2)-E2_old, ΔE2, atol = 0, rtol = (1e-13)*L^2*L₃*mcsweeps))
 println(@test isapprox(E(ψ1)-E1_old, ΔE1, atol = 0, rtol = (1e-13)*L^2*L₃*mcsweeps))
 
