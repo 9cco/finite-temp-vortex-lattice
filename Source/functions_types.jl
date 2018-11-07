@@ -9,7 +9,7 @@ function copy(c::SystConstants)
     SystConstants(c.L, c.L₃, c.γ, c.g⁻², c.ν, c.κ₅, c.f, c.β)
 end
 # Copy functions for Neighbors, NextNeighbors and NNNeighbors
-function copy(nb::Neighbors)
+function copy(nb::NearestNeighbors)
 	Neighbors(nb.ϕᵣ₊₁,nb.ϕᵣ₋₁,nb.ϕᵣ₊₂,nb.ϕᵣ₋₂)
 end
 function copy(nnb::NextNeighbors)
@@ -18,19 +18,19 @@ end
 function copy(nnnb::NNNeighbors)
 	NNNeighbors(nnnb.ϕᵣ₊₁₁, nnnb.ϕᵣ₋₁₁, nnnb.ϕᵣ₊₂₂, nnnb.ϕᵣ₋₂₂, nnnb.ϕᵣ₊₃₃, nnnb.ϕᵣ₋₃₃)
 end
-# Copy functions for LxL lattices of Neighbors
-function copy(nbl::Array{Neighbors,2})
+# Copy functions for LxL lattices of NearestNeighbors
+function copy(nbl::Array{NearestNeighbors,2})
 	L = size(nbl,2)
-	nbl_copy = Array{Neighbors,2}(L,L)
+	nbl_copy = Array{NearestNeighbors,2}(L,L)
 	for h_pos = 1:L, v_pos = 1:L
 		nbl_copy[v_pos,h_pos] = copy(nbl[v_pos,h_pos])
 	end
 	nbl_copy
 end
-function copy(nbl::Array{Neighbors,3})
+function copy(nbl::Array{NearestNeighbors,3})
 	L = size(nbl,2)
     L₃ = size(nbl,3)
-	nbl_copy = Array{Neighbors,3}(L,L,L₃)
+	nbl_copy = Array{NearestNeighbors,3}(L,L,L₃)
 	for z_pos=1:L₃, h_pos = 1:L, v_pos = 1:L
 		nbl_copy[v_pos,h_pos,z_pos] = copy(nbl[v_pos,h_pos,z_pos])
 	end

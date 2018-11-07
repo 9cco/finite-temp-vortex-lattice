@@ -3,8 +3,9 @@ module ChiralMC
 using Distributions
 using StatsBase
 using Base.Test
+using MCMCDiagnostics
 
-export SystConstants, LatticeSite, State, Controls, Neighbors, NearestNeighbors, NextNeighbors, NNNeighbors, two_pi
+export SystConstants, LatticeSite, State, Controls, NearestNeighbors, NextNeighbors, NNNeighbors, two_pi
 
 include("types.jl")
 

@@ -96,6 +96,11 @@ function ΔE(ϕ′::LatticeSite, ϕ::LatticeSite, nb::NearestNeighbors, nnb::Nex
     Aᵣ₊₁ = two_pi*c.f*h_pos
     Aᵣ = two_pi*c.f*(h_pos-1)
     Aᵣ₋₁ = two_pi*c.f*(h_pos-2)
+    if h_pos == 1
+        Aᵣ₋₁ = two_pi*c.f*(L-1)
+    elseif h_pos == L
+        Aᵣ₊₁ = 0.0
+    end
     
     # Get neighbors
     ϕᵣ₊₁ = nb.ϕᵣ₊₁

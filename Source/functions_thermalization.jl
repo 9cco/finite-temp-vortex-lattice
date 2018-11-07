@@ -196,11 +196,6 @@ function checkThermalization(E_ref::Array{Float64,1}, E_workers::Array{Float64,2
     max_std = 0.0
     n_workers = size(E_workers,1)
 
-	# Check that we have enough available processes
-    if nprocs()-1 >= n_workers
-        println("Warning: Not enough worker processes")
-    end
-
 	future_array = [Future() for i = 1:n_workers]
 	av = Array{Float64,1}(n_workers)
 	st = Array{Float64,1}(n_workers)
