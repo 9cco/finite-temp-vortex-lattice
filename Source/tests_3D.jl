@@ -76,7 +76,6 @@ end #Fra gammel kode, disse funker
 @test nbl[L,L,L₃].ϕᵣ₋₁.θ⁻ == L-1
 @test nbl[L,L,L₃].ϕᵣ₊₁.θ⁻ == 1
 
-#TODO: Test for NNeighbors i z-retning, må implenteres før de kan testes
 println("\nTesting LaticeNextNeighbors")
 for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
 #    @test nnbl[v_pos, h_pos, z_pos].ϕᵣ₊₁₊₃.u⁺ == Float64(mod(z_pos-2,L₃)+1)
@@ -200,7 +199,7 @@ gm = 0.3
 g = 0.3
 ν = 0.3
 κ₅ = 0.7
-f = 0.00
+f = 0.02
 syst = SystConstants(L, L₃, gm, g, ν, κ₅, f, 0.0)
 ψ = State(1,syst)
 
@@ -221,9 +220,9 @@ A_max = 3.0
 #Calculation of the theoretical energies
 #First the cosine terms in the kin energy from sites where A has been changed. Each term here has a factor
 #2 since we have one contribution from r and one from r-μ (where μ || the A component that contributes).
-energy_theoretical = -0.5*gm^2*( 2*cos(ψ.lattice[2,2,2].A[1]) + 2*cos(ψ.lattice[2,2,2].A[2] + 2*π*f) + 
-    2*κ₅*cos(ψ.lattice[2,2,2].A[3]) + 2*κ₅*cos(ψ.lattice[1,2,2].A[3]) + 2*cos(ψ.lattice[2,2,1].A[2] + 2*π*f) + 
-    2*cos(ψ.lattice[2,2,1].A[1]) + 2*κ₅*cos(ψ.lattice[2,3,2].A[3]) + 2*cos(ψ.lattice[2,3,2].A[2] + 2*2π*f) +
+energy_theoretical = -0.5*gm^2*( 2*cos(ψ.lattice[2,2,2].A[1]) + 2*cos(ψ.lattice[2,2,2].A[2] + 2*2*π*f) + 
+    2*κ₅*cos(ψ.lattice[2,2,2].A[3]) + 2*κ₅*cos(ψ.lattice[1,2,2].A[3]) + 2*cos(ψ.lattice[2,2,1].A[2] + 2*2*π*f) + 
+    2*cos(ψ.lattice[2,2,1].A[1]) + 2*κ₅*cos(ψ.lattice[2,3,2].A[3]) + 2*cos(ψ.lattice[2,3,2].A[2] + 2*2*2π*f) +
     2*cos(ψ.lattice[1,2,2].A[1]) )
 #Now have to sum over the rest of the cosine terms
 #In the x,z direction A has been changed at 6 sites for each. Thus remains a factor
@@ -234,7 +233,7 @@ for v_pos=1:L, h_pos=1:L, z_pos=1:L₃
     energy_theoretical += -0.5*gm^2*cos(2*2*π*f*(h_pos-1))
 end
 
-energy_theoretical += 4*0.5*gm^2*cos(2*π*f) + 2*0.5*gm^2*cos(2*2π*f)
+energy_theoretical += 4*0.5*gm^2*cos(2*2*π*f) + 2*0.5*gm^2*cos(2*2*2π*f)
 
 #Then the contribution from the non-cosine terms:
 energy_theoretical += L^2*L₃*gm^2*( (1 + 0.5*κ₅) + (-1+0.5*gm^2) )
@@ -251,4 +250,32 @@ energy_theoretical += ( (ψ.lattice[1,2,2].A[3] - ψ.lattice[2,2,2].A[3] - ψ.la
 
 println(@test isapprox(energy_theoretical, E(ψ), atol = 0, rtol = 1e-13))
 
+###################################################################################################
+#Testing the energy difference function
+
+println("Testing ΔE function in mcSweep")
+mcsweeps = 100
+L = 20
+L₃ = 14
+gm = 0.7
+g = 0.3
+ν = 0.2
+κ₅ = 0.6
+f = 0.03
+syst = SystConstants(L, L₃, gm, g, ν, κ₅, f, 1.2)
+ψ1 = State(1,syst)
+ψ2 = State(2,syst)
+E1_old = E(ψ1)
+E2_old = E(ψ2)
+ΔE1 = 0.0
+ΔE2 = 0.0
+for i=1:mcsweeps
+    ΔE1 += mcSweepEn!(ψ1)
+    ΔE2 += mcSweepEn!(ψ2)
+end
+
+println("Low T state: ΔE = $(ΔE1), E - E0 = $(E(ψ1) - E1_old)")
+println("High T state: ΔE = $(ΔE2), E - E0 = $(E(ψ2) - E2_old)")
+println(@test isapprox(E(ψ2)-E2_old, ΔE2, atol = 0, rtol = (1e-13)*L^2*L₃*mcsweeps))
+println(@test isapprox(E(ψ1)-E1_old, ΔE1, atol = 0, rtol = (1e-13)*L^2*L₃*mcsweeps))
 
