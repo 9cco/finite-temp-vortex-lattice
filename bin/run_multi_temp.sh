@@ -19,6 +19,7 @@ g="0.3"
 NU="0.3"
 H="0.005"
 L="64"
+Lz="64"
 GAMMA="1.0"
 M="300"
 dt="5000"
@@ -80,6 +81,7 @@ g="$g"
 NU="$NU"
 H="$H"
 L="$L"
+Lz="$Lz"
 TEMP="${TEMPS[$i]}"
 GAMMA="$GAMMA"
 M="$M"
@@ -88,7 +90,7 @@ dt="$dt"
 [ -d \$DATA_PATH ] || error_exit "ERROR: Could not find Data directory in \$DATA_PATH"
 cd \$DATA_PATH
 # Make work directory name
-WORK_NAME="VORTEX_GAMMA_\${GAMMA}_g_\${g}_NU_\${NU}_H_\${H}_T_\${TEMP}_L_\${L}_M_\${M}"
+WORK_NAME="3D_GAM_\${GAMMA}_g_\${g}_NU_\${NU}_H_\${H}_T_\${TEMP}_L_\${L}_Lz_\${Lz}_M_\${M}"
 # Make directory if it does not exist.
 echo "Entering directory \$WORK_NAME"
 [ -d \$WORK_NAME ] || mkdir \$WORK_NAME
@@ -101,7 +103,7 @@ echo "\$WORK_NAME" >> \$NEED_LATEX_FILE
 cd \$WORK_NAME
 # Now we are in the correct work directory.
 echo "Handling control to julia script. Writing output to \$OUTPUT"
-\$JULIA_PATH -p \$CPUS \$SOURCE_PATH/\$JULIA_SCRIPT \$g \$NU \$H \$L \$TEMP \$GAMMA \$M \$dt > \$OUTPUT 2>&1
+\$JULIA_PATH -p \$CPUS \$SOURCE_PATH/\$JULIA_SCRIPT \$g \$NU \$H \$L \$Lz \$TEMP \$GAMMA \$M \$dt > \$OUTPUT 2>&1
 echo "Job script finished without issue."
 EOF
 	# Make the script executable

@@ -94,8 +94,8 @@ end
 # -----------------------------------------------------------------------------------------------------------
 # Plotting and saving result of structureFunctionVortexLatticeAvg!
 # Should be run inside of designated directory.
-function plotStructureFunctionVortexLatticeS{T<:Real, R<:Real}(avV⁺::Array{T, 2}, avV⁻::Array{T, 2}, 
-        V⁺::Array{R, 2}, V⁻::Array{R,2}, avS⁺::Array{T, 2}, avS⁻::Array{T,2}, ks::Array{Array{T,1}, 2})
+function plotStructureFunctionVortexLatticeS{T<:Real}(ψ::State, avV⁺::Array{T, 2}, avV⁻::Array{T, 2}, 
+        avS⁺::Array{T, 2}, avS⁻::Array{T,2}, ks::Array{Array{T,1}, 2})
     L = size(avV⁺,1)
     # Plotting structure factor
     L_k = size(ks, 1)
@@ -127,6 +127,9 @@ function plotStructureFunctionVortexLatticeS{T<:Real, R<:Real}(avV⁺::Array{T, 
     avS⁻[Int(ceil(L_k/2)), Int(ceil(1+L_k/2))] = temp⁻
     
     # Plotting vortex snapshots
+    V⁺_mat, V⁻_mat = vortexSnapshot(ψ)
+    L₃ = ψ.consts.L₃
+    V⁺ = V⁺_mat[:,:,rand(1:L₃)]; V⁻ = V⁻_mat[:,:,rand(1:L₃)]
     plt = heatmap(1:L, 1:L, V⁺, title="Snapshot of + component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
     savefig(plt, "sfvl_V+_snapshot_plot.pdf")
     plt = heatmap(1:L, 1:L, V⁻, title="Snapshot of - component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
@@ -336,7 +339,7 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
 	STD_FACTOR = 0.5	# How many standard errors the average have to be within.
 
 	# Create initial states, reference at random and worker list from corrolation
-	n_workers = nprocs()-1
+    n_workers = max(nprocs()-1,1)
 	ψ_ref = State(2, syst)
 	ψ_w = [State(1,syst) for i = 1:n_workers]
 
@@ -395,7 +398,7 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
 	sim₂ = sim_ref
     println("Calculating energies and acceptance rates")
     flush(STDOUT)
-    T = 2000
+    T = 1000
     dE = zeros(2T)
     E₁ = zeros(2T)
     E₂ = zeros(2T)
