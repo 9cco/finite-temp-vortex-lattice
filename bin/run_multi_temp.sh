@@ -30,7 +30,11 @@ declare -a names
 t_len=${#TEMPS[@]}
 for (( i=1; i<=${t_len}; i++ ));
 do
-	names+=("lowerT_$i")
+    # Remove the dot.
+    T=`echo ${TEMPS[$i]} | sed s/[\.]//`
+    # Remove extrenious zeroes.
+    T=`echo $T | sed s/^[0]*//`
+	names+=("3D${i}T$T")
 done
 
 # For each of the temps we create a separate temp_single_job.pbs script
@@ -54,7 +58,7 @@ do
 #PBS -e ${names[$i]}.e
 #PBS -l select=1:ncpus=16
 #PBS -l walltime=62:00:00
-#PBS -l pmem=1000MB
+#PBS -l pmem=8000MB
 ##################################################################
 # Prepare the simulation
 ##################################################################

@@ -13,7 +13,7 @@ error_exit()
 
 
 # First we need to input the temperature range
-T="0.07"
+T="0.119"
 # Then the other variables are set as before
 g="0.3"
 NU="0.3"
@@ -30,7 +30,7 @@ declare -a names
 l_len=${#LS[@]}
 for (( i=1; i<=${l_len}; i++ ));
 do
-	names+=("lowerT_$i")
+	names+=("3D${i}L${LS[$i]}")
 done
 
 # For each of the temps we create a separate temp_single_job.pbs script
@@ -56,7 +56,7 @@ do
 #PBS -e ${names[$i]}.e
 #PBS -l select=1:ncpus=16
 #PBS -l walltime=92:00:00
-#PBS -l pmem=1000MB
+#PBS -l pmem=8000MB
 
 ##################################################################
 # Prepare the simulation
