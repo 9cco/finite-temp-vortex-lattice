@@ -129,7 +129,7 @@ function plotStructureFunctionVortexLatticeS{T<:Real}(ψ::State, avV⁺::Array{T
     # Plotting vortex snapshots
     V⁺_mat, V⁻_mat = vortexSnapshot(ψ)
     L₃ = ψ.consts.L₃
-    V⁺ = V⁺_mat[:,:,rand(1:L₃)]; V⁻ = V⁻_mat[:,:,rand(1:L₃)]
+    V⁺ = V⁺_mat[:,:,rand(1:L₃)]/two_pi; V⁻ = V⁻_mat[:,:,rand(1:L₃)]/two_pi
     plt = heatmap(1:L, 1:L, V⁺, title="Snapshot of + component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
     savefig(plt, "sfvl_V+_snapshot_plot.pdf")
     plt = heatmap(1:L, 1:L, V⁻, title="Snapshot of - component vorticity", xlabel="x", ylabel="y", aspect_ratio=1)
