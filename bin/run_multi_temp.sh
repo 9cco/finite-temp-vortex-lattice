@@ -13,7 +13,7 @@ error_exit()
 
 
 # First we need to input the temperature range
-TEMPS=(0.005 0.008 0.02 0.04 0.06)
+TEMPS=(0.27 0.23 0.21 0.19 0.17 0.15)
 # Then the other variables are set as before
 g="0.3"
 NU="0.3"
@@ -22,13 +22,13 @@ L="64"
 Lz="64"
 GAMMA="1.0"
 M="300"
-dt="5000"
+dt="10000"
 
 # For each of the values in TEMPS, we make a new name
 declare -a IDS
 declare -a names
 t_len=${#TEMPS[@]}
-for (( i=1; i<=${t_len}; i++ ));
+for (( i=0; i<${t_len}; i++ ));
 do
     # Remove the dot.
     T=`echo ${TEMPS[$i]} | sed s/[\.]//`
@@ -58,7 +58,7 @@ do
 #PBS -e ${names[$i]}.e
 #PBS -l select=1:ncpus=16
 #PBS -l walltime=62:00:00
-#PBS -l pmem=8000MB
+#PBS -l pmem=2000MB
 ##################################################################
 # Prepare the simulation
 ##################################################################

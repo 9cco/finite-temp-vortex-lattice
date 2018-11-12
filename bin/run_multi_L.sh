@@ -28,7 +28,7 @@ dt="100000"
 declare -a IDS
 declare -a names
 l_len=${#LS[@]}
-for (( i=1; i<=${l_len}; i++ ));
+for (( i=0; i<${l_len}; i++ ));
 do
 	names+=("3D${i}L${LS[$i]}")
 done
