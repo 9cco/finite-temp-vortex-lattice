@@ -258,10 +258,10 @@ energy_theoretical += ( (ψ.lattice[1,2,2].A[3] - ψ.lattice[2,2,2].A[3] - ψ.la
 #Testing the energy difference function
 
 println("Testing ΔE function in mcSweep")
-mcsweeps = 1
-L = 5
-L₃ = 5
-gm = 1.0
+mcsweeps = 20
+L = 20
+L₃ = 20
+gm = 0.7
 g = 0.3 
 ν = 0.2
 κ₅ = 0.6
@@ -282,6 +282,6 @@ end
 println("Low T state: ΔE = $(ΔE1), E - E0 = $(E(ψ1) - E1_old)")
 println("Difference: $(ΔE1 - (E(ψ1)-E1_old))")
 println("High T state: ΔE = $(ΔE2), E - E0 = $(E(ψ2) - E2_old)")
-#println(@test isapprox(E(ψ2)-E2_old, ΔE2, atol = 0, rtol = (1e-13)*L^2*L₃*mcsweeps))
+println(@test isapprox(E(ψ2)-E2_old, ΔE2, atol = 0, rtol = (1e-13)*L^2*L₃*mcsweeps))
 println(@test isapprox(E(ψ1)-E1_old, ΔE1, atol = 0, rtol = (1e-13)*L^2*L₃*mcsweeps))
 
