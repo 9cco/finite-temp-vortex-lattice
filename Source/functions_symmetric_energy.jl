@@ -93,13 +93,16 @@ function ΔE(ϕ′::LatticeSite, ϕ::LatticeSite, nb::NearestNeighbors, nnb::Nex
     δE::Float64 = 0.0
     
     # Calculate constant link variables
-    Aᵣ₊₁ = two_pi*c.f*h_pos
     Aᵣ = two_pi*c.f*(h_pos-1)
-    Aᵣ₋₁ = two_pi*c.f*(h_pos-2)
     if h_pos == 1
         Aᵣ₋₁ = two_pi*c.f*(c.L-1)
+        Aᵣ₊₁ = two_pi*c.f*h_pos
     elseif h_pos == c.L
+        Aᵣ₋₁ = two_pi*c.f*(h_pos-2)
         Aᵣ₊₁ = 0.0
+    else
+        Aᵣ₋₁ = two_pi*c.f*(h_pos-2)
+        Aᵣ₊₁ = two_pi*c.f*h_pos
     end
     
     # Get neighbors

@@ -244,13 +244,22 @@ end
 #--------------------------------------------------------------------------------------------------
 # Find first occurrence of when the values in the arrays cross eachother in the interval
 # between iₛ and iₑ
-function firstZero{T<:Real}(E_high::Array{T, 1}, E_low::Array{T,1}, iₛ::Int64, iₑ::Int64)
-	for i = iₛ:iₑ
-		if E_high[i] <= E_low[i]
-			return i
-		end
-	end
-	return -1
+function firstZero{T<:Real}(E_ref::Array{T, 1}, E_w::Array{T, 2}, w::Int64, iₛ::Int64, iₑ::Int64, ref_highest::Bool)
+    if ref_highest
+        for i = iₛ:iₑ
+            if E_ref[i] <= E_w[w,i]
+                return i
+            end
+        end
+        return -1
+    else
+        for i = iₛ:iₑ
+            if E_w[w,i] <= E_ref[i]
+                return i
+            end
+        end
+        return -1
+    end
 end
 
 #--------------------------------------------------------------------------------------------------
@@ -259,7 +268,7 @@ end
 # convergence.
 function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystConstants,
         sim::Controls, T::Int64=1000, ex::Float64=1.8, STD_NUMBER::Float64=0.5)
-    CUTOFF_MAX::Int64=6000000           #Max number of MCS before the function terminates
+    CUTOFF_MAX::Int64=4000000           #Max number of MCS before the function terminates
     ADJUST_INTERVAL=400                 #Number of MCS between each sim_const adjustment while finding dE<0
     AVERAGING_INT_FRAC=1/4                 #Similiar for 2nd loop, also the interval that is averaged over
     AVERAGING_INT_EX = 1.4
@@ -324,11 +333,7 @@ Thermalization will be ×$(floor(Int64, (NWS+1)/(np+1))) as long.")
         # Check if for all processes dE < 0, and get largest step that this happens for.
 		# Takes into account whether it is the worker or reference that should have highest energy.
 		for w = 1:NWS
-			if ref_highest[w]
-				ψ_future_list[w] = @spawn firstZero(E_ref, E_w[w, :], tₛ, T)
-			else
-				ψ_future_list[w] = @spawn firstZero(E_w[w,:], E_ref, tₛ, T)
-			end
+            ψ_future_list[w] = @spawn firstZero(E_ref, E_w, w, tₛ, T, ref_highest[w])
 		end
 		for w = 1:NWS
 			i = fetch(ψ_future_list[w])
@@ -399,7 +404,7 @@ Thermalization will be ×$(floor(Int64, (NWS+1)/(np+1))) as long.")
         # If we didn't find thermalization in this interval, we extend the interval by a fraction and go
         # to this new interval.
         averaging_int = ceil(Int64, averaging_int*AVERAGING_INT_EX)
-        tₛ=T + 1
+        tₛ = T + 1
         T = tₛ + averaging_int - 1
         println("Increasing simulation time to T = $(T)")
     end

@@ -13,12 +13,13 @@ error_exit()
 
 
 # First we need to input the temperature range
-T="0.07"
+T="0.119"
 # Then the other variables are set as before
 g="0.3"
 NU="0.3"
-H="-0.72"
+H="0.005"
 LS=(70 64 46 36 32)
+LzS=(70 64 46 36 32)
 GAMMA="1.0"
 M="300"
 dt="100000"
@@ -29,7 +30,7 @@ declare -a names
 l_len=${#LS[@]}
 for (( i=1; i<=${l_len}; i++ ));
 do
-	names+=("lowerT_$i")
+	names+=("3D${i}L${LS[$i]}")
 done
 
 # For each of the temps we create a separate temp_single_job.pbs script
@@ -55,7 +56,7 @@ do
 #PBS -e ${names[$i]}.e
 #PBS -l select=1:ncpus=16
 #PBS -l walltime=92:00:00
-#PBS -l pmem=1000MB
+#PBS -l pmem=8000MB
 
 ##################################################################
 # Prepare the simulation
@@ -88,6 +89,7 @@ g="$g"
 NU="$NU"
 H="$H"
 L="${LS[$i]}"
+Lz="${LzS[$i]}"
 TEMP="$T"
 GAMMA="$GAMMA"
 M="$M"
@@ -97,7 +99,7 @@ dt="$dt"
 [ -d \$DATA_PATH ] || error_exit "ERROR: Could not find Data directory in \$DATA_PATH"
 cd \$DATA_PATH
 # Make work directory name
-WORK_NAME="VORTEX_GAMMA_\${GAMMA}_g_\${g}_NU_\${NU}_H_\${H}_T_\${TEMP}_L_\${L}_M_\${M}"
+WORK_NAME="3D_GAM_\${GAMMA}_g_\${g}_NU_\${NU}_H_\${H}_T_\${TEMP}_L_\${L}_Lz_\${Lz}_M_\${M}"
 # Make directory if it does not exist.
 echo "Entering directory \$WORK_NAME"
 [ -d \$WORK_NAME ] || mkdir \$WORK_NAME
@@ -112,7 +114,7 @@ cd \$WORK_NAME
 # Now we are in the correct work directory.
 
 echo "Handling control to julia script. Writing output to \$OUTPUT"
-\$JULIA_PATH -p \$CPUS \$SOURCE_PATH/\$JULIA_SCRIPT \$g \$NU \$H \$L \$TEMP \$GAMMA \$M \$dt > \$OUTPUT 2>&1
+\$JULIA_PATH -p \$CPUS \$SOURCE_PATH/\$JULIA_SCRIPT \$g \$NU \$H \$L \$Lz \$TEMP \$GAMMA \$M \$dt > \$OUTPUT 2>&1
 
 
 echo "Job script finished without issue."
