@@ -303,8 +303,15 @@ end
 # -----------------------------------------------------------------------------------------------------------
 # In the current directory, writes the current system and simulations constants to a file system_values.data
 function writeSimulationConstants(syst::SystConstants, sim::Controls, M::Int64, t₀::Int64, Δt::Int64, 
-        filename::AbstractString = "system_values.data")
-    open(filename, "w") do f
+        filename::AbstractString = "system_values.data", dir::AbstractString="")
+    if (dir != "")
+        println("Making dir")
+        makeDirRec(dir)
+        dir_name = dir*"/"
+    else
+        dir_name = ""
+    end
+    open(dir_name*filename, "w") do f
         write(f, "L $(syst.L)\n")
         write(f, "Lz $(syst.L₃)\n")
         write(f, "GAMMA $(syst.γ)\n")
@@ -328,7 +335,7 @@ end
 # Performing common initialization checks and plots for making sure the states are correctly
 # thermalized.
 # Saves to .pdf files in current directory.
-function initializeParallelStatesS(syst::SystConstants, sim::Controls)
+function initializeParallelStatesS(syst::SystConstants, sim::Controls, dir::AbstractString="")
 	# Parameters
 	PLOT_FRACTION = 0.71
     PLOT_DE = 1e3
@@ -378,19 +385,27 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
 	end
     labels = reshape(labels, (1, n_workers+1))
 
+    #Create directory to save plots. If dir is empty or "" it is saved in pwd
+    if (dir != "")
+        makeDirRec(dir)
+        dir_name = dir*"/"
+    else
+        dir_name = ""
+    end
+
 	# Plotting the energies of reference and all workers
 	plt = plot(int, energies, label=labels, xlabel="MCS", ylabel="Energy", title="Thermalization energies");
-    savefig(plt, "ini_equi_E_plot.pdf")
+    savefig(plt, dir_name*"ini_equi_E_plot.pdf")
     
 	# Plot energy difference for first worker
     plt = plot(int, dE_array[1][int], title="Energy difference", xlabel="MCS");
-    savefig(plt, "ini_equi_dE_plot.pdf")
+    savefig(plt, dir_name*"ini_equi_dE_plot.pdf")
 
 	# Plot energy difference for all workers in averaging interval
     avg_int = tᵢ:Tᵢ
     dE_array = [dE_array[w][avg_int] for w = 1:n_workers]
 	plt = plot(tᵢ:Tᵢ, dE_array, title="dE, average interval", xlabel="MCS", label=labels[1:n_workers], ylabel="En. diff.")
-	savefig(plt, "ini_equi_dE_avgint_plot.pdf")
+	savefig(plt, dir_name*"ini_equi_dE_avgint_plot.pdf")
     
 	ψ₁ = ψ_w[1]
 	ψ₂ = ψ_ref
@@ -430,11 +445,11 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls)
     # Plotting results
 	x_mcs = (2t₀+1):(2t₀+2T)
     plt = plot(1:2T, dE, title="Energy difference", xlabel="MCS", xticks=x_mcs);
-    savefig(plt, "ini_extra_dE_plot.pdf")
+    savefig(plt, dir_name*"ini_extra_dE_plot.pdf")
     plt = plot(1:2T, [E₁,E₂], title="Internal energies", xlabel="MCS", xticks=x_mcs);
-    savefig(plt, "ini_extra_E_plot.pdf")
+    savefig(plt, dir_name*"ini_extra_E_plot.pdf")
     plt = plot(1:2T, [p₁,p₂], title="Accept probabilities", xlabel="MCS", ylabel="%", xticks=x_mcs);
-    savefig(plt, "ini_extra_AR_plot.pdf")
+    savefig(plt, dir_name*"ini_extra_AR_plot.pdf")
     
 	return (t₀, ψ_ref, sim_ref, ψ_w, sim_w)
 end
@@ -513,4 +528,19 @@ function initializeTwoStatesS(syst::SystConstants, sim::Controls)
     return (ψ₁, sim₁, ψ₂, sim₂, t₀)
 end
 
-
+#---------------------------------------------------------------------------------------------------
+#Check if a directory exist, and make it if it does not
+function makeDirRec(dir_name::AbstractString)
+    folders = split(dir_name, "/")
+    temp_dir = folders[1]
+    if !isdir(temp_dir)
+        mkdir(temp_dir)
+    end
+    
+    for i=2:length(folders)
+        temp_dir = temp_dir*"/"*folders[i]
+        if !isdir(temp_dir)
+            mkdir(temp_dir)
+        end
+    end
+end
