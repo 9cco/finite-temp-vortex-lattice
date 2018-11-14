@@ -56,7 +56,7 @@ function fᵣ(ϕ::LatticeSite, nb::NearestNeighbors, h_pos::Int64, c::SystConsta
 #2		println("Then MGT at h_pos+2 should be $t")
 #	end
 #	@test Fₘ == 0
-    energy = Fₖ + Fᵥ# + Fₐₙ + Fₘ
+    energy = Fₖ# + Fᵥ# + Fₐₙ + Fₘ
 end
 
 function maxwell(ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₃::LatticeSite, g⁻²::Float64)
@@ -155,7 +155,7 @@ function ΔE(ϕ′::LatticeSite, ϕ::LatticeSite, nb::NearestNeighbors, nnb::Nex
     # Potential energy terms
 #    δE += c.γ^4*((ϕ′.u⁺*ϕ′.u⁻)^2*(2+c.ν*cos(2*(ϕ′.θ⁺-ϕ′.θ⁻))) - (ϕ.u⁺*ϕ.u⁻)^2*(2+c.ν*cos(2*(ϕ.θ⁺-ϕ.θ⁻))) 
 #        + 0.5*(ϕ′.u⁺^4-ϕ.u⁺^4+ϕ′.u⁻^4-ϕ.u⁻^4))
-    δE += c.γ^4*0.5*(ϕ′.u⁺^4-ϕ.u⁺^4+ϕ′.u⁻^4-ϕ.u⁻^4)
+#    δE += c.γ^4*0.5*(ϕ′.u⁺^4-ϕ.u⁺^4+ϕ′.u⁻^4-ϕ.u⁻^4)
     
     # Andreev-Bashkin terms
 #    δE += (c.ν+1)/4*c.γ^2*(
