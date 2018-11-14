@@ -125,7 +125,7 @@ print("\n")
 # Setup files
 #---------------------------------------------------------------------------------------------------
 
-println("Writing system:\ng\t=\t$(g)\nν\t=\t$(ν)\nH\t=\t$(H)\nL\t=\t$(L)\nT\t=\t$(T)")
+println("Writing system:\ng\t=\t$(g)\nν\t=\t$(ν)\nH\t=\t$(H)\nL\t=\t$(L)\nL₃\t=\t$(L₃)\nT\t=\t$(T)")
 println("γ\t=\t$(γ)\nM\t=\t$(M)\nt₀\t=\t$(t₀)\nΔt\t=\t$(Δt)\nf\t=\t$(f)")
 writeSimulationConstants(syst, sim, M, t₀, Δt)
 
@@ -138,7 +138,13 @@ save(ψ_w[1], "state_w")
 
 println("\nMeasuring structure function and vortex lattice
 --------------------------------------------------------------------------------------")
-@time (av_V⁺, err_V⁺, V⁺, av_V⁻, err_V⁻, V⁻, av_S⁺, err_S⁺, S⁺, av_S⁻, err_S⁻, S⁻) = parallelSFVLA!(k_matrix, ψ_list, sim_ref, M, Δt)
-plotStructureFunctionVortexLatticeS(ψ_ref, av_V⁺, av_V⁻, av_S⁺, av_S⁻, k_matrix)
+#@time (av_V⁺, err_V⁺, V⁺, av_V⁻, err_V⁻, V⁻, av_S⁺, err_S⁺, S⁺, av_S⁻, err_S⁻, S⁻) = parallelSFVLA!(k_matrix, ψ_list, sim_ref, M, Δt)
+@time u⁺_list, u⁻_list = averageAmplitudes!(ψ_list, sim_ref, M, Δt)
+#plotStructureFunctionVortexLatticeS(ψ_ref, av_V⁺, av_V⁻, av_S⁺, av_S⁻, k_matrix)
+println("Average amplitudes:\n u⁺ =\t$(mean(u⁺_list)) ± $(std(u⁺_list))\n u⁻ =\t$(mean(u⁻_list)) ± $(std(u⁻_list))")
+
+# Saving u_lists to file
+writedlm("u_p.data", u⁺_list, ":")
+writedlm("u_m.data", u⁻_list, ":")
 
 println("\nSimulation finished!  o(〃＾▽＾〃)o\n\nResults are found in \n$(pwd())")

@@ -483,4 +483,88 @@ V⁻: \t$(sum(V⁻[rand(1:M)]))")
     return (av_V⁺, err_V⁺, V⁺, av_V⁻, err_V⁻, V⁻, av_S⁺, err_S⁺, S⁺, av_S⁻, err_S⁻, S⁻)
 end
 
+####################################################################################################################
+#                            Amplitude measurements
+#
+####################################################################################################################
 
+function avgAmpMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64; visible=false)
+    
+    PROG_NUM = 10
+    u⁺_list = Array{Float64, 1}(M); u⁻_list = Array{Float64, 1}(M)
+    u⁺_list[1], u⁻_list[1] = meanAmplitudes(ψ)
+    
+    prog_int = floor(Int64, M/PROG_NUM)
+    if visible
+        for m = 2:M
+            nMCS(ψ, sim, Δt)
+            u⁺_list[m], u⁻_list[m] = meanAmplitudes(ψ)
+            if m % prog_int == 0
+                println("Measurement progress: $(Int(round(m/M*100,0)))%")
+                flush(STDOUT)
+            end
+        end
+    else # If not visible
+        for m = 2:M
+            nMCS(ψ, sim, Δt)
+            u⁺_list[m], u⁻_list[m] = meanAmplitudes(ψ)
+        end
+    end
+    
+    return u⁺_list, u⁻_list
+end
+
+# --------------------------------------------------------------------------------------------------
+# Given np+1 uncorrelated states in ψ_list we use these to make M measurements of the vortex lattice by splitting
+# the M measurements on the np workers as well as the master process. In this version we continuously discard
+# the measurements and only save the averages and second moments.
+function averageAmplitudes!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δt::Int64)
+    syst = ψ_list[1].consts
+    L = syst.L
+    
+    # Setup storage for measurements of average amplitudes
+    u⁺_list = Array{Float64, 1}(M); u⁻_list = Array{Float64, 1}(M);
+    
+    # Splitting the problem into np sub-problems.
+    np = nprocs()
+    # Minimum amount of work pr. process
+    M_min = Int(floor(M/np))
+    # Number of workers doing +1 extra work
+    nw = M%np
+    
+    # Make sure that we have enough states
+    length(ψ_list) >= np || throw(error("ERROR: Not enough states in list"))
+    
+    # Setup worker futures
+    futures = [Future() for i=1:(np-1)]
+    
+    println("Starting $(M) measurements on $(np) processes doing max $(M_min + Int(ceil(nw/np))) measurements each
+on a $(L)×$(L) system, corresponding to $((M_min+ceil(Int64, nw/np))*Δt) MCS pr. process")
+    
+    # Start +1 workers
+    for i = 1:nw
+        futures[i] = @spawn avgAmpMeasure!(ψ_list[i], sim, M_min+1, Δt)
+    end
+    # Start remaining workers
+    for i = 1:np-nw-1
+        futures[nw+i] = @spawn avgAmpMeasure!(ψ_list[nw+i], sim, M_min, Δt)
+    end
+    # Make the master process work as well
+    
+    u⁺_list[1:M_min], u⁻_list[1:M_min] = avgAmpMeasure!(ψ_list[np], sim, M_min, Δt; visible=true)
+    
+    println("Measurements done, collecting parallell results.")
+    # Collect results
+    for i = 1:nw
+        int = (i-1)*(M_min+1)+1+M_min:i*(M_min+1)+M_min
+        u⁺_list[int], u⁻_list[int] = fetch(futures[i])
+    end
+    for i = 1:np-nw-1
+        int = (i-1)*M_min+nw*(M_min+1)+1+M_min:i*M_min+nw*(M_min+1)+M_min
+        u⁺_list[int], u⁻_list[int] = fetch(futures[nw+i])
+    end
+    
+    println("Parallell measurements done. Processing.")
+    
+    return u⁺_list, u⁻_list
+end
