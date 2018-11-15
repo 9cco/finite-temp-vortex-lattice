@@ -185,7 +185,7 @@ function State(choice::Int64, consts::SystConstants)
         
         # Construct NxN lattice of NxN LatticeSites
         #lattice = [LatticeSite([0,0,0],0,0,0,1) for y=1:N, x=1:N, z=1:L₃]
-        lattice = [LatticeSite([0,0,0],0,0,0.2,2.0) for y=1:N, x=1:N, z=1:L₃]
+        lattice = [LatticeSite([0,0,0],0,0,1.0,0.0) for y=1:N, x=1:N, z=1:L₃]
 		nb = latticeNeighbors(lattice,N,L₃)
 		nnb = latticeNextNeighbors(lattice,N,L₃)
 		nnnb = latticeNNNeighbors(lattice,N,L₃)
@@ -196,10 +196,10 @@ function State(choice::Int64, consts::SystConstants)
         Amax::Int64 = 2^10
 		#lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
 		#				   rand(Uniform(0,2π)), rand(Uniform(0,2π)), rand(), 1) for y=1:N, x=1:N, z=1:L₃]
-		lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
-						   rand(Uniform(0,2π)), rand(Uniform(0,2π)), 0.2, 2.0) for y=1:N, x=1:N, z=1:L₃]
-		#lattice = [LatticeSite([0,0,0],
-        #                       rand(Uniform(0,2π)), rand(Uniform(0,2π)), 1, 0) for y=1:N, x=1:N, z=1:L₃]
+		#lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
+	#					   rand(Uniform(0,2π)), rand(Uniform(0,2π)), 1.0, 0.0) for y=1:N, x=1:N, z=1:L₃]
+		lattice = [LatticeSite([0,0,0],
+                               rand(Uniform(0,2π)), rand(Uniform(0,2π)), 1.0, 0.0) for y=1:N, x=1:N, z=1:L₃]
 		nb = latticeNeighbors(lattice,N,L₃)
 		nnb = latticeNextNeighbors(lattice,N,L₃)
 		nnnb = latticeNNNeighbors(lattice,N,L₃)
