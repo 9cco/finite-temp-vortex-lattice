@@ -150,7 +150,7 @@ function State(choice::Int64, L::Int64)
     if choice == 1
         
         # Construct LxL lattice of LxL LatticeSites
-        lattice = [LatticeSite([0,0,0],0,0,0,1) for y=1:L, x=1:L, z=1:L]
+        lattice = [LatticeSite([0,0,0],0,0,1.0,0.0) for y=1:L, x=1:L, z=1:L]
 		nbl = latticeNeighbors(lattice,L,L)
 		nnbl = latticeNextNeighbors(lattice,L,L)
 		nnnbl = latticeNNNeighbors(lattice,L,L)
@@ -159,8 +159,10 @@ function State(choice::Int64, L::Int64)
     # Construct random state
     elseif choice == 2
         Amax::Int64 = 2^10
-		lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
-							  rand(Uniform(0,2π)), rand(Uniform(0,2π)), rand(), rand()) for y=1:L, x=1:L, z=1:L]
+#		lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
+#							  rand(Uniform(0,2π)), rand(Uniform(0,2π)), 1.0, 0.0) for y=1:L, x=1:L, z=1:L]
+		lattice = [LatticeSite([0.0,0.0,0.0],
+							  rand(Uniform(0,2π)), rand(Uniform(0,2π)), 1.0, 0.0) for y=1:L, x=1:L, z=1:L]
 #        for y=1:L, x=1:L
 #            lattice[y,x].u⁻ = √(1-lattice[y,x].u⁺^2)
 #        end

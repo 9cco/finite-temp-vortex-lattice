@@ -28,6 +28,14 @@ function nᵣNoA(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕ
         - mod(ϕᵣ₊₂.θ⁻ - ϕ.θ⁻, two_pi))
     return vort_θ⁺, vort_θ⁻
 end
+function symmetrizedVorticity(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, ϕᵣ₊₂₂::LatticeSite, ϕᵣ₋₁₊₂::LatticeSite, h_pos::Int64)
+    Aᵣ = c.f*two_pi*(h_pos-1)
+    vort_θ⁺ = (drawback(ϕᵣ₊₁₊₂.θ⁺ - ϕ.θ⁺ - (ϕ.A[2]+Aᵣ+ϕᵣ₊₂.A[1]) ) + drawback(ϕᵣ₊₂₂.θ⁺ - ϕᵣ₊₁₊₂.θ⁺ - (-ϕᵣ₊₂.A[1]+ϕᵣ₊₂.A[2]+Aᵣ))
+               - drawback(ϕᵣ₊₂₂.θ⁺ - ϕᵣ₋₁₊₂.θ⁺ - (ϕᵣ₋₁₊₂.A[1]+ϕᵣ₊₂.A[2]+Aᵣ)) - drawback(ϕᵣ₋₁₊₂.θ⁺ - ϕ.θ⁺ - (ϕ.A[2]+Aᵣ-ϕᵣ₋₁₊₂.A[1])))
+    vort_θ⁻ = (drawback(ϕᵣ₊₁₊₂.θ⁻ - ϕ.θ⁻ - (ϕ.A[2]+Aᵣ+ϕᵣ₊₂.A[1]) ) + drawback(ϕᵣ₊₂₂.θ⁻ - ϕᵣ₊₁₊₂.θ⁻ - (-ϕᵣ₊₂.A[1]+ϕᵣ₊₂.A[2]+Aᵣ))
+               - drawback(ϕᵣ₊₂₂.θ⁻ - ϕᵣ₋₁₊₂.θ⁻ - (ϕᵣ₋₁₊₂.A[1]+ϕᵣ₊₂.A[2]+Aᵣ)) - drawback(ϕᵣ₋₁₊₂.θ⁻ - ϕ.θ⁻ - (ϕ.A[2]+Aᵣ-ϕᵣ₋₁₊₂.A[1])))
+    return vort_θ⁺, vort_θ⁻
+end
 
 
 # -----------------------------------------------------------------------------------------------------------
@@ -41,10 +49,14 @@ function vortexSnapshot(ψ::State)
     # Sum over the lattice
     for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
         ϕ = ψ.lattice[v_pos,h_pos,z_pos]
-        ϕᵣ₊₁ = ψ.nb[v_pos,h_pos,z_pos].ϕᵣ₊₁
-        ϕᵣ₊₂ = ψ.nb[v_pos,h_pos,z_pos].ϕᵣ₊₂
         ϕᵣ₊₁₊₂ = ψ.nnb[v_pos,h_pos,z_pos].ϕᵣ₊₁₊₂
+        ϕᵣ₋₁₊₂ = ψ.nnb[v_pos,h_pos,z_pos].ϕᵣ₋₁₊₂
+        ϕᵣ₊₂₂ = ψ.nnnb[v_pos,h_pos,z_pos].ϕᵣ₊₂₂
+#        ϕᵣ₊₁ = ψ.nb[v_pos,h_pos,z_pos].ϕᵣ₊₁
+#        ϕᵣ₊₂ = ψ.nb[v_pos,h_pos,z_pos].ϕᵣ₊₂
+#        ϕᵣ₊₁₊₂ = ψ.nnb[v_pos,h_pos,z_pos].ϕᵣ₊₁₊₂
         (V⁺[v_pos,h_pos,z_pos], V⁻[v_pos, h_pos, z_pos]) = nᵣ(ψ.consts, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₁₊₂, h_pos)
+#        V⁺[v_pos,h_pos,z_pos], V⁻[v_pos,h_pos,z_pos] = symmetrizedVorticity(ψ.consts, ϕ, ϕᵣ₊₁₊₂, ϕᵣ₊₂₂, ϕᵣ₋₁₊₂)
     end
     
     return (V⁺, V⁻)
