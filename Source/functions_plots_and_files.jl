@@ -404,7 +404,7 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls, dir::Abst
 	# Plot energy difference for all workers in averaging interval
     avg_int = tᵢ:Tᵢ
     dE_array = [dE_array[w][avg_int] for w = 1:n_workers]
-	plt = plot(tᵢ:Tᵢ, dE_array, title="dE, average interval", xlabel="MCS", label=labels[1:n_workers], ylabel="En. diff.")
+	plt = plot(avg_int, dE_array, title="dE, average interval", xlabel="MCS", label=labels[1:n_workers], ylabel="En. diff.")
 	savefig(plt, dir_name*"ini_equi_dE_avgint_plot.pdf")
     
 	ψ₁ = ψ_w[1]
@@ -443,12 +443,12 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls, dir::Abst
 	println("Saving plots to files")
 
     # Plotting results
-	x_mcs = (2t₀+1):(2t₀+2T)
-    plt = plot(1:2T, dE, title="Energy difference", xlabel="MCS", xticks=x_mcs);
+	x_mcs = (t₀+1):(t₀+2T)
+    plt = plot(x_mcs, dE, title="Energy difference", xlabel="MCS");
     savefig(plt, dir_name*"ini_extra_dE_plot.pdf")
-    plt = plot(1:2T, [E₁,E₂], title="Internal energies", xlabel="MCS", xticks=x_mcs);
+    plt = plot(x_mcs, [E₁,E₂], title="Internal energies", xlabel="MCS");
     savefig(plt, dir_name*"ini_extra_E_plot.pdf")
-    plt = plot(1:2T, [p₁,p₂], title="Accept probabilities", xlabel="MCS", ylabel="%", xticks=x_mcs);
+    plt = plot(x_mcs, [p₁,p₂], title="Accept probabilities", xlabel="MCS", ylabel="%");
     savefig(plt, dir_name*"ini_extra_AR_plot.pdf")
     
 	return (t₀, ψ_ref, sim_ref, ψ_w, sim_w)
