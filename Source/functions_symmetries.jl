@@ -140,6 +140,18 @@ function parallelMeasureGS!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δ
     #Master process
     (ρˣˣₖ₂, ρˣˣₖ₃, ρʸʸₖ₃, ρʸʸₖ₁, ρᶻᶻₖ₁, ρᶻᶻₖ₂) = gaugeStiffnessMeasure!(ψ_list[np], sim, M_min, Δt) 
     
+    u⁺ = 0.0
+    u⁻ = 0.0
+    #Measure density as a test
+    for i=1:np
+        for x=1:L, y=1:L, z=1:L
+            u⁺ += ψ_list[np].lattice[x,y,z].u⁺
+            u⁻ += ψ_list[np].lattice[x,y,z].u⁻
+        end
+    end
+    u⁺ = u⁺/(L^3 * np)
+    u⁻ = u⁻/(L^3 * np)
+    
     println("Measurements completed, collecting results from processes")
     #Gather results from workers
     for i=1:np-1
@@ -171,7 +183,7 @@ function parallelMeasureGS!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δ
     SEρᶻᶻₖ₂ = std(ρᶻᶻₖ₂)/sqrt(M)
     
     return (AVρˣˣₖ₂, SEρˣˣₖ₂, AVρˣˣₖ₃, SEρˣˣₖ₃, AVρʸʸₖ₃, SEρʸʸₖ₃, AVρʸʸₖ₁, SEρʸʸₖ₁,
-            AVρᶻᶻₖ₁, SEρᶻᶻₖ₁, AVρᶻᶻₖ₂, SEρᶻᶻₖ₂)
+            AVρᶻᶻₖ₁, SEρᶻᶻₖ₁, AVρᶻᶻₖ₂, SEρᶻᶻₖ₂, u⁺, u⁻)
 end
 #--------------------------------------------------------------------------------------------------   
 
