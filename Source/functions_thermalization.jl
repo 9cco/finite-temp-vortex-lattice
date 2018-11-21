@@ -268,7 +268,7 @@ end
 # convergence.
 function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystConstants,
         sim::Controls, T::Int64=1000, ex::Float64=1.8, STD_NUMBER::Float64=0.5)
-    CUTOFF_MAX::Int64=4000000           #Max number of MCS before the function terminates
+    CUTOFF_MAX::Int64=2000000           #Max number of MCS before the function terminates
     ADJUST_INTERVAL=400                 #Number of MCS between each sim_const adjustment while finding dE<0
     AVERAGING_INT_FRAC=1/4                 #Similiar for 2nd loop, also the interval that is averaged over
     AVERAGING_INT_EX = 1.4
@@ -359,6 +359,7 @@ Thermalization will be ×$(floor(Int64, (NWS+1)/(np+1))) as long.")
 			flush(STDOUT)
             thermalized_init = true
         end
+        gc() # Trying to run garbage collection manually since Vilje seems to be running out of memory at long thermalizations.
     end
 
     tₛ = T+1
@@ -407,6 +408,7 @@ Thermalization will be ×$(floor(Int64, (NWS+1)/(np+1))) as long.")
         tₛ = T + 1
         T = tₛ + averaging_int - 1
         println("Increasing simulation time to T = $(T)")
+        gc() # Trying to run garbage collection manually since Vilje seems to be running out of memory at long thermalizations.
     end
     return -1, tₛ, CUTOFF_MAX, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w
 end

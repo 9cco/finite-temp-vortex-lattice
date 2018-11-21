@@ -14,13 +14,16 @@ function proposeLocalUpdate(ϕ::LatticeSite, sim::Controls)
     #                    ϕ.A[3]+rand(Uniform(-sim.Amax,sim.Amax))],
     #    mod(ϕ.θ⁺ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), mod(ϕ.θ⁻ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), 
     #    u⁺, u⁻)
-    return LatticeSite([ϕ.A[1]+rand(Uniform(-sim.Amax,sim.Amax)), ϕ.A[2]+rand(Uniform(-sim.Amax,sim.Amax)),
-                        ϕ.A[3]+rand(Uniform(-sim.Amax,sim.Amax))],
-        mod(ϕ.θ⁺ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), mod(ϕ.θ⁻ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), 
-        u⁺, u⁻)
+#    return LatticeSite([ϕ.A[1]+rand(Uniform(-sim.Amax,sim.Amax)), ϕ.A[2]+rand(Uniform(-sim.Amax,sim.Amax)),
+#                        ϕ.A[3]+rand(Uniform(-sim.Amax,sim.Amax))],
+#        mod(ϕ.θ⁺ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), mod(ϕ.θ⁻ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), 
+#        u⁺, u⁻)
     #return LatticeSite([0, 0, 0],
     #    mod(ϕ.θ⁺ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), mod(ϕ.θ⁻ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), 
     #    u⁺, u⁻)
+    return LatticeSite([0, 0, 0],
+        mod(ϕ.θ⁺ + rand(sim.θ_rng), 2π), mod(ϕ.θ⁻ + rand(sim.θ_rng), 2π), 
+        u⁺, u⁻)
 end
 
 # --------------------------------------------------------------------------------------------------

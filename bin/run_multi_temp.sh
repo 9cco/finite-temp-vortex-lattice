@@ -15,14 +15,14 @@ error_exit()
 # First we need to input the temperature range
 TEMPS=(1.1 1.0 0.9 0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1)
 # Then the other variables are set as before
-g="0.3"
+g="0.09"
 NU="0.3"
 H="0.005"
 L="64"
 Lz="12"
 GAMMA="1.0"
 M="300"
-dt="10000"
+dt="1000"
 
 # For each of the values in TEMPS, we make a new name
 declare -a IDS
@@ -34,7 +34,7 @@ do
     T=`echo ${TEMPS[$i]} | sed s/[\.]//`
     # Remove extrenious zeroes.
     T=`echo $T | sed s/^[0]*//`
-	names+=("amp3D${i}T$T")
+	names+=("1cXY${i}T$T")
 done
 
 # For each of the temps we create a separate temp_single_job.pbs script
@@ -58,7 +58,7 @@ do
 #PBS -e ${names[$i]}.e
 #PBS -l select=1:ncpus=16
 #PBS -l walltime=24:00:00
-#PBS -l pmem=2000MB
+#PBS -l pmem=8000MB
 ##################################################################
 # Prepare the simulation
 ##################################################################
@@ -94,7 +94,7 @@ dt="$dt"
 [ -d \$DATA_PATH ] || error_exit "ERROR: Could not find Data directory in \$DATA_PATH"
 cd \$DATA_PATH
 # Make work directory name
-WORK_NAME="AMP3D_GAM_\${GAMMA}_g_\${g}_NU_\${NU}_H_\${H}_T_\${TEMP}_L_\${L}_Lz_\${Lz}_M_\${M}"
+WORK_NAME="1CompXY_GAM_\${GAMMA}_g_\${g}_NU_\${NU}_H_\${H}_T_\${TEMP}_L_\${L}_Lz_\${Lz}_M_\${M}"
 # Make directory if it does not exist.
 echo "Entering directory \$WORK_NAME"
 [ -d \$WORK_NAME ] || mkdir \$WORK_NAME

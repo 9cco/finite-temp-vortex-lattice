@@ -496,12 +496,150 @@ V⁻: \t$(sum(V⁻[rand(1:M)]))")
 end
 
 
+####################################################################################################################
+#                            Structure function using state-list in file
+#
+####################################################################################################################
+
+# --------------------------------------------------------------------------------------------------
+# Takes in a list of states and measures the vorticity and structure function for each of them.
+function structureFunctionWork{T<:Real}(k_matrix::Array{Array{T,1},2}, ψ_list::Array{State,1}; visible=false)
+    PROG_NUM = 10
+    M = length(ψ_list)
+    L_k1 = size(k_matrix, 1)
+    L_k2 = size(k_matrix, 2)
+    L = size(ψ_list[1].lattice, 1)
+    
+    #Setup measurement storage
+    S⁺ = [zeros(L_k1, L_k2) for i = 1:M]; S⁻ = [zeros(L_k1, L_k2) for i = 1:M]
+    V⁺ = [zeros(L,L) for i = 1:M]; V⁻ = [zeros(L,L) for i = 1:M]
+    
+    # Measure for each of the states in the list
+    for m = 1:M
+        V⁺_cube, V⁻_cube = vortexSnapshot(ψ_list[m])
+        V⁺[m] = avgVort(V⁺_cube); V⁻[m] = avgVort(V⁻_cube)
+        
+        # We use the vortex snapshots to measure the structure function
+        for v_pos = 1:L_k1, h_pos = 1:L_k2
+            S⁺[m][v_pos,h_pos], S⁻[m][v_pos,h_pos] = structureFunction(k_matrix[v_pos,h_pos], ψ_list[m], V⁺[m], V⁻[m])
+        end
+    end     
+    
+    return S⁺, S⁻, V⁺, V⁻
+end
+
+# --------------------------------------------------------------------------------------------------
+# Normalizes the matrices found through 
+# structureFunctionWork(::Array{Array{Float64,1},2}, ::Array{State,1}; ::Bool)
+function normalizeSFVL!(S⁺, S⁻, V⁺, V⁻, syst)
+    
+    s_norm_inv = 1/(syst.L^2*syst.f*two_pi)^2
+    v_norm_inv = 1/two_pi
+    
+    S⁺ = s_norm_inv.*S⁺; S⁻ = s_norm_inv.*S⁻;
+    V⁺ = v_norm_inv.*V⁺; V⁻ = v_norm_inv.*V⁻;
+    return S⁺, S⁻, V⁺, V⁻
+end
+
+# --------------------------------------------------------------------------------------------------
+function structureFunction{T<:Real}(filename::AbstractString, k_matrix::Array{Array{T, 1},2})
+    
+    # Get pre-measured states.
+    ψ_list = loadStates(filename)
+    
+    syst = ψ_list[1].consts
+    L = syst.L
+    
+    # Checking that the k matrix has equal dimensions
+    L_k = size(k_matrix, 1)
+    size(k_matrix, 2) == L_k || throw(error("k_matrix dimensions are not equal"))
+    
+    M = length(ψ_list)
+    np, M_min, nw = splitParallell(M)
+    
+    # Setup storage.
+    S⁺ = Array{Array{Float64, 2},1}(M); S⁻ = Array{Array{Float64, 2},1}(M)
+    V⁺ = Array{Array{Float64, 2},1}(M); V⁻ = Array{Array{Float64, 2},1}(M)
+    
+    # Make sure that we have enough states
+    length(ψ_list) >= np || throw(error("ERROR: Not enough states in list"))
+    
+    # Setup worker futures
+    futures = [Future() for i=1:(np-1)]
+    
+    println("Starting $(M) measurements on $(np) processes doing max $(M_min + Int(ceil(nw/np))) measurements each
+on a $(L)×$(L) system.")
+    
+    # Start +1 workers
+    for i = 1:nw
+        futures[i] = @spawn structureFunctionWork(k_matrix, ψ_list[(M_min+1)*(i-1) + 1:(M_min+1)*i])
+        println("Starting states: $((M_min+1)*(i-1) + 1):$((M_min+1)*i)")
+    end
+    # Start remaining workers
+    for i = 1:np-nw-1
+        futures[nw+i] = @spawn structureFunctionWork(k_matrix,
+            ψ_list[M_min*(i-1)+nw*(M_min+1)+1:M_min*(i-1)+nw*(M_min+1)+M_min])
+        println("Starting states: $(M_min*(i-1)+nw*(M_min+1)+1):$(M_min*(i-1)+nw*(M_min+1)+M_min)")
+    end
+    # Make the master process work as well
+    int = 1:M_min
+    S⁺[int], S⁻[int], V⁺[int], V⁻[int] = structureFunctionWork(k_matrix,
+        ψ_list[M_min*(np-nw-1-1)+nw*(M_min+1)+M_min+1:M_min*np+nw]; visible=true)
+    println("Starting states: $(M_min*(np-nw-1-1)+nw*(M_min+1)+M_min+1):$(M_min*np+nw)")
+    println("Saving to: $(1):$(M_min)")
+    
+    println("Measurements done, collecting parallell results.")
+    # Collect results
+    for i = 1:nw
+        int = (i-1)*(M_min+1)+1+M_min:i*(M_min+1)+M_min
+        S⁺[int], S⁻[int], V⁺[int], V⁻[int] = fetch(futures[i])
+        println("Saving to: $((i-1)*(M_min+1)+1+M_min):$(i*(M_min+1)+M_min)")
+    end
+    for i = 1:np-nw-1
+        int = (i-1)*M_min+nw*(M_min+1)+1+M_min:i*M_min+nw*(M_min+1)+M_min
+        S⁺[int], S⁻[int], V⁺[int], V⁻[int] = fetch(futures[nw+i])
+        println("Saving to: $((i-1)*M_min+nw*(M_min+1)+1+M_min):$(i*M_min+nw*(M_min+1)+M_min)")
+    end
+    
+    println("Parallell measurements done. Processing.")
+    
+    # Normalize values
+    S⁺, S⁻, V⁺, V⁻ = normalizeSFVL!(S⁺, S⁻, V⁺, V⁻, syst)
+    
+    # Calculate averages and errors.
+    avg_S⁺, err_S⁺ = avgErr(S⁺); avg_S⁻, err_S⁻ = avgErr(S⁻)
+    avg_V⁺, err_V⁺ = avgErr(V⁺); avg_V⁻, err_V⁻ = avgErr(V⁻)
+    
+
+    # Sum of all vorticities
+    println("\nSum of vorticity of random snapshot:\nV⁺: \t$(sum(V⁺[rand(1:M)]))
+V⁻: \t$(sum(V⁻[rand(1:M)]))")
+    
+    # Finding max relative error in the matrices.
+    println("\nMax relative errors\nS⁺:\t$(maxRelErrString(avg_S⁺, err_S⁺))
+S⁻:\t$(maxRelErrString(avg_S⁻, err_S⁻))\nV⁺:\t$(maxRelErrString(avg_V⁺, err_V⁺))
+V⁻:\t$(maxRelErrString(avg_V⁻, err_V⁻))")
+    
+    # Finding max values over the matrices.
+    N_MAX = 3
+    max_S⁺= findMaximaIndices(avg_S⁺; n=N_MAX); max_S⁻ = findMaximaIndices(avg_S⁻; n=N_MAX)
+    println("\nMaximum of S⁺")
+    for i = 1:length(max_S⁺)
+        avg, err = scientificRounding(avg_S⁺[max_S⁺[i]...], err_S⁺[max_S⁺[i]...])
+        println("$(max_S⁺[i]):   \t$(avg) ± $(err)")
+    end
+    
+    
+    return avg_V⁺, err_V⁺, V⁺, avg_V⁻, err_V⁻, V⁻, avg_S⁺, err_S⁺, S⁺, avg_S⁻, err_S⁻, S⁻
+end
+
 
 ####################################################################################################################
 #                            Amplitude measurements
 #
 ####################################################################################################################
 
+# --------------------------------------------------------------------------------------------------
 function avgAmpMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64; visible=false)
     
     PROG_NUM = 10
@@ -581,4 +719,83 @@ on a $(L)×$(L) system, corresponding to $((M_min+ceil(Int64, nw/np))*Δt) MCS p
     println("Parallell measurements done. Processing.")
     
     return u⁺_list, u⁻_list
+end
+
+
+####################################################################################################################
+#                            General thermal state average
+#
+####################################################################################################################
+# Measures states and saves these to disk.
+
+
+# --------------------------------------------------------------------------------------------------
+# Complimentary function to measurementSeries! Makes M measurements of the state and writes these
+# state-measurements to the remote channel. Each measurement is done with Δt MCS between them.
+function measureStates!(ψ::State, sim::Controls, M::Int64, Δt::Int64, r_chan::RemoteChannel{Channel{State}})
+#    u⁺_list = Array{Float64, 1}(M); u⁻_list = Array{Float64, 1}(M)
+#    u⁺_list[1], u⁻_list[1] = meanAmplitudes(ψ)
+    put!(r_chan, ψ) # First measurement
+
+    for m = 2:M
+        nMCS(ψ, sim, Δt)
+        put!(r_chan, ψ)
+    end
+    
+    return 1
+end
+
+# --------------------------------------------------------------------------------------------------
+# Ment to be called as an asynchronous task to collect states from remote channel.
+function writeChannel(r_chan::RemoteChannel{Channel{State}}, filename::AbstractString)
+    while true
+        ψ = take!(r_chan)
+        addToList(ψ, filename)
+    end
+end
+
+# --------------------------------------------------------------------------------------------------
+# Given np+1 uncorrelated states in ψ_list we use these to make M measurements of the states by splitting
+# the M measurements on the np workers as well as the master process. The measured states are continuously
+# stored in an file which can later be read to produce a measurement array of lattices.
+function measurementSeries!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δt::Int64; filename="state_list.data")
+    syst = ψ_list[1].consts
+    L = syst.L
+    
+    M = M-1 # We use one of the states in ψ_list as first measurement to initialize file.
+    # Setup storage channel for parallel processes
+    ψ_chan = RemoteChannel(()->Channel{State}(M))
+    
+     # Splitting the problem into np sub-problems.
+    np = nprocs()-1
+    # Minimum amount of work pr. process
+    M_min = Int(floor(M/np))
+    # Number of workers doing +1 extra work
+    nw = M%np
+    
+    # Make sure that we have enough states
+    length(ψ_list) >= np+1 || throw(error("ERROR: Not enough states in list"))
+    
+    # Initialize file
+    save([ψ_list[np+1]], filename)
+    
+    println("Starting $(M) measurements on $(np) processes doing max $(M_min + Int(ceil(nw/np))) measurements each
+on a $(L)×$(L) system giving in total $(M+1) measurements to file")
+    
+    @async writeChannel(ψ_chan, filename)
+    @sync begin
+        # Start +1 workers
+        for i = 1:nw
+            @async remotecall_fetch(measureStates!, i+1, ψ_list[i], sim, M_min+1, Δt, ψ_chan)
+        end
+        # Start remaining workers
+        for i = 1:np-nw
+            @async remotecall_fetch(measureStates!, i+1+nw, ψ_list[nw+i], sim, M_min, Δt, ψ_chan)
+        end
+    end
+        
+    println("Measurements done.")
+    
+    println("Measurements saved to:\n$(pwd())/$(filename)")
+    return 1
 end

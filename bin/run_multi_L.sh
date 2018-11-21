@@ -13,15 +13,15 @@ error_exit()
 
 
 # First we need to input the temperature range
-T="0.119"
+T="0.4"
 # Then the other variables are set as before
-g="0.3"
+g="0.1"
 NU="0.3"
 H="0.005"
 LS=(70 64 46 36 32)
 LzS=(70 64 46 36 32)
 GAMMA="1.0"
-M="300"
+M="600"
 dt="100000"
 
 # For each of the values in TEMPS, we make a new name
@@ -30,7 +30,7 @@ declare -a names
 l_len=${#LS[@]}
 for (( i=0; i<${l_len}; i++ ));
 do
-	names+=("3D${i}L${LS[$i]}")
+	names+=("1cXY${i}L${LS[$i]}")
 done
 
 # For each of the temps we create a separate temp_single_job.pbs script
@@ -99,7 +99,7 @@ dt="$dt"
 [ -d \$DATA_PATH ] || error_exit "ERROR: Could not find Data directory in \$DATA_PATH"
 cd \$DATA_PATH
 # Make work directory name
-WORK_NAME="3D_GAM_\${GAMMA}_g_\${g}_NU_\${NU}_H_\${H}_T_\${TEMP}_L_\${L}_Lz_\${Lz}_M_\${M}"
+WORK_NAME="1CompXY_GAM_\${GAMMA}_g_\${g}_NU_\${NU}_H_\${H}_T_\${TEMP}_L_\${L}_Lz_\${Lz}_M_\${M}"
 # Make directory if it does not exist.
 echo "Entering directory \$WORK_NAME"
 [ -d \$WORK_NAME ] || mkdir \$WORK_NAME

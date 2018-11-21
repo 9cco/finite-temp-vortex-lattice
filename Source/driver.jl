@@ -52,7 +52,7 @@ M = parse(Int64, ARGS[8])
 # Calculate remaining parameters
 
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
-f = ceil(abs(H/(2π)*L))/L*sign(H)
+f = 1/L#ceil(abs(H/(2π)*L))/L*sign(H)
 # Updating H to value given by f
 H = 2π*f
 # Calculate inverse temperature
@@ -80,7 +80,7 @@ ENV["GKSwstype"] = "100"
 
 # Create system
 syst = SystConstants(L, L₃, γ, 1/g^2, ν, κ₅, f, β)
-sim = Controls(π/3, 0.4, 3.0)
+sim = Controls(π/2, 0.49, 4.0)
 
 # Construct k-matrix where the horizontal axis contains kx ∈ [-π, π), while
 # the vertical axis contain ky ∈ [-π, π) at the second component
@@ -138,13 +138,13 @@ save(ψ_w[1], "state_w")
 
 println("\nMeasuring structure function and vortex lattice
 --------------------------------------------------------------------------------------")
-#@time (av_V⁺, err_V⁺, V⁺, av_V⁻, err_V⁻, V⁻, av_S⁺, err_S⁺, S⁺, av_S⁻, err_S⁻, S⁻) = parallelSFVLA!(k_matrix, ψ_list, sim_ref, M, Δt)
-@time u⁺_list, u⁻_list = averageAmplitudes!(ψ_list, sim_ref, M, Δt)
-#plotStructureFunctionVortexLatticeS(ψ_ref, av_V⁺, av_V⁻, av_S⁺, av_S⁻, k_matrix)
-println("Average amplitudes:\n u⁺ =\t$(mean(u⁺_list)) ± $(std(u⁺_list))\n u⁻ =\t$(mean(u⁻_list)) ± $(std(u⁻_list))")
+@time (av_V⁺, err_V⁺, V⁺, av_V⁻, err_V⁻, V⁻, av_S⁺, err_S⁺, S⁺, av_S⁻, err_S⁻, S⁻) = parallelSFVLA!(k_matrix, ψ_list, sim_ref, M, Δt)
+#@time u⁺_list, u⁻_list = averageAmplitudes!(ψ_list, sim_ref, M, Δt)
+plotStructureFunctionVortexLatticeS(ψ_ref, av_V⁺, av_V⁻, av_S⁺, av_S⁻, k_matrix)
+#println("Average amplitudes:\n u⁺ =\t$(mean(u⁺_list)) ± $(std(u⁺_list))\n u⁻ =\t$(mean(u⁻_list)) ± $(std(u⁻_list))")
 
 # Saving u_lists to file
-writedlm("u_p.data", u⁺_list, ":")
-writedlm("u_m.data", u⁻_list, ":")
+#writedlm("u_p.data", u⁺_list, ":")
+#writedlm("u_m.data", u⁻_list, ":")
 
 println("\nSimulation finished!  o(〃＾▽＾〃)o\n\nResults are found in \n$(pwd())")
