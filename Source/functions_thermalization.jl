@@ -556,9 +556,9 @@ end
 # it is divided in N_SUBS sub-intervals and the differences between the averages of the energies in
 # the sub-intervals are compared with the MC error. The control constants are attempted updated
 # after each energy-interval is calculated.
-function flatThermalization!(ψ_list::Array{State,1}, sim_list::Array{Controls, 1}; 
-        T_AVG = 2000, N_SUBS = 3, CUTOFF_MAX=400000, T_QUENCH=1000, visible=false, 
-        temp_states_filename="therm_temp.statelist")
+function flatThermalization!(ψ_list::Array{State,1}, sim_list::Array{Controls, 1},
+        T_AVG::Int64=2000, N_SUBS::Int64=3, CUTOFF_MAX::Int64=400000, T_QUENCH::Int64=1000, 
+        visible::Bool=false, temp_states_filename::AbstractString="therm_temp.statelist")
     
     # Setup storage
     adjustment_mcs = 0
