@@ -14,6 +14,8 @@ include("types.jl")
 #
 ####################################################################################################
 
+export maxRelErr, scientificRounding, avgErr, maxRelErrString, splitParallell, matrixIndices, findMaximaIndices
+
 include("functions_msc.jl")
 
 # This export is for testing
@@ -22,7 +24,7 @@ export checkNeighbors
 
 include("functions_neighbors.jl")
 
-export save, checkState, set!, meanAmplitudes, maxMinAmplitudes
+export save, readState, checkState, set!, meanAmplitudes, maxMinAmplitudes, addToList, loadStates
 include("functions_types.jl")
 
 export E, ΔE

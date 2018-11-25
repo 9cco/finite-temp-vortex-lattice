@@ -84,7 +84,7 @@ function copy(ψ::State)
 	State(lattice, consts, nbl, nnbl, nnnbl)
 end
 function copy(sim::Controls)
-    return Controls(sim.θmax, sim.umax, sim.Amax)
+    return Controls(sim.θmax, sim.umax, sim.Amax, Uniform(-sim.θmax,sim.θmax), Uniform(-sim.umax,sim.umax), Uniform(-sim.Amax,sim.Amax))
 end
 
 # -------------------------------------------------------------------------------------------------
@@ -198,10 +198,10 @@ function State(choice::Int64, consts::SystConstants)
         Amax::Int64 = 2^6
 		#lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
 		#				   rand(Uniform(0,2π)), rand(Uniform(0,2π)), rand(), 1) for y=1:N, x=1:N, z=1:L₃]
-		lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
-						   rand(Uniform(0,2π)), rand(Uniform(0,2π)), 1.0, 0.0) for y=1:N, x=1:N, z=1:L₃]
-#		lattice = [LatticeSite([0,0,0],
-#                               rand(Uniform(0,2π)), rand(Uniform(0,2π)), 1.0, 0.0) for y=1:N, x=1:N, z=1:L₃]
+		#lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
+		#				   rand(Uniform(0,2π)), rand(Uniform(0,2π)), 1.0, 0.0) for y=1:N, x=1:N, z=1:L₃]
+		lattice = [LatticeSite([0,0,0],
+                               rand(Uniform(0,2π)), rand(Uniform(0,2π)), 1.0, 0.0) for y=1:N, x=1:N, z=1:L₃]
 		nb = latticeNeighbors(lattice,N,L₃)
 		nnb = latticeNextNeighbors(lattice,N,L₃)
 		nnnb = latticeNNNeighbors(lattice,N,L₃)
@@ -326,6 +326,137 @@ function readState(filename::AbstractString)
 end
 
 # -------------------------------------------------------------------------------------------------
+# Saves a list of states to a txt file without compression. This list is designed to give multiple
+# different occasions of a state in the same system, i.e. all states are assumed to have the same
+# constants, which is given in the beginning of the file.
+function save(ψ_list::Array{State, 1}, filename::AbstractString="state_list.data")
+    MAX_NUM_DIGITS = 10
+    open(filename, "w") do f
+        write(f, "state array\n")
+        M = digits(length(ψ_list), 10, MAX_NUM_DIGITS)
+        for i = 1:MAX_NUM_DIGITS
+            write(f, "$(M[MAX_NUM_DIGITS-i+1])")
+        end
+        write(f, "\n")
+        write(f, "$(ψ_list[1].consts.L):$(ψ_list[1].consts.L₃):$(ψ_list[1].consts.γ):$(ψ_list[1].consts.g⁻²):")
+        write(f, "$(ψ_list[1].consts.ν):$(ψ_list[1].consts.κ₅):$(ψ_list[1].consts.f):$(ψ_list[1].consts.β)\n")
+        for ψ in ψ_list
+            write(f, "state start\n")
+            for z=1:L₃, h=1:L, v=1:L
+                ϕ = ψ.lattice[v,h,z]
+                write(f, "$(ϕ.A[1]):$(ϕ.A[2]):$(ϕ.A[3]):$(ϕ.θ⁺):$(ϕ.θ⁻):$(ϕ.u⁺):$(ϕ.u⁻)\n")
+            end
+        end
+    end
+    return 1
+end
+
+# -------------------------------------------------------------------------------------------------
+# Adds a state to a list already created by the save(::Array{State,1}, ::AbstractString) function.
+function addToList(ψ::State, filename::AbstractString)
+    MAX_NUM_DIGITS = 10 # Has to be the same as number used in save(::Array{State,1}, ::AbstractString)
+    M₀ = 0
+    # Get length of existing list and check that constants are the same as state.
+    open(filename, "r") do file
+        line = readline(file)
+        if line != "state array"
+            println("ERROR: Start of file is $(line)")
+            throw(Domainerror())
+        end
+        M₀ = parse(Int64, readline(file))
+        M₀ > 0 || throw(error("ERROR: Number of states in list is set to $(M₀)"))
+        c_values = split(readline(file), ":")
+        L = parse(Int64, c_values[1])
+        L > 0 || throw(error("ERROR: States L is $(L)"))
+        L₃ = parse(Int64, c_values[2])
+        L₃ > 0 || throw(error("ERROR: States L₃ is $(L₃)"))
+        γ = parse(Float64, c_values[3])
+        g⁻² = parse(Float64, c_values[4])
+        ν = parse(Float64, c_values[5])
+        κ₅ = parse(Float64, c_values[6])
+        f = parse(Float64, c_values[7])
+        β = parse(Float64, c_values[8])
+        if !(ψ.consts.L == L && ψ.consts.L₃ == L₃ && ψ.consts.γ == γ && ψ.consts.g⁻² == g⁻² && ψ.consts.ν == ν
+                && ψ.consts.κ₅ == κ₅ && ψ.consts.f == f && ψ.consts.β == β)
+            throw(error("ERROR: Input-state's constants do not match stored constants.
+\tL\tL₃\tγ\tg⁻²\tν\tκ₅\tf\tβ
+stored:\t$(L)\t$(L₃)\t$(γ)\t$(g⁻²)\t$(ν)\t$(κ₅)\t$(f)\t$(β)
+input:\t$(ψ.consts.L)\t$(ψ.consts.L₃)\t$(ψ.consts.γ)\t$(ψ.consts.g⁻²)\t$(ψ.consts.ν)\t$(ψ.consts.κ₅)\t$(ψ.consts.f)\t$(ψ.consts.β)"))
+        end
+    end
+    # Save lattice to new state at the end
+    open(filename, "a") do file
+        write(file, "state start\n")
+        for z=1:L₃, h=1:L, v=1:L
+            ϕ = ψ.lattice[v,h,z]
+            write(file, "$(ϕ.A[1]):$(ϕ.A[2]):$(ϕ.A[3]):$(ϕ.θ⁺):$(ϕ.θ⁻):$(ϕ.u⁺):$(ϕ.u⁻)\n")
+        end
+    end
+    # Update length of list by 1.
+    open(filename, "r+") do file
+        line = readline(file)
+        M_list = digits(M₀+1, 10, MAX_NUM_DIGITS)
+        for i = 1:MAX_NUM_DIGITS
+            write(file, "$(M_list[MAX_NUM_DIGITS-i+1])")
+        end
+        write(file, "\n")
+    end
+    return 1
+end
+
+# -------------------------------------------------------------------------------------------------
+# Reads a list of states created by the save(::Array{State,1}, ::AbstractString) and
+# addToList(::State, ::AbstractString) functions and returns a list of these states
+function loadStates(filename::AbstractString)
+    open(filename, "r") do file
+        line = readline(file)
+        if line != "state array"
+            throw(DomainError())
+        end
+        M = parse(Int64, readline(file))
+        M > 0 || throw(DomainError())
+        ψ_l = Array{State, 1}(M)
+        c_values = split(readline(file), ":")
+        L = parse(Int64, c_values[1])
+        L > 0 || throw(DomainError())
+        L₃ = parse(Int64, c_values[2])
+        L₃ > 0 || throw(DomainError())
+        γ = parse(Float64, c_values[3])
+        g⁻² = parse(Float64, c_values[4])
+        ν = parse(Float64, c_values[5])
+        κ₅ = parse(Float64, c_values[6])
+        f = parse(Float64, c_values[7])
+        β = parse(Float64, c_values[8])
+        for i = 1:M
+            line = readline(file)
+            if line != "state start"
+                throw(DomainError())
+            end
+            syst = SystConstants(L,L₃,γ,g⁻²,ν,κ₅,f,β)
+            lattice = Array{LatticeSite, 3}(L,L,L₃)
+            for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
+                ϕ_values = split(readline(file), ":")
+                A₁ = parse(Float64, ϕ_values[1])
+                A₂ = parse(Float64, ϕ_values[2])
+                A₃ = parse(Float64, ϕ_values[3])
+                θ⁺ = parse(Float64, ϕ_values[4])
+                θ⁻ = parse(Float64, ϕ_values[5])
+                u⁺ = parse(Float64, ϕ_values[6])
+                u⁻ = parse(Float64, ϕ_values[7])
+                lattice[v_pos,h_pos,z_pos] = LatticeSite([A₁, A₂, A₃], θ⁺, θ⁻, u⁺, u⁻)
+            end
+
+            nbl = latticeNeighbors(lattice,L,L₃)
+            nnbl = latticeNextNeighbors(lattice,L,L₃)
+            nnnbl = latticeNNNeighbors(lattice,L,L₃)
+
+            ψ_l[i] = State(lattice, syst, nbl, nnbl, nnnbl)
+        end
+        return ψ_l
+    end
+end
+
+# -------------------------------------------------------------------------------------------------
 # Return the average amplitudes in the system.
 function meanAmplitudes(ψ::State)
 	u⁺ = 0.0
@@ -367,6 +498,10 @@ end
 #
 ####################################################################################################
 
+function Controls(θ_max::Float64, u_max::Float64, A_max::Float64)
+    return Controls(θ_max, u_max, A_max, Uniform(-θ_max,θ_max), Uniform(-u_max,u_max), Uniform(-A_max, A_max))
+end
+
 function Controls()
     return Controls(π/3, 0.4, 3.0)
 end
@@ -376,7 +511,10 @@ function setValues!(sim_target::Controls, sim_source::Controls)
     sim_target.θmax = sim_source.θmax
     sim_target.umax = sim_source.umax
     sim_target.Amax = sim_source.Amax
-    return
+    sim_target.θ_rng = Uniform(-sim_source.θmax,sim_source.θmax)
+    sim_target.u_rng = Uniform(-sim_source.umax,sim_source.umax)
+    sim_target.A_rng = Uniform(-sim_source.Amax,sim_source.Amax)
+    return 
 end
 
 

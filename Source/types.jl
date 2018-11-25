@@ -14,6 +14,9 @@ mutable struct Controls
     θmax::Float64
     umax::Float64
     Amax::Float64
+    θ_rng::Distributions.Uniform{Float64}
+    u_rng::Distributions.Uniform{Float64}
+    A_rng::Distributions.Uniform{Float64}
 end
 
 mutable struct LatticeSite
