@@ -7,7 +7,7 @@
 # Given a lattice site ϕ, propose a new lattice site with values in intervals around the existing ones.
 function proposeLocalUpdate(ϕ::LatticeSite, sim::Controls)
     UMAX::Int64 = 4
-    u⁺ = 1.0#mod(ϕ.u⁺ + rand(Uniform(-sim.umax,sim.umax)), UMAX) # This does not allow u⁺ = UMAX, is this a problem?
+    u⁺ = mod(ϕ.u⁺ + rand(Uniform(-sim.umax,sim.umax)), UMAX) # This does not allow u⁺ = UMAX, is this a problem?
 	u⁻ = 0.0#mod(ϕ.u⁻ + rand(Uniform(-sim.umax,sim.umax)), UMAX)
     # Construct new configuration at lattice site.
     #return LatticeSite([ϕ.A[1]+rand(Uniform(-sim.Amax,sim.Amax)), ϕ.A[2]+rand(Uniform(-sim.Amax,sim.Amax)),
@@ -145,6 +145,35 @@ function nMCS(ψ::State, sim::Controls, n::Int64)
 end
 
 # --------------------------------------------------------------------------------------------------
+# Preform nMCS for all states in a list, as much as possible in parallell.
+function nMCS!(ψ_list::Array{State, 1}, sim_list::Array{Controls, 1}, N::Int64)
+    nw = nprocs()-1
+    n_state = length(ψ_list)
+    
+    i = 0 # Index in ψ_list of states already updated.
+    while i < n_state
+        
+        worker_jobs = min(nw, n_state-1-i) # Number of needed jobs given to workers
+        # Start the max number of workers if that wouldn't be too much.
+        work_futures = [Future() for w = 1:worker_jobs]
+        
+        for w = 1:worker_jobs
+            work_futures[w] = @spawn nMCS(ψ_list[i+w], sim_list[i+w], N)
+        end
+        nMCS(ψ_list[i+worker_jobs+1], sim_list[i+worker_jobs+1], N)
+        
+        for w = 1:worker_jobs
+            ψ_list[i+w] = fetch(work_futures[w])
+        end
+        
+        i += worker_jobs+1
+    end
+    
+    # After this, all states should have been updated
+    return ψ_list
+end
+
+# --------------------------------------------------------------------------------------------------
 # Perform n MCsweeps and return the final state and an array with energies after each sweep
 function nMCSEnergy(ψ::State, sim::Controls, n::Int64, E₀::Float64)
 	E_array = Array{Float64,1}(n)
@@ -154,6 +183,37 @@ function nMCSEnergy(ψ::State, sim::Controls, n::Int64, E₀::Float64)
         #Have checked that this energy matches E(ψ) for each step
     end
     return ψ, E_array
+end
+
+# --------------------------------------------------------------------------------------------------
+# Preform nMCSEnergy on a list of states (as much as possible in paralllel)
+function nMCSEnergy!(ψ_list::Array{State, 1}, sim_list::Array{Controls, 1}, n::Int64, E₀_list::Array{Float64, 1})
+    nw = nprocs()-1
+    n_state = length(ψ_list)
+    E_matrix = Array{Float64, 2}(n_state, n)
+    
+    i = 0 # Index in ψ_list of states already updated.
+    while i < n_state
+        
+        worker_jobs = min(nw, n_state-1-i) # Number of needed jobs given to workers
+        # Start the max number of workers if that wouldn't be too much.
+        work_futures = [Future() for w = 1:worker_jobs]
+        
+        for w = 1:worker_jobs
+            work_futures[w] = @spawn nMCSEnergy(ψ_list[i+w], sim_list[i+w], n, E₀_list[i+w])
+        end
+        index = i+worker_jobs+1
+        ψ_list[index], E_matrix[index, :] =  nMCSEnergy(ψ_list[index], sim_list[index], n, E₀_list[index])
+        
+        for w = 1:worker_jobs
+            ψ_list[i+w], E_matrix[i+w, :] = fetch(work_futures[w])
+        end
+        
+        i += worker_jobs+1
+    end
+    
+    # After this, all states should have been updated
+    return ψ_list, E_matrix
 end
 
 #---------------------------------------------------------------------------------------------------
@@ -204,7 +264,7 @@ function adjustSimConstants!(sim::Controls, ψ::State, M::Int64 = 40)
     (av, std) = mcProposalFraction!(ψ, sim, M)
     adjustment_mcs = M
     if av >= LOWER
-        return (av, adjustment_mcs)
+        return (av, adjustment_mcs, ψ, sim)
     end
     
     s₀ = copy(sim)
@@ -285,7 +345,7 @@ function adjustSimConstants!(sim::Controls, ψ::State, M::Int64 = 40)
             println("WARNING: Could not find simulation constant such that update probability 
                 was higher than $(LOWER)")
             sim = s₀
-            return (accept_ratios[i_max], adjustment_mcs)
+            return (accept_ratios[i_max], adjustment_mcs, ψ, sim)
         end
     end
     # The end situation of the loop is that we have a number of proposals >= NEEDED_PROPOSALS.
@@ -298,17 +358,40 @@ function adjustSimConstants!(sim::Controls, ψ::State, M::Int64 = 40)
     i_max = indmax(norms)
     setValues!(sim, proposedConstants[i_max]) # Finally we update the simulation constants to the sim that has 
     # highest norm, and an accept ratio above LOWER.
-    return (proposedAR[i_max], adjustment_mcs)
+    return (proposedAR[i_max], adjustment_mcs, ψ, sim)
     # Return the acceptance ratio of the new sim and the number of Monte-Carlo Sweeps done during this adjustment.
 end
 
-#--------------------------------------------------------------------------------------------------
-# Cannot use adjustSimConstant in a paralell, process since it does not return ψ and sim, so have to
-# make a dummy function to help send variables between processes.
-function adjustSimConstantsPar(sim::Controls, ψ::State, M::Int64=40)
-    accept_ratio, adjustment_mcs = adjustSimConstants!(sim, ψ, M)
-    return ψ, sim, adjustment_mcs
+# --------------------------------------------------------------------------------------------------
+# Adjust controls of all states in a list (as much as possible in parallel)
+function adjustSimConstants!(ψ_list::Array{State, 1}, sim_list::Array{Controls, 1})
+    nw = nprocs()-1
+    n_state = length(ψ_list)
+    mcs_list = zeros(Int64, n_state)
+    ar_list = Array{Float64, 1}(n_state)
+    
+    i = 0 # Index in ψ_list of states already updated.
+    while i < n_state
+        
+        worker_jobs = min(nw, n_state-1-i) # Number of needed jobs given to workers
+        # Start the max number of workers if that wouldn't be too much.
+        work_futures = [Future() for w = 1:worker_jobs]
+        
+        for w = 1:worker_jobs
+            work_futures[w] = @spawn adjustSimConstants!(sim_list[i+w], ψ_list[i+w])
+        end
+        index = i+worker_jobs+1
+        ar_list[index], mcs_list[index], ψ_list[index], sim_list[index] = adjustSimConstants!(sim_list[index],
+            ψ_list[index])
+        
+        # Fetch futures
+        for w = 1:worker_jobs
+            ar_list[i+w], mcs_list[i+w], ψ_list[i+w], sim_list[i+w] = fetch(work_futures[w])
+        end
+        
+        i += worker_jobs+1
+    end
+    
+    # After this, all states should have been updated
+    return mcs_list, ar_list
 end
-
-
-

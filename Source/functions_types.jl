@@ -201,7 +201,7 @@ function State(choice::Int64, consts::SystConstants)
 		#lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
 		#				   rand(Uniform(0,2π)), rand(Uniform(0,2π)), 1.0, 0.0) for y=1:N, x=1:N, z=1:L₃]
 		lattice = [LatticeSite([0,0,0],
-                               rand(Uniform(0,2π)), rand(Uniform(0,2π)), 1.0, 0.0) for y=1:N, x=1:N, z=1:L₃]
+                               rand(Uniform(0,2π)), rand(Uniform(0,2π)), 2*rand(), 0.0) for y=1:N, x=1:N, z=1:L₃]
 		nb = latticeNeighbors(lattice,N,L₃)
 		nnb = latticeNextNeighbors(lattice,N,L₃)
 		nnnb = latticeNNNeighbors(lattice,N,L₃)
@@ -252,15 +252,18 @@ function checkState(ψ::State)
 	@test isapprox(ψ.consts.L*abs(ψ.consts.f) % 1, 0.0, atol=0, rtol=1e-13)
 end
 
+
 # -------------------------------------------------------------------------------------------------
 # Saves the state to file with specified filename. If mode is set to "a" then the state is appended
 # to the file.
-function save(ψ::State, filename::AbstractString, mode::AbstractString="w")
+function save(ψ::State, filename::AbstractString, mode::AbstractString="w"; visible=false)
     if mode != "w" && mode != "a"
         println("$(mode) is not a valid file-opening option.")
         return 0
     end
-    println("Saving state to file $(filename)")
+    if visible
+        println("Saving state to file $(filename)")
+    end
     L = ψ.consts.L
     L₃ = ψ.consts.L₃
     open(filename, mode) do f
@@ -515,6 +518,15 @@ function setValues!(sim_target::Controls, sim_source::Controls)
     sim_target.u_rng = Uniform(-sim_source.umax,sim_source.umax)
     sim_target.A_rng = Uniform(-sim_source.Amax,sim_source.Amax)
     return 
+end
+
+# -------------------------------------------------------------------------------------------------
+function printSimControls(sim_list::Array{Controls})
+    println("State\tθmax\t\t\tumax\tAmax")
+    for i = 1:length(sim_list)
+        println("$i\t$(sim_list[i].θmax)\t$(sim_list[i].umax)\t$(sim_list[i].Amax)")
+    end
+    return
 end
 
 

@@ -413,6 +413,211 @@ Thermalization will be ×$(floor(Int64, (NWS+1)/(np+1))) as long.")
     return -1, tₛ, CUTOFF_MAX, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w
 end
 
+# --------------------------------------------------------------------------------------------------
+# Checks if a list of energies is more or less flat by dividing in intervals and checking that
+# the average in each of the intervals is more or less the same (within MC error)
+function flatThermalization{T<:Real}(E_list::Array{T, 1}; N_SUBS=3, ERR_WEIGHT=2.0)
+    L = length(E_list)
+    
+    # Length of the first N_SUBS-1 intervals
+    L_s⁻ = floor(Int64, L/N_SUBS)
+    # Length of the last interval
+    L_s⁺ = L_s⁻ + L%N_SUBS
+    
+    E_avg = Array{Float64, 1}(N_SUBS)
+    E_err = Array{Float64, 1}(N_SUBS)
+    
+    # Calculate average for the first N_SUBS-1 intervals
+    for s = 1:N_SUBS-1
+        int = 1 + (s-1)*L_s⁻:s*L_s⁻
+        E_avg[s], E_err[s] = avgErr(E_list[int])
+    end
+    # Last interval
+    int = 1 + (N_SUBS-1)*L_s⁻:(N_SUBS-1)*L_s⁻ + L_s⁺
+    E_avg[N_SUBS], E_err[N_SUBS] = avgErr(E_list[int])
+    
+    # Check if all interval averages are within max error of first interval average
+    # Return if we find non-flat average
+    for s = 2:N_SUBS
+        error = max(E_err[s], E_err[1])
+        if abs(E_avg[s] - E_avg[1]) > ERR_WEIGHT*error
+            return false, E_avg[s], E_avg[1], error
+        end
+    end
+    
+    # If we got through previous loop it means that all averages are within error and the
+    # energy-curves must be flat.
+    return true, E_avg[N_SUBS], E_avg[1], max(E_err[N_SUBS], E_err[1])
+end 
 
 
+# --------------------------------------------------------------------------------------------------
+# Checks if multiple lists of energies are flat, where these lists are given as a matrix such that
+# each row is a list of energies for a specific measurement series and the different rows then give
+# different measurement series (typically produced by different workers)
+function flatThermalization(E_w::Array{Float64, 2}; N_SUBS=3, visible=false)
+    nw = size(E_w, 1)
+    
+    # Setup storage
+    avg_last = Array{Float64, 1}(nw); avg_first = Array{Float64, 1}(nw); err = Array{Float64, 1}(nw)
+    
+    # Go through all workers and check if their energies are flat
+    for w = 1:nw
+        isflat, avg_last[w], avg_first[w], err[w] = flatThermalization(E_w[w, :]; N_SUBS=N_SUBS)
+        if !isflat
+            if visible
+                println("Worker $(w) not flat.\t⟨ΔE⟩ = $(avg_last[w]-avg_first[w]) ± $(err[w])")
+            end
+            return false
+        end
+    end
+    
+    # All workers must be flat
+    if visible
+        println("\nAll workers flat.")
+        for w = 1:nw
+            println("  ⟨ΔE⟩{$(w)} =\t$(avg_last[w]-avg_first[w]) ± $(err[w])")
+        end
+    end
+    return true
+end
 
+# --------------------------------------------------------------------------------------------------
+# Do T_QUENCH number of MCMC updates or until we find the first point where the energies curves of the
+# reference state and all of the workers have crossed at least once.
+function thermalizeToZero!(ψ_ref::State, ψ_w::Array{State, 1}, sim_ref::Controls, sim_w::Array{Controls,1},
+        T_QUENCH::Int64; GROWTH_EX=1.5, INIT_T=100)
+    T = min(T_QUENCH, INIT_T) # This is the number of steps to do initially
+    
+    nw = length(ψ_w)
+    ψ_future_list = [Future() for i=1:nw]
+    
+    # Setup storage
+    E_ref = Array{Float64, 1}(T_QUENCH)
+    E_w = Array{Float64, 2}(nw, T_QUENCH)
+    E_check_workers = zeros(Int64, nw)
+    
+    # Checking whether reference or worker has highest energy.
+    ref_highest = [true for i = 1:nw]
+    E_ref[1] = E(ψ_ref)
+    for w = 1:nw
+        E_w[w,1] = E(ψ_w[w])
+        if E_w[w,1]>E_ref[1]
+            ref_highest[w] = false
+        end
+    end
+    t = 1 # The previously occupied index in the energy arrays
+    
+    # Do the T_QUENCH MCS updates and store resulting energy
+    
+    # First grow the number to keep doing MCS with, by a factor GROWTH_EX from the initial T = INIT_T
+    # until we have grown to T_QUENCH
+    while t < T_QUENCH
+        # Do T MCS and store resulting energy
+        for w = 1:nw
+            ψ_future_list[w] = @spawn nMCSEnergy(ψ_w[w], sim_w[w], T, E_w[w,t])
+        end
+        ψ_ref, E_ref[t+1:t+T] = nMCSEnergy(ψ_ref, sim_ref, T, E_ref[t])
+        for w = 1:nw
+            ψ_w[w], E_w[w,t+1:t+T] = fetch(ψ_future_list[w])
+        end
+        
+        # Check for first zero
+        for w = 1:nw
+            ψ_future_list[w] = @spawn firstZero(E_ref, E_w, w, t+1, t+T, ref_highest[w])
+        end
+        for w = 1:nw
+            i = fetch(ψ_future_list[w])
+            if i != -1
+                E_check_workers[w] = i
+                println("Worker $(w) initially thermalised after $(i) steps")
+                flush(STDOUT)
+            end
+        end
+
+        t = t+T # Setting t to be the last occupied element in lists after inserting T results.
+        if minimum(E_check_workers) == 0 # This is always true if we found no dE < 0 in all workers
+            T = min(ceil(Int64, T*GROWTH_EX), T_QUENCH-t) # Updating until we have done T_QUENCH updates.
+        else
+            t_final = maximum(E_check_workers)
+            println("All workers initially thermalized after $(t_final) steps")
+            flush(STDOUT)
+            return t_final, ψ_ref, E_ref[1:t], ψ_w, E_w[:,1:t]
+        end
+    end
+    
+    println("Warning: Couldn't find ΔE = 0 after $(t) steps.")
+    return t, ψ_ref, E_ref, ψ_w, E_w
+end
+
+# --------------------------------------------------------------------------------------------------
+# Preforms MCS on a list of states ψ_list with corresponding controls in sim_list until the energy curves
+# are flat over an interval T_AVG. First T_QUENCH updates are done. To find if the interval is flat,
+# it is divided in N_SUBS sub-intervals and the differences between the averages of the energies in
+# the sub-intervals are compared with the MC error. The control constants are attempted updated
+# after each energy-interval is calculated.
+function flatThermalization!(ψ_list::Array{State,1}, sim_list::Array{Controls, 1}; 
+        T_AVG = 2000, N_SUBS = 3, CUTOFF_MAX=400000, T_QUENCH=1000, visible=false, 
+        temp_states_filename="therm_temp.statelist")
+    
+    # Setup storage
+    adjustment_mcs = 0
+    n_state = length(ψ_list)
+    E_matrix = Array{Float64, 2}(n_state, T_AVG)
+    ψ_future_list = [Future() for i = 1:n_state]
+    
+    # Check whether we have enough processes for efficiency
+    n_workers = nprocs()-1
+    if n_state > n_workers+1
+        println("WARNING: More requested states ($(n_state)), than currently available extra processes ($(n_workers+1)).
+Thermalization will be ×$(floor(Int64, n_state/(n_workers+1))) as long.")
+    end
+    
+    # First we quench the states with T_QUENCH MCS
+    ψ_list = nMCS!(ψ_list, sim_list, T_QUENCH)
+    
+    # Adjust simulation constants
+    mcs_list, ar_list = adjustSimConstants!(ψ_list, sim_list)
+    adjustment_mcs += maximum(mcs_list)
+    if visible
+        println("Controls after initial adjustment:")
+        printSimControls(sim_list)
+        println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))\n")
+    end
+    
+    # Go T_AVG at a time until we reach CUTOFF_MAX
+    t = T_QUENCH # How many MCS we have used on making the states flat (except adjustments)
+    while t < CUTOFF_MAX
+        
+        # Preform T_AVG updates and store energies for flatness calculation
+        ψ_list, E_matrix = nMCSEnergy!(ψ_list, sim_list, T_AVG, [E(ψ) for ψ in ψ_list])
+        
+        # Adjust constants
+        mcs_list, ar_list = adjustSimConstants!(ψ_list, sim_list)
+        adjustment_mcs += maximum(mcs_list)
+        
+        # Save temporary state-files
+        save(ψ_list, temp_states_filename)
+        
+        # Check if we have thermalization
+        if flatThermalization(E_matrix; visible=visible, N_SUBS=N_SUBS)
+            if visible
+                println("All state energy-curves are flat after $(t+T_AVG+adjustment_mcs)\n\nFinal control constants:")
+                printSimControls(sim_list)
+                println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))")
+            end
+            return true, t+T_AVG+adjustment_mcs, ψ_list, sim_list, E_matrix
+        end
+        
+        if visible
+            println("Thermalization not yet reached after $(t) MCS")
+        end
+        t += T_AVG
+    end
+    
+    # Couldn't find flat thermalization after CUTOFF_MAX MCS
+    if visible
+        println("Warning: cutoff reached after $(t-T_AVG) MCS. No thermalization found.")
+    end
+    return false, t-T_AVG+adjustment_mcs, ψ_list, sim_list, E_matrix
+end
