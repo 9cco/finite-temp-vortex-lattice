@@ -64,10 +64,27 @@ function avgErr(A::Array{Array{Float64, 2},1})
         end
     end
     sm_A = sm_A./M
-    τ_matrix = [N/effective_sample_size([A[m][i] for m=1:M]) for i=1:N]
+    τ_matrix = [M/effective_sample_size([A[m][i] for m=1:M]) for i=1:N]
     τ_matrix = reshape(τ_matrix, size(avg_A)...)
     
     err_A = sqrt.((1+2.*τ_matrix).*abs.(sm_A - avg_A.^2)./(M-1))
+    
+    return avg_A, err_A
+end
+
+# --------------------------------------------------------------------------------------------------
+# A series of measurements produced by MC Monte Carlo calculations, calculate the average and error
+# of the array.
+function avgErr{T<:Real}(A::Array{T,1})
+    avg_A = mean(A)
+    sm_A = 0.0
+    M = length(A)
+    for m = 1:M
+        sm_A += A[m]^2
+    end
+    sm_A = sm_A/M
+    τ = M/effective_sample_size(A)
+    err_A = sqrt((1+2*τ)*abs(sm_A - avg_A^2)/(M-1))
     
     return avg_A, err_A
 end
