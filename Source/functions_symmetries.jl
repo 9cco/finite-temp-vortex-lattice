@@ -80,6 +80,12 @@ function gaugeStiffnessMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64)
     k₁ = [2π/L, 0.0, 0.0]
     k₂ = [0.0, 2π/L, 0.0]
     k₃ = [0.0, 0.0, 2π/L]
+    u⁺_array = Array{Float64}(M)
+    u⁻_array = Array{Float64}(M)
+    A_array = Array{Float64}(M)
+    E_array = Array{Float64}(M)
+    θ_array = Array{Float64}(M)
+    θu_array = Array{Float64}(M)
     
     #Initial measurement
     ρˣˣₖ₂[1] = gaugeStiffnessXX(k₂, ψ)
@@ -88,6 +94,31 @@ function gaugeStiffnessMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64)
     ρʸʸₖ₁[1] = gaugeStiffnessYY(k₁, ψ)
     ρᶻᶻₖ₁[1] = gaugeStiffnessZZ(k₁, ψ)
     ρᶻᶻₖ₂[1] = gaugeStiffnessZZ(k₂, ψ)
+    E_array[1] = E(ψ)
+    
+
+    A_abs = 0.0 
+    u⁺ = 0.0
+    u⁻ = 0.0
+    θ = 0.0
+    θu = 0.0
+    for x=1:L, y=1:L, z=1:L
+        ϕ = ψ.lattice[x,y,z]
+        ϕᵣ₊₁ = ψ.nb[x,y,z].ϕᵣ₊₁
+        ϕᵣ₊₂ = ψ.nb[x,y,z].ϕᵣ₊₂
+        ϕᵣ₊₃ = ψ.nb[x,y,z].ϕᵣ₊₃
+        u⁺ += ψ.lattice[x,y,z].u⁺^2
+        u⁻ += ψ.lattice[x,y,z].u⁻^2
+        A_abs += ((ψ.lattice[x,y,z].A[1])^2 + (ψ.lattice[x,y,z].A[2])^2
+                    + (ψ.lattice[x,y,z].A[3])^2 )
+        θ += (cos(ϕ.θ⁺-ϕᵣ₊₁.θ⁺) + cos(ϕ.θ⁺-ϕᵣ₊₂.θ⁺) + cos(ϕ.θ⁺-ϕᵣ₊₃.θ⁺))
+        θu += ϕ.u⁺*(ϕᵣ₊₁.u⁺*cos(ϕ.θ⁺-ϕᵣ₊₁.θ⁺) + ϕᵣ₊₂.u⁺*cos(ϕ.θ⁺-ϕᵣ₊₂.θ⁺) + ϕᵣ₊₃.u⁺*cos(ϕ.θ⁺-ϕᵣ₊₃.θ⁺))
+    end
+    u⁺_array[1] = u⁺/(L^3 )
+    u⁻_array[1] = u⁻/(L^3 )
+    A_array[1] = A_abs/(L^3 )
+    θ_array[1] = θ/(3*L^3)
+    θu_array[1] = θu/(3*L^3)
 
     #M-1 remaining measurements
     for m = 2:M
@@ -103,9 +134,33 @@ function gaugeStiffnessMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64)
         ρʸʸₖ₁[m] = gaugeStiffnessYY(k₁, ψ)
         ρᶻᶻₖ₁[m] = gaugeStiffnessZZ(k₁, ψ)
         ρᶻᶻₖ₂[m] = gaugeStiffnessZZ(k₂, ψ)
-
+        E_array[m] = E(ψ)
+        
+        A_abs = 0.0 
+        u⁺ = 0.0
+        u⁻ = 0.0
+        θ = 0.0
+        θu = 0.0
+        for x=1:L, y=1:L, z=1:L
+            ϕ = ψ.lattice[x,y,z]
+            ϕᵣ₊₁ = ψ.nb[x,y,z].ϕᵣ₊₁
+            ϕᵣ₊₂ = ψ.nb[x,y,z].ϕᵣ₊₂
+            ϕᵣ₊₃ = ψ.nb[x,y,z].ϕᵣ₊₃
+            u⁺ += ψ.lattice[x,y,z].u⁺
+            u⁻ += ψ.lattice[x,y,z].u⁻
+            A_abs += ((ψ.lattice[x,y,z].A[1])^2 + (ψ.lattice[x,y,z].A[2])^2
+                    + (ψ.lattice[x,y,z].A[3])^2 )
+            θ += (cos(ϕ.θ⁺-ϕᵣ₊₁.θ⁺) + cos(ϕ.θ⁺-ϕᵣ₊₂.θ⁺) + cos(ϕ.θ⁺-ϕᵣ₊₃.θ⁺))
+            θu += ϕ.u⁺*(ϕᵣ₊₁.u⁺*cos(ϕ.θ⁺-ϕᵣ₊₁.θ⁺) + ϕᵣ₊₂.u⁺*cos(ϕ.θ⁺-ϕᵣ₊₂.θ⁺) + ϕᵣ₊₃.u⁺*cos(ϕ.θ⁺-ϕᵣ₊₃.θ⁺))
+        end
+        u⁺_array[m] = u⁺/(L^3 )
+        u⁻_array[m] = u⁻/(L^3 )
+        A_array[m] = A_abs/(L^3 )
+        θ_array[m] = θ/(3*L^3)
+        θu_array[m] = θu/(3*L^3)
     end
-    return (ρˣˣₖ₂, ρˣˣₖ₃, ρʸʸₖ₃, ρʸʸₖ₁, ρᶻᶻₖ₁, ρᶻᶻₖ₂)
+    return (ρˣˣₖ₂, ρˣˣₖ₃, ρʸʸₖ₃, ρʸʸₖ₁, ρᶻᶻₖ₁, ρᶻᶻₖ₂, u⁺_array, u⁻_array, A_array, E_array,
+            θ_array, θu_array)
 end
     
     
@@ -138,30 +193,27 @@ function parallelMeasureGS!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δ
         futures[nw+i] = @spawn gaugeStiffnessMeasure!(ψ_list[i], sim, M_min, Δt)
     end
     #Master process
-    (ρˣˣₖ₂, ρˣˣₖ₃, ρʸʸₖ₃, ρʸʸₖ₁, ρᶻᶻₖ₁, ρᶻᶻₖ₂) = gaugeStiffnessMeasure!(ψ_list[np], sim, M_min, Δt) 
-    
-    u⁺ = 0.0
-    u⁻ = 0.0
-    #Measure density as a test
-    for i=1:np
-        for x=1:L, y=1:L, z=1:L
-            u⁺ += ψ_list[np].lattice[x,y,z].u⁺
-            u⁻ += ψ_list[np].lattice[x,y,z].u⁻
-        end
-    end
-    u⁺ = u⁺/(L^3 * np)
-    u⁻ = u⁻/(L^3 * np)
+    (ρˣˣₖ₂, ρˣˣₖ₃, ρʸʸₖ₃, ρʸʸₖ₁, ρᶻᶻₖ₁, ρᶻᶻₖ₂, u⁺, u⁻, A, E_arr,
+        θ_arr, θu_arr) = gaugeStiffnessMeasure!(ψ_list[np], sim, M_min, Δt) 
+   
     
     println("Measurements completed, collecting results from processes")
     #Gather results from workers
     for i=1:np-1
-        (newρˣˣₖ₂, newρˣˣₖ₃, newρʸʸₖ₃, newρʸʸₖ₁, newρᶻᶻₖ₁, newρᶻᶻₖ₂) = fetch(futures[i])
+        (newρˣˣₖ₂, newρˣˣₖ₃, newρʸʸₖ₃, newρʸʸₖ₁, newρᶻᶻₖ₁, newρᶻᶻₖ₂, newu⁺, newu⁻, newA, newE,
+            newθ, newθu) = fetch(futures[i])
         ρˣˣₖ₂ = vcat(ρˣˣₖ₂, newρˣˣₖ₂)
         ρˣˣₖ₃ = vcat(ρˣˣₖ₃, newρˣˣₖ₃)
         ρʸʸₖ₃ = vcat(ρʸʸₖ₃, newρʸʸₖ₃)
         ρʸʸₖ₁ = vcat(ρʸʸₖ₁, newρʸʸₖ₁)
         ρᶻᶻₖ₁ = vcat(ρᶻᶻₖ₁, newρᶻᶻₖ₁)
         ρᶻᶻₖ₂ = vcat(ρᶻᶻₖ₂, newρᶻᶻₖ₂)
+        u⁺ = vcat(u⁺, newu⁺)
+        u⁻ = vcat(u⁻, newu⁻)
+        A = vcat(A,newA)
+        E_arr = vcat(E_arr, newE)
+        θ_arr = vcat(θ_arr, newθ)
+        θu_arr = vcat(θu_arr, newθu)
     end
     
     println("Processing results")
@@ -172,6 +224,13 @@ function parallelMeasureGS!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δ
     AVρʸʸₖ₁ = mean(ρʸʸₖ₁)
     AVρᶻᶻₖ₁ = mean(ρᶻᶻₖ₁)
     AVρᶻᶻₖ₂ = mean(ρᶻᶻₖ₂)
+    AVu⁺ = mean(u⁺)
+    AVu⁻ = mean(u⁻)
+    AVA = mean(A)
+    AVE = mean(E_arr)/L^3
+    AVθ = (mean(θ_arr))^2
+    AVθu = (mean(θu_arr))^2
+    
     
     #Calculate the standard error 
     #TODO: Here we might also have to account for the autocorr time
@@ -183,9 +242,33 @@ function parallelMeasureGS!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δ
     SEρᶻᶻₖ₂ = std(ρᶻᶻₖ₂)/sqrt(M)
     
     return (AVρˣˣₖ₂, SEρˣˣₖ₂, AVρˣˣₖ₃, SEρˣˣₖ₃, AVρʸʸₖ₃, SEρʸʸₖ₃, AVρʸʸₖ₁, SEρʸʸₖ₁,
-            AVρᶻᶻₖ₁, SEρᶻᶻₖ₁, AVρᶻᶻₖ₂, SEρᶻᶻₖ₂, u⁺, u⁻)
+            AVρᶻᶻₖ₁, SEρᶻᶻₖ₁, AVρᶻᶻₖ₂, SEρᶻᶻₖ₂, AVu⁺, AVu⁻, AVA, u⁺, AVE, AVθ, AVθu)
 end
 #--------------------------------------------------------------------------------------------------   
+#Functionality to measure the helicity modulus
+function helicityModulusContributions(ψ::State)
+    sumCosX = 0.0
+    sumCosY = 0.0
+    sumCosZ = 0.0
+    sumSinX = 0.0
+    sumSinY = 0.0
+    sumSinZ = 0.0
 
-    
+    L = ψ.consts.L
+    for h_pos = 1:L, v_pos = 1:L, z_pos=1:L
+        ϕ = ψ.lattice[h_pos, v_pos, z_pos]
+        ϕᵣ₊₁ = ψ.nb[h_pos, v_pos, z_pos].ϕᵣ₊₁
+        ϕᵣ₊₂ = ψ.nb[h_pos, v_pos, z_pos].ϕᵣ₊₂
+        ϕᵣ₊₃ = ψ.nb[h_pos, v_pos, z_pos].ϕᵣ₊₃
+        sumCosX += ϕ.u⁺*ϕᵣ₊₁.u⁺*cos(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺)
+        sumCosY += ϕ.u⁺*ϕᵣ₊₂.u⁺*cos(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺)
+        sumCosZ += ϕ.u⁺*ϕᵣ₊₃.u⁺*cos(ϕᵣ₊₃.θ⁺ - ϕ.θ⁺)
+        sumSinX += ϕ.u⁺*ϕᵣ₊₁.u⁺*cos(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺)
+        sumSinY += ϕ.u⁺*ϕᵣ₊₂.u⁺*cos(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺)
+        sumSinZ += ϕ.u⁺*ϕᵣ₊₃.u⁺*cos(ϕᵣ₊₃.θ⁺ - ϕ.θ⁺)
+
+    end
+    return (sumCosX, sumCosY, sumCosZ, sumSinX^2, sumSinY^2, sumSinZ^2)
+end
+
 
