@@ -40,4 +40,6 @@ export parallelThermalization!, findEquilibrium
 
 include("functions_thermalization.jl")
 
+export flatThermalization!
+
 end # Module ChiralMC

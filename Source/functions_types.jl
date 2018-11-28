@@ -355,6 +355,8 @@ end
 # different occasions of a state in the same system, i.e. all states are assumed to have the same
 # constants, which is given in the beginning of the file.
 function save(ψ_list::Array{State, 1}, filename::AbstractString="state_list.data"; different=false)
+    L = ψ_list[1].consts.L
+    L₃ = ψ_list[1].consts.L₃
     MAX_NUM_DIGITS = 10
     open(filename, "w") do f
         write(f, "state array\n")
