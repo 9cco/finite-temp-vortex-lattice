@@ -84,8 +84,12 @@ function gaugeStiffnessMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64)
     u⁻_array = Array{Float64}(M)
     A_array = Array{Float64}(M)
     E_array = Array{Float64}(M)
-    θ_array = Array{Float64}(M)
-    θu_array = Array{Float64}(M)
+    ΥcosX = Array{Float64}(M)
+    ΥsinX = Array{Float64}(M)
+    ΥcosY = Array{Float64}(M)
+    ΥsinY = Array{Float64}(M)
+    ΥcosZ = Array{Float64}(M)
+    ΥsinZ = Array{Float64}(M)
     
     #Initial measurement
     ρˣˣₖ₂[1] = gaugeStiffnessXX(k₂, ψ)
@@ -95,30 +99,20 @@ function gaugeStiffnessMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64)
     ρᶻᶻₖ₁[1] = gaugeStiffnessZZ(k₁, ψ)
     ρᶻᶻₖ₂[1] = gaugeStiffnessZZ(k₂, ψ)
     E_array[1] = E(ψ)
-    
+    ΥcosX[1], ΥcosY[1], ΥcosZ[1], ΥsinX[1], ΥsinY[1], ΥsinZ[1] = helicityModulusContribution(ψ)
 
     A_abs = 0.0 
     u⁺ = 0.0
     u⁻ = 0.0
-    θ = 0.0
-    θu = 0.0
     for x=1:L, y=1:L, z=1:L
-        ϕ = ψ.lattice[x,y,z]
-        ϕᵣ₊₁ = ψ.nb[x,y,z].ϕᵣ₊₁
-        ϕᵣ₊₂ = ψ.nb[x,y,z].ϕᵣ₊₂
-        ϕᵣ₊₃ = ψ.nb[x,y,z].ϕᵣ₊₃
         u⁺ += ψ.lattice[x,y,z].u⁺^2
         u⁻ += ψ.lattice[x,y,z].u⁻^2
         A_abs += ((ψ.lattice[x,y,z].A[1])^2 + (ψ.lattice[x,y,z].A[2])^2
                     + (ψ.lattice[x,y,z].A[3])^2 )
-        θ += (cos(ϕ.θ⁺-ϕᵣ₊₁.θ⁺) + cos(ϕ.θ⁺-ϕᵣ₊₂.θ⁺) + cos(ϕ.θ⁺-ϕᵣ₊₃.θ⁺))
-        θu += ϕ.u⁺*(ϕᵣ₊₁.u⁺*cos(ϕ.θ⁺-ϕᵣ₊₁.θ⁺) + ϕᵣ₊₂.u⁺*cos(ϕ.θ⁺-ϕᵣ₊₂.θ⁺) + ϕᵣ₊₃.u⁺*cos(ϕ.θ⁺-ϕᵣ₊₃.θ⁺))
     end
     u⁺_array[1] = u⁺/(L^3 )
     u⁻_array[1] = u⁻/(L^3 )
     A_array[1] = A_abs/(L^3 )
-    θ_array[1] = θ/(3*L^3)
-    θu_array[1] = θu/(3*L^3)
 
     #M-1 remaining measurements
     for m = 2:M
@@ -135,32 +129,23 @@ function gaugeStiffnessMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64)
         ρᶻᶻₖ₁[m] = gaugeStiffnessZZ(k₁, ψ)
         ρᶻᶻₖ₂[m] = gaugeStiffnessZZ(k₂, ψ)
         E_array[m] = E(ψ)
-        
+        ΥcosX[m], ΥcosY[m], ΥcosZ[m], ΥsinX[m], ΥsinY[m], ΥsinZ[m] = helicityModulusContribution(ψ)
+
         A_abs = 0.0 
         u⁺ = 0.0
         u⁻ = 0.0
-        θ = 0.0
-        θu = 0.0
         for x=1:L, y=1:L, z=1:L
-            ϕ = ψ.lattice[x,y,z]
-            ϕᵣ₊₁ = ψ.nb[x,y,z].ϕᵣ₊₁
-            ϕᵣ₊₂ = ψ.nb[x,y,z].ϕᵣ₊₂
-            ϕᵣ₊₃ = ψ.nb[x,y,z].ϕᵣ₊₃
             u⁺ += ψ.lattice[x,y,z].u⁺
             u⁻ += ψ.lattice[x,y,z].u⁻
             A_abs += ((ψ.lattice[x,y,z].A[1])^2 + (ψ.lattice[x,y,z].A[2])^2
                     + (ψ.lattice[x,y,z].A[3])^2 )
-            θ += (cos(ϕ.θ⁺-ϕᵣ₊₁.θ⁺) + cos(ϕ.θ⁺-ϕᵣ₊₂.θ⁺) + cos(ϕ.θ⁺-ϕᵣ₊₃.θ⁺))
-            θu += ϕ.u⁺*(ϕᵣ₊₁.u⁺*cos(ϕ.θ⁺-ϕᵣ₊₁.θ⁺) + ϕᵣ₊₂.u⁺*cos(ϕ.θ⁺-ϕᵣ₊₂.θ⁺) + ϕᵣ₊₃.u⁺*cos(ϕ.θ⁺-ϕᵣ₊₃.θ⁺))
         end
         u⁺_array[m] = u⁺/(L^3 )
         u⁻_array[m] = u⁻/(L^3 )
         A_array[m] = A_abs/(L^3 )
-        θ_array[m] = θ/(3*L^3)
-        θu_array[m] = θu/(3*L^3)
     end
     return (ρˣˣₖ₂, ρˣˣₖ₃, ρʸʸₖ₃, ρʸʸₖ₁, ρᶻᶻₖ₁, ρᶻᶻₖ₂, u⁺_array, u⁻_array, A_array, E_array,
-            θ_array, θu_array)
+            ΥcosX, ΥcosY, ΥcosZ, ΥsinX, ΥsinY, ΥsinZ)
 end
     
     
@@ -194,14 +179,14 @@ function parallelMeasureGS!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δ
     end
     #Master process
     (ρˣˣₖ₂, ρˣˣₖ₃, ρʸʸₖ₃, ρʸʸₖ₁, ρᶻᶻₖ₁, ρᶻᶻₖ₂, u⁺, u⁻, A, E_arr,
-        θ_arr, θu_arr) = gaugeStiffnessMeasure!(ψ_list[np], sim, M_min, Δt) 
+        ΥcosX, ΥcosY, ΥcosZ, ΥsinX, ΥsinY, ΥsinZ) = gaugeStiffnessMeasure!(ψ_list[np], sim, M_min, Δt) 
    
     
     println("Measurements completed, collecting results from processes")
     #Gather results from workers
     for i=1:np-1
         (newρˣˣₖ₂, newρˣˣₖ₃, newρʸʸₖ₃, newρʸʸₖ₁, newρᶻᶻₖ₁, newρᶻᶻₖ₂, newu⁺, newu⁻, newA, newE,
-            newθ, newθu) = fetch(futures[i])
+            newΥcosX, newΥcosY, newΥcosZ, newΥsinX, newΥsinY, newΥsinZ) = fetch(futures[i])
         ρˣˣₖ₂ = vcat(ρˣˣₖ₂, newρˣˣₖ₂)
         ρˣˣₖ₃ = vcat(ρˣˣₖ₃, newρˣˣₖ₃)
         ρʸʸₖ₃ = vcat(ρʸʸₖ₃, newρʸʸₖ₃)
@@ -212,8 +197,13 @@ function parallelMeasureGS!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δ
         u⁻ = vcat(u⁻, newu⁻)
         A = vcat(A,newA)
         E_arr = vcat(E_arr, newE)
-        θ_arr = vcat(θ_arr, newθ)
-        θu_arr = vcat(θu_arr, newθu)
+        ΥcosX = vcat(ΥcosX, newΥcosX)
+        ΥcosY = vcat(ΥcosY, newΥcosY)
+        ΥcosZ = vcat(ΥcosZ, newΥcosZ)
+        ΥsinX = vcat(ΥsinX, newΥsinX)
+        ΥsinY = vcat(ΥsinY, newΥsinY)
+        ΥsinZ = vcat(ΥsinZ, newΥsinZ)
+
     end
     
     println("Processing results")
@@ -228,9 +218,9 @@ function parallelMeasureGS!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δ
     AVu⁻ = mean(u⁻)
     AVA = mean(A)
     AVE = mean(E_arr)/L^3
-    AVθ = (mean(θ_arr))^2
-    AVθu = (mean(θu_arr))^2
-    
+    Υx = (mean(ΥcosX) - syst.β*mean(ΥsinX))*2/(syst.L)^2
+    Υy = (mean(ΥcosY) - syst.β*mean(ΥsinY))*2/(syst.L)^2
+    Υz = (mean(ΥcosZ) - syst.β*mean(ΥsinZ))*2/(syst.L₃)^2
     
     #Calculate the standard error 
     #TODO: Here we might also have to account for the autocorr time
@@ -242,11 +232,11 @@ function parallelMeasureGS!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δ
     SEρᶻᶻₖ₂ = std(ρᶻᶻₖ₂)/sqrt(M)
     
     return (AVρˣˣₖ₂, SEρˣˣₖ₂, AVρˣˣₖ₃, SEρˣˣₖ₃, AVρʸʸₖ₃, SEρʸʸₖ₃, AVρʸʸₖ₁, SEρʸʸₖ₁,
-            AVρᶻᶻₖ₁, SEρᶻᶻₖ₁, AVρᶻᶻₖ₂, SEρᶻᶻₖ₂, AVu⁺, AVu⁻, AVA, u⁺, AVE, AVθ, AVθu)
+            AVρᶻᶻₖ₁, SEρᶻᶻₖ₁, AVρᶻᶻₖ₂, SEρᶻᶻₖ₂, AVu⁺, AVu⁻, AVA, u⁺, AVE, Υx, Υy, Υz)
 end
 #--------------------------------------------------------------------------------------------------   
 #Functionality to measure the helicity modulus
-function helicityModulusContributions(ψ::State)
+function helicityModulusContribution(ψ::State)
     sumCosX = 0.0
     sumCosY = 0.0
     sumCosZ = 0.0
@@ -255,7 +245,8 @@ function helicityModulusContributions(ψ::State)
     sumSinZ = 0.0
 
     L = ψ.consts.L
-    for h_pos = 1:L, v_pos = 1:L, z_pos=1:L
+    L₃ = ψ.consts.L₃
+    for h_pos = 1:L, v_pos = 1:L, z_pos=1:L₃
         ϕ = ψ.lattice[h_pos, v_pos, z_pos]
         ϕᵣ₊₁ = ψ.nb[h_pos, v_pos, z_pos].ϕᵣ₊₁
         ϕᵣ₊₂ = ψ.nb[h_pos, v_pos, z_pos].ϕᵣ₊₂
@@ -263,9 +254,9 @@ function helicityModulusContributions(ψ::State)
         sumCosX += ϕ.u⁺*ϕᵣ₊₁.u⁺*cos(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺)
         sumCosY += ϕ.u⁺*ϕᵣ₊₂.u⁺*cos(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺)
         sumCosZ += ϕ.u⁺*ϕᵣ₊₃.u⁺*cos(ϕᵣ₊₃.θ⁺ - ϕ.θ⁺)
-        sumSinX += ϕ.u⁺*ϕᵣ₊₁.u⁺*cos(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺)
-        sumSinY += ϕ.u⁺*ϕᵣ₊₂.u⁺*cos(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺)
-        sumSinZ += ϕ.u⁺*ϕᵣ₊₃.u⁺*cos(ϕᵣ₊₃.θ⁺ - ϕ.θ⁺)
+        sumSinX += ϕ.u⁺*ϕᵣ₊₁.u⁺*sin(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺)
+        sumSinY += ϕ.u⁺*ϕᵣ₊₂.u⁺*sin(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺)
+        sumSinZ += ϕ.u⁺*ϕᵣ₊₃.u⁺*sin(ϕᵣ₊₃.θ⁺ - ϕ.θ⁺)
 
     end
     return (sumCosX, sumCosY, sumCosZ, sumSinX^2, sumSinY^2, sumSinZ^2)
