@@ -225,7 +225,7 @@ function testSystem(syst::SystConstants, sim::Controls, M::Int64=2000)
     # that after a couple of mcSweeps, the state will be completely changed
     println("Testing if mcSweep! gives completely different state when temperature is infinite, where completely different
     means that all values on all lattice sites are different. Thus we have proved that mcSweep! visits all lattice sites.")
-    ψ = State(2, SystConstants(syst.L, syst.γ, syst.g⁻², syst.ν, syst.f, 0))
+    ψ = State(2, SystConstants(syst.L, syst.g⁻², syst.ν, syst.f, 0))
     ψ_old = copy(ψ)
     for i = 1:2
         mcSweep!(ψ)
@@ -250,6 +250,18 @@ end
 #                            Utility Functions
 #
 ####################################################################################################################
+
+function mkcd(dir_name::AbstractString; visible=false)
+    if ispath(dir_name)
+        if visible
+            println("Directory $(dir_name) already exists.. entering.")
+        end
+        cd(dir_name)
+    else
+        mkdir(dir_name)
+        cd(dir_name)
+    end
+end
 
 # -----------------------------------------------------------------------------------------------------------
 # Creates a new directory based on the simulation constants and enters it for further writing of files.
@@ -276,7 +288,7 @@ function mkcdSystemDirectory(syst::SystConstants, M::Int64, Δt::Int64)
     end
     
     # Make directory name based on system constants
-    DIR_NAME = "3D_L_$(syst.L)_M_$(M)_T_$(round(1/syst.β,acc))_GAMMA_$(round(syst.γ,acc))_g_$(round(√(1/syst.g⁻²),acc))"
+    DIR_NAME = "3D_L_$(syst.L)_M_$(M)_T_$(round(1/syst.β,acc))_g_$(round(√(1/syst.g⁻²),acc))"
     DIR_NAME = DIR_NAME * "_NU_$(round(syst.ν,acc))_K_$(round(syst.κ₅,acc))_f_$(round(syst.f,acc))_T_$(round(1/syst.β,acc))"
     
     if isdir("./$(DIR_NAME)")
@@ -314,7 +326,6 @@ function writeSimulationConstants(syst::SystConstants, sim::Controls, M::Int64, 
     open(dir_name*filename, "w") do f
         write(f, "L $(syst.L)\n")
         write(f, "Lz $(syst.L₃)\n")
-        write(f, "GAMMA $(syst.γ)\n")
         write(f, "g $(√(1/syst.g⁻²))\n")
         write(f, "NU $(syst.ν)\n")
         write(f, "K $(syst.κ₅)\n")

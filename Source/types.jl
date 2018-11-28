@@ -3,7 +3,7 @@ const two_pi = 2π
 struct SystConstants
     L::Int64      # System size in one direction
     L₃::Int64     # System size in z-direction
-    γ::Float64    # Order parameter amplitude
+#    γ::Float64    # Order parameter amplitude
     g⁻²::Float64  # 1/g² for gauge coupling g
     ν::Float64    # Anisotropy constant
     κ₅::Float64   # z-layer coupling.
