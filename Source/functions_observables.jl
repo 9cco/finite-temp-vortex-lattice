@@ -639,6 +639,29 @@ end
 #
 ####################################################################################################################
 
+# -------------------------------------------------------------------------------------------------
+# Return the average amplitudes in the system.
+function meanAmplitudes(ψ::State)
+	u⁺ = 0.0; u⁻ = 0.0
+    N = length(ψ.lattice)
+    for ϕ in ψ.lattice
+		u⁺ += ϕ.u⁺; u⁻ += ϕ.u⁻
+	end
+
+	return u⁺/N, u⁻/N
+end
+
+# --------------------------------------------------------------------------------------------------
+# Takes a list of states and produces a corresponding list of average amplitudes.
+function measureMeanAmplitudes(ψ_list::Array{State,1})
+    M = length(ψ_list)
+    u⁺_meas = SharedArray{Float64}(M); u⁻_meas = SharedArray{Float64}(M);
+    @sync @parallel for i = 1:M
+        u⁺_meas[i], u⁻_meas[i] = meanAmplitudes(ψ_list[i])
+    end
+    return sdata(u⁺_meas), sdata(u⁻_meas)
+end
+
 # --------------------------------------------------------------------------------------------------
 function avgAmpMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64; visible=false)
     
@@ -903,4 +926,22 @@ on a $(L)×$(L) system, corresponding to $((M_min+ceil(Int64, nw/np))*Δt) MCS p
     return c⁺_list, c⁻_list, u⁺_list, u⁻_list
 end
 
+# Given a state, calculate the average of the order-parameter over the lattice.
+function averageOrdParam(ψ::State)
+    η⁺ = Complex(0.0,0.0); η⁻ = Complex(0.0,0.0)
+    for ϕ in ψ.lattice
+        η⁺ += ϕ.u⁺*exp(im*ϕ.θ⁺); η⁻ += ϕ.u⁻*exp(im*ϕ.θ⁻);
+    end
+    N = length(ψ.lattice)
+    return abs(η⁺/N), abs(η⁻/N)
+end
 
+# Given a list of states measured by MCMC calculation, calculate the average order parameter over this list 
+function measureOrdParam(ψ_list::Array{State,1})
+    M = length(ψ_list)
+    η⁺_abs_meas = SharedArray{Float64}(M); η⁻_abs_meas = SharedArray{Float64}(M)
+    @sync @parallel for i = 1:M
+        η⁺_abs_meas[i], η⁻_abs_meas[i] = averageOrdParam(ψ_list[i])
+    end
+    return sdata(η⁺_abs_meas), sdata(η⁻_abs_meas)
+end

@@ -36,6 +36,11 @@ function scientificRounding{T<:Real}(val::T, err::T; extra_digits::Int64 = 0)
     err_temp = signif(err, 1)
     # Find the first significant digit
     st = "$(err_temp)"
+    if st == "NaN"
+        # Infinite error means we don't know what the value is.
+        println("Warning: error was NaN")
+        return signif(val, 1+extra_digits), err
+    end
     if ismatch(r"[e]", st)
         st = st[1]
     else

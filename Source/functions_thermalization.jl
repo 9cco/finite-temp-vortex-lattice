@@ -621,3 +621,118 @@ Thermalization will be ×$(floor(Int64, n_state/(n_workers+1))) as long.")
     end
     return false, t-T_AVG+adjustment_mcs, ψ_list, sim_list, E_matrix
 end
+
+# --------------------------------------------------------------------------------------------------
+function thermalizeLite!(ψ_ref::State, ψ_w::Array{State,1}, sim::Controls; T_AVG = 2500, T_QUENCH = 1000,
+        CUTOFF_MAX = 200000, N_SUBS=10, AVG_EX = 1.5, STABILITY_CUTOFF = 4000, ADJUST_INTERVAL = 400,
+    temp_ref_filename="therm_temp_ref.state", temp_workers_filename="therm_temp_workers.statelist", visible=false)
+    
+    nw = length(ψ_w)
+    # Setup storage
+    E_ref = Array{Float64, 1}(T_AVG)
+    ΔE_w = Array{Float64, 2}(nw, T_AVG)
+    E_w = Array{Float64, 2}(nw, T_AVG)
+    sim_ref = copy(sim)
+    sim_w = [copy(sim) for i = 1:nw]
+    
+    mcs_ref = 0
+    mcs_w = zeros(Int64, nw)
+    adjustment_mcs = 0
+    
+    # Check whether we have enough processes for efficiency
+    num_workers = nprocs()-1
+    if nw > num_workers
+        println("WARNING: More requested states ($(nw+1)), than currently available extra processes ($(num_workers+1)).
+Thermalization will be ×$(floor(Int64, (nw+1)/(num_workers+1))) as long.")
+    end
+    
+    # Preform initial quench, trying to find first ΔE=0
+    t, ψ_ref, _1, ψ_w, _2 = thermalizeToZero!(ψ_ref, ψ_w, sim_ref, sim_w, T_QUENCH)
+    
+    # Collecting all states into one list for ease of referencing.
+    ψ_list = [ψ_ref, ψ_w...]
+    sim_list = [sim_ref, sim_w...]
+    
+    # Adjust simulation constants
+    mcs_list, ar_list = adjustSimConstants!(ψ_list, sim_list)
+    adjustment_mcs += maximum(mcs_list)
+    if visible
+        println("\nControls after initial adjustment:")
+        printSimControls(sim_list)
+        println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))")
+    end
+    
+    # Make future list for the computations that will be done on ψ_w.
+    ψ_future_list = [Future() for i=1:nw]
+    
+    while t < CUTOFF_MAX
+        
+        # Start by doing MCMC steps and saving the energies in the energy arrays until we have T_AVG energies.
+        ψ_list, E_matrix = nMCSEnergy!(ψ_list, sim_list, T_AVG, [E(ψ) for ψ in ψ_list])
+        E_ref = E_matrix[1,:]
+        E_w = E_matrix[2:end, :]
+        
+        # Doing this for all the worker states
+        #for w=1:nw
+        #    ψ_future_list[w] = @spawn nMCSEnergy(ψ_w[w], sim_w[w], T_AVG, ADJUST_INTERVAL, E(ψ_w[w]))
+        #end
+        # Similar for the high T in master
+        #ψ_ref, E_ref, sim_ref, mcs_ref = nMCSEnergyDynamic(ψ_ref, sim_ref, T_AVG, ADJUST_INTERVAL, E(ψ_ref))
+        
+        # Gather results from workers
+        #for w=1:nw
+        #    ψ_w[w], E_w[w,:], sim_w[w], mcs_w[w] = fetch(ψ_future_list[w])
+        #    ΔE_w[w, :] = E_ref - E_w[w,:]
+        #end
+        
+        # Finding energy differences
+        for w = 1:nw
+            ΔE_w[w,:] = E_ref-E_w[w,:]
+        end
+        
+        # Save temporary state-files
+        save(ψ_ref, temp_ref_filename)
+        save(ψ_w, temp_workers_filename)
+        
+        # Check if we have thermalization
+        if flatThermalization(ΔE_w; visible=visible)
+            if checkThermalization(E_ref, E_w, 1, T_AVG)
+                println("Final thermalization time: $(t+T_AVG+adjustment_mcs)")
+                if visible
+                    println("\nFinal controls:")
+                    printSimControls(sim_list)
+                    println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))")
+                end
+                return true, t+T_AVG+adjustment_mcs, ψ_ref, E_ref, sim_ref, ψ_w, E_w, sim_w
+            elseif t+T_AVG > STABILITY_CUTOFF
+                println("WARNING: Flat energy curves after $(t+T_AVG) MCS, but stabilized at different energies.
+Jagged energy landscape?")
+                if visible
+                    println("\nFinal controls:")
+                    printSimControls(sim_list)
+                    println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))")
+                end
+                return false, t+T_AVG+adjustment_mcs, ψ_ref, E_ref, sim_ref, ψ_w, E_w, sim_w
+            end
+        end
+        
+        if visible
+            println("Thermalization not yet reached after $(t+T_AVG) MCS")
+        end
+        
+        # Adjust constants
+        mcs_list, ar_list = adjustSimConstants!(ψ_list, sim_list)
+        adjustment_mcs += max(maximum(mcs_w),mcs_ref)
+        
+        t += T_AVG
+    end
+
+    # If we get to this point we have completely given up on getting any flat thermalization.
+    println("ERROR: Was not able to find point where energy curves were flat.")
+    if visible
+        println("\nFinal controls:")
+        printSimControls(sim_list)
+        println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))")
+    end
+    return false, t-T_AVG+adjustment_mcs, ψ_ref, E_ref, sim_ref, ψ_w, E_w, sim_w
+end

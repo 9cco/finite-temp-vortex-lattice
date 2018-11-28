@@ -6,7 +6,7 @@ function copy(ϕ::LatticeSite)
     LatticeSite([ϕ.A[1],ϕ.A[2],ϕ.A[3]],ϕ.θ⁺,ϕ.θ⁻,ϕ.u⁺,ϕ.u⁻)
 end
 function copy(c::SystConstants)
-    SystConstants(c.L, c.L₃, c.γ, c.g⁻², c.ν, c.κ₅, c.f, c.β)
+    SystConstants(c.L, c.L₃, c.g⁻², c.ν, c.κ₅, c.f, c.β)
 end
 # Copy functions for Neighbors, NextNeighbors and NNNeighbors
 function copy(nb::NearestNeighbors)
@@ -96,7 +96,7 @@ function ==(ϕ₁::LatticeSite, ϕ₂::LatticeSite)
         ϕ₁.θ⁻ == ϕ₂.θ⁻ && ϕ₁.u⁺ == ϕ₂.u⁺ && ϕ₁.u⁻ == ϕ₂.u⁻)
 end
 function ==(c₁::SystConstants, c₂::SystConstants)
-    return (c₁.L == c₂.L && c₁.L₃ == c₂.L₃ && c₁.γ == c₂.γ && c₁.g⁻² == c₂.g⁻² && c₁.ν == c₂.ν
+    return (c₁.L == c₂.L && c₁.L₃ == c₂.L₃ && c₁.g⁻² == c₂.g⁻² && c₁.ν == c₂.ν
             && c₁.κ₅ == c₂.κ₅ && c₁.f == c₂.f && c₁.β == c₂.β)
 end
 function ==(ψ₁::State, ψ₂::State)
@@ -145,7 +145,7 @@ end
 function State(choice::Int64, L::Int64)
     L <= 4 && throw(DomainError())
 
-	consts = SystConstants(L, L, 1.0, 1/0.3^2, 0.3, 1.0, 2.0/L, 0.5)
+	consts = SystConstants(L, L, 1/0.3^2, 0.3, 1.0, 2.0/L, 0.5)
     # Construct ordered state 
     if choice == 1
         
@@ -177,37 +177,59 @@ function State(choice::Int64, L::Int64)
     end
     ψ
 end
-# Same as above but with non-default parameter-inputs from SystConstants
-function State(choice::Int64, consts::SystConstants)
-    N = consts.L
+
+# Same as above but with non-default parameter-inputs from SystConstants and options
+# 1:    Correlated mean field state with specified values for fields.
+# 2:    Completely random state for all fields.
+# 3:    u⁺ is random, the rest are mean field.
+# 4:    u⁺ and u⁻ are random, the rest are mean field.
+# 5:    θ⁺ and θ⁻ are random, the rest are mean field.
+function State(choice::Int64, consts::SystConstants; u⁺=1.0, u⁻=0.0, θ⁺=0.0, θ⁻=0.0, A=[0.0, 0.0, 0.0])
+    L = consts.L
     L₃ = consts.L₃
-    N <= 4 && throw(DomainError())
+    L <= 4 && throw(DomainError())
+    Amax::Int64 = 10
+    umax::Int64 = 3
     # Construct ordered state 
     if choice == 1
-        
+        # Mean field lattice sites for all fields.
         # Construct NxN lattice of NxN LatticeSites
-        #lattice = [LatticeSite([0,0,0],0,0,0,1) for y=1:N, x=1:N, z=1:L₃]
-        lattice = [LatticeSite([0,0,0],0,0,1.0,0.0) for y=1:N, x=1:N, z=1:L₃]
-		nb = latticeNeighbors(lattice,N,L₃)
-		nnb = latticeNextNeighbors(lattice,N,L₃)
-		nnnb = latticeNNNeighbors(lattice,N,L₃)
+        lattice = [LatticeSite(A, θ⁺, θ⁻, u⁺, u⁻) for y=1:L, x=1:L, z=1:L₃]
+		nb = latticeNeighbors(lattice,L,L₃)
+		nnb = latticeNextNeighbors(lattice,L,L₃)
+		nnnb = latticeNNNeighbors(lattice,L,L₃)
         ψ = State(lattice, consts, nb, nnb, nnnb)
         
     # Construct random state
     elseif choice == 2
-        Amax::Int64 = 2^6
-		#lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
-		#				   rand(Uniform(0,2π)), rand(Uniform(0,2π)), rand(), 1) for y=1:N, x=1:N, z=1:L₃]
-		#lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
-		#				   rand(Uniform(0,2π)), rand(Uniform(0,2π)), 1.0, 0.0) for y=1:N, x=1:N, z=1:L₃]
-		lattice = [LatticeSite([0,0,0],
-                               rand(Uniform(0,2π)), rand(Uniform(0,2π)), 2*rand(), 0.0) for y=1:N, x=1:N, z=1:L₃]
-		nb = latticeNeighbors(lattice,N,L₃)
-		nnb = latticeNextNeighbors(lattice,N,L₃)
-		nnnb = latticeNNNeighbors(lattice,N,L₃)
+		lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
+                              rand(Uniform(0,2π)), rand(Uniform(0,2π)), umax*rand(), umax*rand()) for y=1:L, x=1:L, z=1:L₃]
+		nb = latticeNeighbors(lattice,L,L₃)
+		nnb = latticeNextNeighbors(lattice,L,L₃)
+		nnnb = latticeNNNeighbors(lattice,L,L₃)
         ψ = State(lattice, consts, nb, nnb, nnnb)
-        
-    # We only have choices 1 and 2 so far so other values for choice will give an error.
+    elseif choice == 3
+        # Uniform mean field for all fields except u⁺ which is random.
+        lattice = [LatticeSite(A, θ⁺, θ⁻, umax*rand(), u⁻) for v=1:L, h=1:L, z=1:L₃]
+		nb = latticeNeighbors(lattice,L,L₃)
+		nnb = latticeNextNeighbors(lattice,L,L₃)
+		nnnb = latticeNNNeighbors(lattice,L,L₃)
+        ψ = State(lattice, consts, nb, nnb, nnnb)
+    elseif choice == 4
+        # Uniform mean field except for u⁺ and u⁻
+        lattice = [LatticeSite(A, θ⁺, θ⁻, umax*rand(), umax*rand()) for v=1:L, h=1:L, z=1:L₃]
+		nb = latticeNeighbors(lattice,L,L₃)
+		nnb = latticeNextNeighbors(lattice,L,L₃)
+		nnnb = latticeNNNeighbors(lattice,L,L₃)
+        ψ = State(lattice, consts, nb, nnb, nnnb)
+    elseif choice == 5
+        # Vary phases, all other fields are uniform mean fields.
+        lattice = [LatticeSite(A, rand(Uniform(0,2π)), rand(Uniform(0,2π)), u⁺, u⁻) for v=1:L, h=1:L, z=1:L₃]
+		nb = latticeNeighbors(lattice,L,L₃)
+		nnb = latticeNextNeighbors(lattice,L,L₃)
+		nnnb = latticeNNNeighbors(lattice,L,L₃)
+        ψ = State(lattice, consts, nb, nnb, nnnb)
+    # We only have choices 1 - 5 so far so other values for choice will give an error.
     else
         throw(DomainError())
     end
@@ -248,7 +270,7 @@ function checkState(ψ::State)
         @test ψ.lattice[y,x,z].u⁻ >= 0
 #        @test isapprox(ψ.lattice[y,x].u⁻^2+ψ.lattice[y,x].u⁺^2, 1.0, atol=0, rtol=1e-13)
     end
-    @test typeof(ψ.consts.γ) == typeof(ψ.consts.g⁻²) == typeof(ψ.consts.ν) == typeof(ψ.consts.f) == Float64
+    @test typeof(ψ.consts.g⁻²) == typeof(ψ.consts.ν) == typeof(ψ.consts.f) == Float64
 	@test isapprox(ψ.consts.L*abs(ψ.consts.f) % 1, 0.0, atol=0, rtol=1e-13)
 end
 
@@ -256,7 +278,7 @@ end
 # -------------------------------------------------------------------------------------------------
 # Saves the state to file with specified filename. If mode is set to "a" then the state is appended
 # to the file.
-function save(ψ::State, filename::AbstractString, mode::AbstractString="w"; visible=false)
+function save(ψ::State, filename::AbstractString; mode::AbstractString="w", visible=false)
     if mode != "w" && mode != "a"
         println("$(mode) is not a valid file-opening option.")
         return 0
@@ -272,7 +294,7 @@ function save(ψ::State, filename::AbstractString, mode::AbstractString="w"; vis
         # Writing system constants on top of the file
         write(f, "$(ψ.consts.L)\n")
         write(f, "$(ψ.consts.L₃)\n")
-        write(f, "$(ψ.consts.γ)\n")
+#        write(f, "$(ψ.consts.γ)\n")
         write(f, "$(ψ.consts.g⁻²)\n")
         write(f, "$(ψ.consts.ν)\n")
         write(f, "$(ψ.consts.κ₅)\n")
@@ -299,13 +321,13 @@ function readState(filename::AbstractString)
         end
         L = parse(Int64, readline(file))
         L₃ = parse(Int64, readline(file))
-        γ = parse(Float64, readline(file))
+#        γ = parse(Float64, readline(file))
         g⁻² = parse(Float64, readline(file))
         ν = parse(Float64, readline(file))
         κ₅ = parse(Float64, readline(file))
         f = parse(Float64, readline(file))
         β = parse(Float64, readline(file))
-        syst = SystConstants(L, γ, g⁻², ν, f, β)
+        syst = SystConstants(L, g⁻², ν, f, β)
         
         lattice = Array{LatticeSite, 3}(L,L,L₃)
         for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
@@ -332,7 +354,7 @@ end
 # Saves a list of states to a txt file without compression. This list is designed to give multiple
 # different occasions of a state in the same system, i.e. all states are assumed to have the same
 # constants, which is given in the beginning of the file.
-function save(ψ_list::Array{State, 1}, filename::AbstractString="state_list.data")
+function save(ψ_list::Array{State, 1}, filename::AbstractString="state_list.data"; different=false)
     MAX_NUM_DIGITS = 10
     open(filename, "w") do f
         write(f, "state array\n")
@@ -340,14 +362,23 @@ function save(ψ_list::Array{State, 1}, filename::AbstractString="state_list.dat
         for i = 1:MAX_NUM_DIGITS
             write(f, "$(M[MAX_NUM_DIGITS-i+1])")
         end
-        write(f, "\n")
-        write(f, "$(ψ_list[1].consts.L):$(ψ_list[1].consts.L₃):$(ψ_list[1].consts.γ):$(ψ_list[1].consts.g⁻²):")
-        write(f, "$(ψ_list[1].consts.ν):$(ψ_list[1].consts.κ₅):$(ψ_list[1].consts.f):$(ψ_list[1].consts.β)\n")
-        for ψ in ψ_list
-            write(f, "state start\n")
-            for z=1:L₃, h=1:L, v=1:L
-                ϕ = ψ.lattice[v,h,z]
-                write(f, "$(ϕ.A[1]):$(ϕ.A[2]):$(ϕ.A[3]):$(ϕ.θ⁺):$(ϕ.θ⁻):$(ϕ.u⁺):$(ϕ.u⁻)\n")
+        if different
+            # First create file and save first state
+            save(ψ_list[1], filename; mode="w")
+            # Then go through the list and save remaining states to the same file by appending.
+            for i = 2:length(ψ_list)
+                save(ψ_list[i], filename; mode="a")
+            end
+        else
+            write(f, "\n")
+            write(f, "$(ψ_list[1].consts.L):$(ψ_list[1].consts.L₃):$(ψ_list[1].consts.g⁻²):")
+            write(f, "$(ψ_list[1].consts.ν):$(ψ_list[1].consts.κ₅):$(ψ_list[1].consts.f):$(ψ_list[1].consts.β)\n")
+            for ψ in ψ_list
+                write(f, "state start\n")
+                for z=1:L₃, h=1:L, v=1:L
+                    ϕ = ψ.lattice[v,h,z]
+                    write(f, "$(ϕ.A[1]):$(ϕ.A[2]):$(ϕ.A[3]):$(ϕ.θ⁺):$(ϕ.θ⁻):$(ϕ.u⁺):$(ϕ.u⁻)\n")
+                end
             end
         end
     end
@@ -355,7 +386,7 @@ function save(ψ_list::Array{State, 1}, filename::AbstractString="state_list.dat
 end
 
 # -------------------------------------------------------------------------------------------------
-# Adds a state to a list already created by the save(::Array{State,1}, ::AbstractString) function.
+# Adds a state to a list already created by the save(::Array{State,1}, ::AbstractString; different=false) function.
 function addToList(ψ::State, filename::AbstractString)
     MAX_NUM_DIGITS = 10 # Has to be the same as number used in save(::Array{State,1}, ::AbstractString)
     M₀ = 0
@@ -373,18 +404,18 @@ function addToList(ψ::State, filename::AbstractString)
         L > 0 || throw(error("ERROR: States L is $(L)"))
         L₃ = parse(Int64, c_values[2])
         L₃ > 0 || throw(error("ERROR: States L₃ is $(L₃)"))
-        γ = parse(Float64, c_values[3])
-        g⁻² = parse(Float64, c_values[4])
-        ν = parse(Float64, c_values[5])
-        κ₅ = parse(Float64, c_values[6])
-        f = parse(Float64, c_values[7])
-        β = parse(Float64, c_values[8])
-        if !(ψ.consts.L == L && ψ.consts.L₃ == L₃ && ψ.consts.γ == γ && ψ.consts.g⁻² == g⁻² && ψ.consts.ν == ν
+#        γ = parse(Float64, c_values[3])
+        g⁻² = parse(Float64, c_values[3])
+        ν = parse(Float64, c_values[4])
+        κ₅ = parse(Float64, c_values[5])
+        f = parse(Float64, c_values[6])
+        β = parse(Float64, c_values[7])
+        if !(ψ.consts.L == L && ψ.consts.L₃ == L₃ && ψ.consts.g⁻² == g⁻² && ψ.consts.ν == ν
                 && ψ.consts.κ₅ == κ₅ && ψ.consts.f == f && ψ.consts.β == β)
             throw(error("ERROR: Input-state's constants do not match stored constants.
-\tL\tL₃\tγ\tg⁻²\tν\tκ₅\tf\tβ
-stored:\t$(L)\t$(L₃)\t$(γ)\t$(g⁻²)\t$(ν)\t$(κ₅)\t$(f)\t$(β)
-input:\t$(ψ.consts.L)\t$(ψ.consts.L₃)\t$(ψ.consts.γ)\t$(ψ.consts.g⁻²)\t$(ψ.consts.ν)\t$(ψ.consts.κ₅)\t$(ψ.consts.f)\t$(ψ.consts.β)"))
+\tL\tL₃\tg⁻²\tν\tκ₅\tf\tβ
+stored:\t$(L)\t$(L₃)\t$(g⁻²)\t$(ν)\t$(κ₅)\t$(f)\t$(β)
+input:\t$(ψ.consts.L)\t$(ψ.consts.L₃)\t$(ψ.consts.g⁻²)\t$(ψ.consts.ν)\t$(ψ.consts.κ₅)\t$(ψ.consts.f)\t$(ψ.consts.β)"))
         end
     end
     # Save lattice to new state at the end
@@ -424,18 +455,18 @@ function loadStates(filename::AbstractString)
         L > 0 || throw(DomainError())
         L₃ = parse(Int64, c_values[2])
         L₃ > 0 || throw(DomainError())
-        γ = parse(Float64, c_values[3])
-        g⁻² = parse(Float64, c_values[4])
-        ν = parse(Float64, c_values[5])
-        κ₅ = parse(Float64, c_values[6])
-        f = parse(Float64, c_values[7])
-        β = parse(Float64, c_values[8])
+#        γ = parse(Float64, c_values[3])
+        g⁻² = parse(Float64, c_values[3])
+        ν = parse(Float64, c_values[4])
+        κ₅ = parse(Float64, c_values[5])
+        f = parse(Float64, c_values[6])
+        β = parse(Float64, c_values[7])
         for i = 1:M
             line = readline(file)
             if line != "state start"
                 throw(DomainError())
             end
-            syst = SystConstants(L,L₃,γ,g⁻²,ν,κ₅,f,β)
+            syst = SystConstants(L,L₃,g⁻²,ν,κ₅,f,β)
             lattice = Array{LatticeSite, 3}(L,L,L₃)
             for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
                 ϕ_values = split(readline(file), ":")
@@ -457,20 +488,6 @@ function loadStates(filename::AbstractString)
         end
         return ψ_l
     end
-end
-
-# -------------------------------------------------------------------------------------------------
-# Return the average amplitudes in the system.
-function meanAmplitudes(ψ::State)
-	u⁺ = 0.0
-	u⁻ = 0.0
-    N = length(ψ.lattice)
-    for ϕ in ψ.lattice
-		u⁺ += ϕ.u⁺
-		u⁻ += ϕ.u⁻
-	end
-
-	return u⁺/N, u⁻/N
 end
 
 # -------------------------------------------------------------------------------------------------
