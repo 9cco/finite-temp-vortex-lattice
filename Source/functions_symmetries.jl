@@ -65,6 +65,58 @@ function gaugeStiffnessYY{T<:Real}(k::Array{T,1}, ψ::State)
     end
     return (abs(sumGS))^2 / (2π*L)^3
 end
+
+# -------------------------------------------------------------------------------------------------
+# Calculate gauge stiffness more effectively as a triplet
+function gaugeStiffness{T<:Real}(k::Array{T,1}, ψ::State)
+    gs_xx = Complex(0.0); gs_yy = Complex(0.0); gs_zz = Complex(0.0)
+    L = ψ.consts.L
+    if (L != ψ.consts.L₃)
+        throw(error("The geometry is not cubic, L ≂̸ L₃"))
+    end
+
+    for v_pos = 1:L, h_pos = 1:L, z_pos = 1:L
+        r = [h_pos-1, L-v_pos, L-z_pos] #Spør 9cco om dette, tror det blir riktig
+        ϕ = ψ.lattice[v_pos, h_pos, z_pos]
+        ϕᵣ₊₁ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₁
+        ϕᵣ₊₂ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₂
+        ϕᵣ₊₃ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₃
+        gs_xx += (ϕ.A[2] + ϕᵣ₊₂.A[3] - ϕᵣ₊₃.A[2] - ϕ.A[3])*exp(im*(k⋅r))
+        gs_yy += (ϕ.A[3] + ϕᵣ₊₃.A[1] - ϕᵣ₊₁.A[3] - ϕ.A[1])*exp(im*(k⋅r))
+        gs_zz += (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])*exp(im*(k⋅r))
+    end
+
+    norm = (2π*L)^3
+    return abs(gs_xx)/norm, abs(gs_yy)/norm, abs(gs_zz)/norm
+end
+
+# -------------------------------------------------------------------------------------------------
+# Given a list of states, calculate the gauge stiffnesses for each direction and each k, for each
+# state in the list. Then return lists of the corresponding stiffnesses.
+function gaugeStiffness(ψ_list::Array{State,1})
+    M = length(ψ_list)
+    L = ψ_list[1].consts.L
+
+    ρˣˣₖ₂ = SharedArray{Float64}(M)
+    ρˣˣₖ₃ = SharedArray{Float64}(M)
+    ρʸʸₖ₁ = SharedArray{Float64}(M)
+    ρʸʸₖ₃ = SharedArray{Float64}(M)
+    ρᶻᶻₖ₁ = SharedArray{Float64}(M)
+    ρᶻᶻₖ₂ = SharedArray{Float64}(M)
+    k₁ = [2π/L, 0.0, 0.0]
+    k₂ = [0.0, 2π/L, 0.0]
+    k₃ = [0.0, 0.0, 2π/L]
+
+    @sync @parallel for m = 1:M
+        ρˣˣₖ₂[m], _, ρˣˣₖ₂[m] = gaugeStiffness(k₂, ψ_list[m])
+        ρˣˣₖ₃[m], ρʸʸₖ₃[m], _ = gaugeStiffness(k₃, ψ_list[m])
+        _, ρʸʸₖ₁[m], ρᶻᶻₖ₁[m] = gaugeStiffness(k₁, ψ_list[m])
+    end
+
+    return sdata(ρˣˣₖ₂), sdata(ρˣˣₖ₃), sdata(ρʸʸₖ₁), sdata(ρʸʸₖ₃), sdata(ρᶻᶻₖ₁), sdata(ρᶻᶻₖ₂)
+end
+
+
 #--------------------------------------------------------------------------------------------------
 # For a state, make M measurements of the gaugestiffness components, sampling every Δt MCS
 function gaugeStiffnessMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64)
@@ -234,6 +286,7 @@ function parallelMeasureGS!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δ
     return (AVρˣˣₖ₂, SEρˣˣₖ₂, AVρˣˣₖ₃, SEρˣˣₖ₃, AVρʸʸₖ₃, SEρʸʸₖ₃, AVρʸʸₖ₁, SEρʸʸₖ₁,
             AVρᶻᶻₖ₁, SEρᶻᶻₖ₁, AVρᶻᶻₖ₂, SEρᶻᶻₖ₂, AVu⁺, AVu⁻, AVA, u⁺, AVE, Υx, Υy, Υz)
 end
+
 #--------------------------------------------------------------------------------------------------   
 #Functionality to measure the helicity modulus
 function helicityModulusContribution(ψ::State)
@@ -244,13 +297,11 @@ function helicityModulusContribution(ψ::State)
     sumSinY = 0.0
     sumSinZ = 0.0
 
-    L = ψ.consts.L
-    L₃ = ψ.consts.L₃
-    for h_pos = 1:L, v_pos = 1:L, z_pos=1:L₃
-        ϕ = ψ.lattice[h_pos, v_pos, z_pos]
-        ϕᵣ₊₁ = ψ.nb[h_pos, v_pos, z_pos].ϕᵣ₊₁
-        ϕᵣ₊₂ = ψ.nb[h_pos, v_pos, z_pos].ϕᵣ₊₂
-        ϕᵣ₊₃ = ψ.nb[h_pos, v_pos, z_pos].ϕᵣ₊₃
+    for i = 1:length(ψ.lattice)
+        ϕ = ψ.lattice[i]
+        ϕᵣ₊₁ = ψ.nb[i].ϕᵣ₊₁
+        ϕᵣ₊₂ = ψ.nb[i].ϕᵣ₊₂
+        ϕᵣ₊₃ = ψ.nb[i].ϕᵣ₊₃
         sumCosX += ϕ.u⁺*ϕᵣ₊₁.u⁺*cos(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺)
         sumCosY += ϕ.u⁺*ϕᵣ₊₂.u⁺*cos(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺)
         sumCosZ += ϕ.u⁺*ϕᵣ₊₃.u⁺*cos(ϕᵣ₊₃.θ⁺ - ϕ.θ⁺)
@@ -262,4 +313,65 @@ function helicityModulusContribution(ψ::State)
     return (sumCosX, sumCosY, sumCosZ, sumSinX^2, sumSinY^2, sumSinZ^2)
 end
 
+#--------------------------------------------------------------------------------------------------   
+# Uses the helicityModulusContributions to calculate the helicity modulus vector
+function helicityModulus(ψ::State)
+    sum_cos_x, sum_cos_y, sum_cos_z, sum_sin_x2, sum_sin_y2, sum_sin_z2 = helicityModulusContribution(ψ)
+    N = length(ψ.lattice)
+    syst = ψ.consts
+    Υ_x = 2/N*(sum_cos_x - 2*syst.β*sum_sin_x2);
+    Υ_y = 2/N*(sum_cos_y - 2*syst.β*sum_sin_y2)
+    Υ_z = 2/N*(sum_cos_z - 2*syst.β*sum_sin_z2)
+    return [Υ_x, Υ_y, Υ_z]
+end
 
+#--------------------------------------------------------------------------------------------------   
+# Assuming that the state consists of independent layers of 2D systems, calculate the helicity
+# modulus Υ = (Υ_x + Υ_y)/2 for each layer, and return an average.
+function helicityModulus2D(ψ::State)
+    syst = ψ.consts; L = syst.L; L₃ = syst.L₃
+
+    Υ = 0.0
+    for z = 1:L₃
+
+        sum_cos_x = 0.0; sum_cos_y = 0.0; sum_sin_x2 = 0.0; sum_sin_y2 = 0.0
+        for v = 1:L, h = 1:L
+            pos = [v, h, z]
+            ϕ = ψ.lattice[pos...]
+            ϕᵣ₊₁ = ψ.nb[pos...].ϕᵣ₊₁
+            ϕᵣ₊₂ = ψ.nb[pos...].ϕᵣ₊₂
+            
+            sum_cos_x += ϕ.u⁺*ϕᵣ₊₁.u⁺*cos(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺)
+            sum_cos_y += ϕ.u⁺*ϕᵣ₊₂.u⁺*cos(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺)
+            sum_sin_x2 += ϕ.u⁺*ϕᵣ₊₁.u⁺*sin(ϕᵣ₊₁.θ⁺ - ϕ.θ⁺)
+            sum_sin_y2 += ϕ.u⁺*ϕᵣ₊₂.u⁺*sin(ϕᵣ₊₂.θ⁺ - ϕ.θ⁺)
+        end
+    
+        N = L^2
+        Υ_x = 2/N*(sum_cos_x - 2*syst.β*(sum_sin_x2)^2)
+        Υ_y = 2/N*(sum_cos_y - 2*syst.β*(sum_sin_y2)^2)
+
+        Υ += (Υ_x + Υ_y)/2
+    end
+
+    return Υ/L₃
+end
+
+# --------------------------------------------------------------------------------------------------
+# Calculates a list of helicity moduli Υ = (Υ_x + Υ_y)/2, one for each state, in parallel, and
+# returns this list. If twoD == true, we assume the states consist of independent 2D systems.
+function measureHelicityModulus(ψ_list::Array{State,1}; twoD=false)
+    M = length(ψ_list)
+    Υ_list = SharedArray{Float64}(M)
+    if twoD
+        @sync @parallel for i = 1:M
+            Υ_list[i] = helicityModulus2D(ψ_list[i]::State)
+        end
+    else
+        @sync @parallel for i = 1:M
+            Υ_v = helicityModulus(ψ_list[i])
+            Υ_list[i] = (Υ_v[1] + Υ_v[2])/2
+        end
+    end
+    return sdata(Υ_list)
+end

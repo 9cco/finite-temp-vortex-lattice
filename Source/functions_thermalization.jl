@@ -556,7 +556,7 @@ end
 # it is divided in N_SUBS sub-intervals and the differences between the averages of the energies in
 # the sub-intervals are compared with the MC error. The control constants are attempted updated
 # after each energy-interval is calculated.
-function flatThermalization!(ψ_list::Array{State,1}, sim_list::Array{Controls, 1},
+function flatThermalization!(ψ_list::Array{State,1}, sim_list::Array{Controls, 1};
         T_AVG::Int64=2000, N_SUBS::Int64=3, CUTOFF_MAX::Int64=400000, T_QUENCH::Int64=1000, 
         visible::Bool=false, temp_states_filename::AbstractString="therm_temp.statelist")
     
@@ -583,6 +583,7 @@ Thermalization will be ×$(floor(Int64, n_state/(n_workers+1))) as long.")
         println("Controls after initial adjustment:")
         printSimControls(sim_list)
         println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))\n")
+        flush(STDOUT)
     end
     
     # Go T_AVG at a time until we reach CUTOFF_MAX
@@ -605,12 +606,14 @@ Thermalization will be ×$(floor(Int64, n_state/(n_workers+1))) as long.")
                 println("All state energy-curves are flat after $(t+T_AVG+adjustment_mcs)\n\nFinal control constants:")
                 printSimControls(sim_list)
                 println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))")
+                flush(STDOUT)
             end
             return true, t+T_AVG+adjustment_mcs, ψ_list, sim_list, E_matrix
         end
         
         if visible
             println("Thermalization not yet reached after $(t) MCS")
+            flush(STDOUT)
         end
         t += T_AVG
     end
@@ -624,7 +627,7 @@ end
 
 # --------------------------------------------------------------------------------------------------
 function thermalizeLite!(ψ_ref::State, ψ_w::Array{State,1}, sim::Controls; T_AVG = 2500, T_QUENCH = 1000,
-        CUTOFF_MAX = 200000, N_SUBS=10, AVG_EX = 1.5, STABILITY_CUTOFF = 4000, ADJUST_INTERVAL = 400,
+        CUTOFF_MAX = 200000, N_SUBS=10, AVG_EX = 1.5, STABILITY_CUTOFF = 4000, adjust=true,
     temp_ref_filename="therm_temp_ref.state", temp_workers_filename="therm_temp_workers.statelist", visible=false)
     
     nw = length(ψ_w)
@@ -654,16 +657,15 @@ Thermalization will be ×$(floor(Int64, (nw+1)/(num_workers+1))) as long.")
     sim_list = [sim_ref, sim_w...]
     
     # Adjust simulation constants
-    mcs_list, ar_list = adjustSimConstants!(ψ_list, sim_list)
-    adjustment_mcs += maximum(mcs_list)
-    if visible
-        println("\nControls after initial adjustment:")
-        printSimControls(sim_list)
-        println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))")
+    if adjust
+        mcs_list, ar_list = adjustSimConstants!(ψ_list, sim_list)
+        adjustment_mcs += maximum(mcs_list)
+        if visible
+            println("\nControls after initial adjustment:")
+            printSimControls(sim_list)
+            println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))")
+        end
     end
-    
-    # Make future list for the computations that will be done on ψ_w.
-    ψ_future_list = [Future() for i=1:nw]
     
     while t < CUTOFF_MAX
         
@@ -671,19 +673,6 @@ Thermalization will be ×$(floor(Int64, (nw+1)/(num_workers+1))) as long.")
         ψ_list, E_matrix = nMCSEnergy!(ψ_list, sim_list, T_AVG, [E(ψ) for ψ in ψ_list])
         E_ref = E_matrix[1,:]
         E_w = E_matrix[2:end, :]
-        
-        # Doing this for all the worker states
-        #for w=1:nw
-        #    ψ_future_list[w] = @spawn nMCSEnergy(ψ_w[w], sim_w[w], T_AVG, ADJUST_INTERVAL, E(ψ_w[w]))
-        #end
-        # Similar for the high T in master
-        #ψ_ref, E_ref, sim_ref, mcs_ref = nMCSEnergyDynamic(ψ_ref, sim_ref, T_AVG, ADJUST_INTERVAL, E(ψ_ref))
-        
-        # Gather results from workers
-        #for w=1:nw
-        #    ψ_w[w], E_w[w,:], sim_w[w], mcs_w[w] = fetch(ψ_future_list[w])
-        #    ΔE_w[w, :] = E_ref - E_w[w,:]
-        #end
         
         # Finding energy differences
         for w = 1:nw
@@ -721,8 +710,10 @@ Jagged energy landscape?")
         end
         
         # Adjust constants
-        mcs_list, ar_list = adjustSimConstants!(ψ_list, sim_list)
-        adjustment_mcs += max(maximum(mcs_w),mcs_ref)
+        if adjust
+            mcs_list, ar_list = adjustSimConstants!(ψ_list, sim_list)
+            adjustment_mcs += max(maximum(mcs_w),mcs_ref)
+        end
         
         t += T_AVG
     end

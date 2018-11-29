@@ -17,10 +17,10 @@ function fᵣ(ϕ::LatticeSite,nb::NearestNeighbors,h_pos::Int64,c::SystConstants
     # Complete kinetic term.
     Fₖ = 2*((ϕ.u⁺)^2 - ϕ.u⁺*ϕᵣ₊₁.u⁺*cos(ϕᵣ₊₁.θ⁺-ϕ.θ⁺-ϕ.A[1])
           + (ϕ.u⁺)^2 - ϕ.u⁺*ϕᵣ₊₂.u⁺*cos(ϕᵣ₊₂.θ⁺-ϕ.θ⁺-A₂)
-     + c.κ₅*(ϕ.u⁺)^2 - ϕ.u⁺*ϕᵣ₊₃.u⁺*cos(ϕᵣ₊₃.θ⁺-ϕ.θ⁺-ϕ.A[3])
+    + c.κ₅*((ϕ.u⁺)^2 - ϕ.u⁺*ϕᵣ₊₃.u⁺*cos(ϕᵣ₊₃.θ⁺-ϕ.θ⁺-ϕ.A[3]))
           + (ϕ.u⁻)^2 - ϕ.u⁻*ϕᵣ₊₁.u⁻*cos(ϕᵣ₊₁.θ⁻-ϕ.θ⁻-ϕ.A[1])
           + (ϕ.u⁻)^2 - ϕ.u⁻*ϕᵣ₊₂.u⁻*cos(ϕᵣ₊₂.θ⁻-ϕ.θ⁻-A₂)
-     + c.κ₅*(ϕ.u⁻)^2 - ϕ.u⁻*ϕᵣ₊₃.u⁻*cos(ϕᵣ₊₃.θ⁻-ϕ.θ⁻-ϕ.A[3]))
+    + c.κ₅*((ϕ.u⁻)^2 - ϕ.u⁻*ϕᵣ₊₃.u⁻*cos(ϕᵣ₊₃.θ⁻-ϕ.θ⁻-ϕ.A[3])))
     # Potential energy term
     Fᵥ = ((ϕ.u⁺*ϕ.u⁻)^2*(2+c.ν*cos(2*(ϕ.θ⁻-ϕ.θ⁺))) 
           -(1-1/c.β)*(ϕ.u⁺)^2 + 0.5*(ϕ.u⁺)^4
@@ -38,7 +38,7 @@ function fᵣ(ϕ::LatticeSite,nb::NearestNeighbors,h_pos::Int64,c::SystConstants
         - ϕ.u⁺*ϕᵣ₊₂.u⁻*sin(ϕᵣ₊₂.θ⁻-ϕ.θ⁺ - A₂)    # Here too
         + ϕ.u⁻*ϕᵣ₊₁.u⁺*sin(ϕᵣ₊₁.θ⁺ - ϕ.θ⁻ - ϕ.A[1]) 
         - ϕ.u⁺*ϕᵣ₊₁.u⁻*sin(ϕᵣ₊₁.θ⁻ - ϕ.θ⁺ - ϕ.A[1]))
-    energy = Fᵥ #+ Fₖ #+ Fₐₙ + Fₘ
+    energy = Fᵥ + Fₖ #+ Fₐₙ + Fₘ
 end
 
 # ---------------------------------------------------------------------------------------------------
@@ -203,7 +203,7 @@ function ΔE(ϕ′::LatticeSite, ϕ::LatticeSite, nb::NearestNeighbors, nnb::Nex
     # Then we also have to include the position r-z
     δFₐ += maxwell(ϕᵣ₋₃, ϕᵣ₊₁₋₃, ϕᵣ₊₂₋₃, ϕ′, c.g⁻²) - maxwell(ϕᵣ₋₃, ϕᵣ₊₁₋₃, ϕᵣ₊₂₋₃, ϕ, c.g⁻²)
 
-	δE = δFᵥ + δFₐ #+ δFₖ# + δFₐₙ + δFₘ 
+	δE = δFᵥ + δFₐ + δFₖ# + δFₐₙ + δFₘ 
 end
 
 # --------------------------------------------------------------------------------------------------

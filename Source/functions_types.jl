@@ -229,7 +229,15 @@ function State(choice::Int64, consts::SystConstants; u⁺=1.0, u⁻=0.0, θ⁺=0
 		nnb = latticeNextNeighbors(lattice,L,L₃)
 		nnnb = latticeNNNeighbors(lattice,L,L₃)
         ψ = State(lattice, consts, nb, nnb, nnnb)
-    # We only have choices 1 - 5 so far so other values for choice will give an error.
+    elseif choice == 6
+        # All fields random except for amplitudes
+        lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
+                               rand(Uniform(0,2π)), rand(Uniform(0,2π)), u⁺, u⁻) for v=1:L, h=1:L, z=1:L₃]
+		nb = latticeNeighbors(lattice,L,L₃)
+		nnb = latticeNextNeighbors(lattice,L,L₃)
+		nnnb = latticeNNNeighbors(lattice,L,L₃)
+        ψ = State(lattice, consts, nb, nnb, nnnb)
+    # We only have choices 1 - 6 so far so other values for choice will give an error.
     else
         throw(DomainError())
     end

@@ -936,12 +936,35 @@ function averageOrdParam(ψ::State)
     return abs(η⁺/N), abs(η⁻/N)
 end
 
+# Assuming ψ.lattice is 3-dimensional but consisting of L₃ independent 2D systems, we calculate the
+# average over each plane, take the absolute value and then average this absolute value over the planes.
+function averageOrdParam2D(ψ::State)
+    L = ψ.consts.L; L₃ = ψ.consts.L₃
+    N = L^2
+    η⁺_abs = 0.0; η⁻_abs = 0.0
+    for z = 1:L₃
+        η⁺ = Complex(0.0,0.0); η⁻ = Complex(0.0,0.0)
+        for v = 1:L, h = 1:L
+            ϕ = ψ.lattice[v,h,z]
+            η⁺ += ϕ.u⁺*exp(im*ϕ.θ⁺); η⁻ += ϕ.u⁻*exp(im*ϕ.θ⁻);
+        end
+        η⁺_abs += abs(η⁺/N); η⁻_abs += abs(η⁻/N)
+    end
+    return η⁺_abs/L₃, η⁻_abs/L₃
+end
+
 # Given a list of states measured by MCMC calculation, calculate the average order parameter over this list 
-function measureOrdParam(ψ_list::Array{State,1})
+function measureOrdParam(ψ_list::Array{State,1}; twoD=false)
     M = length(ψ_list)
     η⁺_abs_meas = SharedArray{Float64}(M); η⁻_abs_meas = SharedArray{Float64}(M)
-    @sync @parallel for i = 1:M
-        η⁺_abs_meas[i], η⁻_abs_meas[i] = averageOrdParam(ψ_list[i])
+    if twoD
+        @sync @parallel for i = 1:M
+            η⁺_abs_meas[i], η⁻_abs_meas[i] = averageOrdParam2D(ψ_list[i])
+        end
+    else
+        @sync @parallel for i = 1:M
+            η⁺_abs_meas[i], η⁻_abs_meas[i] = averageOrdParam(ψ_list[i])
+        end
     end
     return sdata(η⁺_abs_meas), sdata(η⁻_abs_meas)
 end

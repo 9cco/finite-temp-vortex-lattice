@@ -84,11 +84,16 @@ function avgErr{T<:Real}(A::Array{T,1})
     avg_A = mean(A)
     sm_A = 0.0
     M = length(A)
+    M > 1 || throw(error("ERROR: List of size >1 required"))
     for m = 1:M
         sm_A += A[m]^2
     end
     sm_A = sm_A/M
     τ = M/effective_sample_size(A)
+    if τ<0
+        println("Warning: Calculated correlation time is < 0. That is weird.")
+        τ = abs(τ)
+    end
     err_A = sqrt((1+2*τ)*abs(sm_A - avg_A^2)/(M-1))
     
     return avg_A, err_A
