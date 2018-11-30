@@ -86,8 +86,8 @@ function gaugeStiffness{T<:Real}(k::Array{T,1}, ψ::State)
         gs_zz += (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])*exp(im*(k⋅r))
     end
 
-    norm = (2π*L)^3
-    return abs(gs_xx)/norm, abs(gs_yy)/norm, abs(gs_zz)/norm
+    norm = two_pi^2*L^3
+    return abs2(gs_xx)/norm, abs2(gs_yy)/norm, abs2(gs_zz)/norm
 end
 
 # -------------------------------------------------------------------------------------------------

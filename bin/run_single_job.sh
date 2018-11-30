@@ -16,7 +16,7 @@
 #PBS -e vortex.e
 #PBS -l select=1:ncpus=16
 #PBS -l walltime=01:00:00
-#PBS -l pmem=1000MB
+#PBS -l pmem=8000MB
 
 ##################################################################
 # Prepare the simulation
@@ -24,7 +24,7 @@
 
 SOURCE_PATH="/work/fredrkro/finite-temp-vortex-lattice/Source"
 JULIA_PATH="/home/ntnu/fredrkro/bin/julia"
-JULIA_SCRIPT="driver.jl"
+JULIA_SCRIPT="thermalize_XY_gauge.jl"
 CPUS="15" # Needs to be the same as ncpus above
 OUTPUT="julia.output"
 FOLDER_FILE="last_folder.txt"

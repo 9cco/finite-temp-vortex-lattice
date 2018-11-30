@@ -32,9 +32,9 @@ g = 1.0    # Gauge coupling
 ν = 0.3    # Anisotropy
 
 # Other parameters
-L = 32     # System length
-L₃ = 32
-T_list = [T for T = 1.2:0.2:6.0]
+L = 12     # System length
+L₃ = 12
+T_list = [T for T = 0.1:0.2:2.0]
 κ₅ = 1.0
 
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
@@ -42,14 +42,14 @@ f = 0.0/L
 println("f set to $(f)")
 sim = Controls(π-π/12, 1.0, 4.0)
 
-M = 50
+M = 300
 # Setup measurement storage
 N_T = length(T_list)
 #u⁺_avg_by_T = Array{Float64}(N_T); u⁻_avg_by_T = Array{Float64}(N_T)
 #u⁺_err_by_T = Array{Float64}(N_T); u⁻_err_by_T = Array{Float64}(N_T)
 
-η⁺_avg_by_T = Array{Float64}(N_T); η⁻_avg_by_T = Array{Float64}(N_T)
-η⁺_err_by_T = Array{Float64}(N_T); η⁻_err_by_T = Array{Float64}(N_T)
+#η⁺_avg_by_T = Array{Float64}(N_T); η⁻_avg_by_T = Array{Float64}(N_T)
+#η⁺_err_by_T = Array{Float64}(N_T); η⁻_err_by_T = Array{Float64}(N_T)
 
 Υ_avg_by_T = Array{Float64}(N_T)
 Υ_err_by_T = Array{Float64}(N_T);
@@ -101,7 +101,7 @@ println([E(init_ψ_list[i])/length(init_ψ_list[i].lattice) for i = 1:length(ini
 
     # Thermalize states
     @time thermalized, t₀, ψ_ref, E_ref, sim_ref, ψ_w, E_w, sim_w = thermalizeLite!(ψ_ref, ψ_w, copy(sim); visible=true,
-        STABILITY_CUTOFF=6000)
+        STABILITY_CUTOFF=10000)
 
     # Preform measurements by saving states to file.
     ψ_list = [ψ_ref, ψ_w...]
@@ -115,18 +115,18 @@ println([E(init_ψ_list[i])/length(init_ψ_list[i].lattice) for i = 1:length(ini
 
     # Use states to produce lists of order-parameters
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    η⁺_list, η⁻_list = measureOrdParam(ψ_measured)
+    #η⁺_list, η⁻_list = measureOrdParam(ψ_measured)
     # Get averages and errors
-    η⁺_avg, η⁺_err = avgErr(η⁺_list); η⁻_avg, η⁻_err = avgErr(η⁻_list)
+    #η⁺_avg, η⁺_err = avgErr(η⁺_list); η⁻_avg, η⁻_err = avgErr(η⁻_list)
     # Get correlation times
-    η⁺_τ = M/effective_sample_size(η⁺_list); η⁻_τ = M/effective_sample_size(η⁻_list)
-    η⁺_avg_r, η⁺_err_r = scientificRounding(η⁺_avg, η⁺_err); η⁻_avg_r, η⁻_err_r = scientificRounding(η⁻_avg, η⁻_err)
-    println("|⟨η⁺⟩| = $(η⁺_avg_r) ± $(η⁺_err_r)\t\tτ = $(η⁺_τ)")
-    println("|⟨η⁻⟩| = $(η⁻_avg_r) ± $(η⁻_err_r)\t\tτ = $(η⁻_τ)")
+    #η⁺_τ = M/effective_sample_size(η⁺_list); η⁻_τ = M/effective_sample_size(η⁻_list)
+    #η⁺_avg_r, η⁺_err_r = scientificRounding(η⁺_avg, η⁺_err); η⁻_avg_r, η⁻_err_r = scientificRounding(η⁻_avg, η⁻_err)
+    #println("|⟨η⁺⟩| = $(η⁺_avg_r) ± $(η⁺_err_r)\t\tτ = $(η⁺_τ)")
+    #println("|⟨η⁻⟩| = $(η⁻_avg_r) ± $(η⁻_err_r)\t\tτ = $(η⁻_τ)")
     
     # Save result to array
-    η⁺_avg_by_T[i] = η⁺_avg; η⁻_avg_by_T[i] = η⁻_avg;
-    η⁺_err_by_T[i] = η⁺_err; η⁻_err_by_T[i] = η⁻_err;
+    #η⁺_avg_by_T[i] = η⁺_avg; η⁻_avg_by_T[i] = η⁻_avg;
+    #η⁺_err_by_T[i] = η⁺_err; η⁻_err_by_T[i] = η⁻_err;
     
     # Use states to produce list of helicity moduli
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -181,10 +181,10 @@ end
 #plt = scatter(T_list, u⁻_avg_by_T, yerror=u⁻_err_by_T; xlabel="T", ylabel="⟨|η⁺|⟩", title="Amplitude T dependence")
 #savefig(plt, "-amplitude_by_T.pdf")
 
-plt = scatter(T_list, η⁺_avg_by_T, yerror=η⁺_err_by_T; xlabel="T", ylabel="|⟨η⁺⟩|", title="OP T dependence")
-savefig(plt, "OP+_by_T.pdf")
-plt = scatter(T_list, η⁻_avg_by_T, yerror=η⁻_err_by_T; xlabel="T", ylabel="|⟨η⁻⟩|", title="OP T dependence")
-savefig(plt, "OP-_by_T.pdf")
+#plt = scatter(T_list, η⁺_avg_by_T, yerror=η⁺_err_by_T; xlabel="T", ylabel="|⟨η⁺⟩|", title="OP T dependence")
+#savefig(plt, "OP+_by_T.pdf")
+#plt = scatter(T_list, η⁻_avg_by_T, yerror=η⁻_err_by_T; xlabel="T", ylabel="|⟨η⁻⟩|", title="OP T dependence")
+#savefig(plt, "OP-_by_T.pdf")
 
 plt = scatter(T_list, Υ_avg_by_T, yerror=Υ_err_by_T; xlabel="T", ylabel="Υ", title="Helicity modulus T dependence")
 savefig(plt, "Hel_Mod_by_T.pdf")
@@ -200,10 +200,10 @@ savefig(plt, "x3_gauge_stiff_by_T.pdf")
 # Save data
 mkcd("Data_Arrays")
 writedlm("Temp_list.data", T_list, ":")
-writedlm("eta+_avg.data", η⁺_avg_by_T, ":")
-writedlm("eta+_err.data", η⁺_err_by_T, ":")
-writedlm("eta-_avg.data", η⁻_avg_by_T, ":")
-writedlm("eta-_err.data", η⁻_err_by_T, ":")
+#writedlm("eta+_avg.data", η⁺_avg_by_T, ":")
+#writedlm("eta+_err.data", η⁺_err_by_T, ":")
+#writedlm("eta-_avg.data", η⁻_avg_by_T, ":")
+#writedlm("eta-_err.data", η⁻_err_by_T, ":")
 writedlm("hel_mod_avg.data", Υ_avg_by_T, ":")
 writedlm("hel_mod_err.data", Υ_err_by_T, ":")
 writedlm("x2_gs_avg.data", ρˣ₂_avg_by_T, ":")

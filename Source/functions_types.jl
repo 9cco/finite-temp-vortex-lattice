@@ -1,6 +1,44 @@
 #
 #   Utility functions for the types
 #
+
+####################################################################################################
+#                            Functions for ::Controls
+#
+####################################################################################################
+
+function Controls(θ_max::Float64, u_max::Float64, A_max::Float64)
+    return Controls(θ_max, u_max, A_max, Uniform(-θ_max,θ_max), Uniform(-u_max,u_max), Uniform(-A_max, A_max))
+end
+
+function Controls()
+    return Controls(π/3, 0.4, 3.0)
+end
+
+# -------------------------------------------------------------------------------------------------
+function setValues!(sim_target::Controls, sim_source::Controls)
+    sim_target.θmax = sim_source.θmax
+    sim_target.umax = sim_source.umax
+    sim_target.Amax = sim_source.Amax
+    sim_target.θ_rng = Uniform(-sim_source.θmax,sim_source.θmax)
+    sim_target.u_rng = Uniform(-sim_source.umax,sim_source.umax)
+    sim_target.A_rng = Uniform(-sim_source.Amax,sim_source.Amax)
+    return 
+end
+
+# -------------------------------------------------------------------------------------------------
+function printSimControls(sim_list::Array{Controls})
+    println("State\tθmax\t\t\tumax\tAmax")
+    for i = 1:length(sim_list)
+        println("$i\t$(sim_list[i].θmax)\t$(sim_list[i].umax)\t$(sim_list[i].Amax)")
+    end
+    return
+end
+
+####################################################################################################
+#                            Copy functions
+#
+####################################################################################################
 import Base.copy
 function copy(ϕ::LatticeSite)
     LatticeSite([ϕ.A[1],ϕ.A[2],ϕ.A[3]],ϕ.θ⁺,ϕ.θ⁻,ϕ.u⁺,ϕ.u⁻)
@@ -84,7 +122,7 @@ function copy(ψ::State)
 	State(lattice, consts, nbl, nnbl, nnnbl)
 end
 function copy(sim::Controls)
-    return Controls(sim.θmax, sim.umax, sim.Amax, Uniform(-sim.θmax,sim.θmax), Uniform(-sim.umax,sim.umax), Uniform(-sim.Amax,sim.Amax))
+    return Controls(sim.θmax, sim.umax, sim.Amax)
 end
 
 # -------------------------------------------------------------------------------------------------
@@ -523,43 +561,3 @@ function maxMinAmplitudes(ψ::State)
 	return ex_u⁺[1], ex_u⁺[2], ex_u⁻[1], ex_u⁻[2]
 end
 
-####################################################################################################
-#                            Functions for ::Controls
-#
-####################################################################################################
-
-function Controls(θ_max::Float64, u_max::Float64, A_max::Float64)
-    return Controls(θ_max, u_max, A_max, Uniform(-θ_max,θ_max), Uniform(-u_max,u_max), Uniform(-A_max, A_max))
-end
-
-function Controls()
-    return Controls(π/3, 0.4, 3.0)
-end
-
-# -------------------------------------------------------------------------------------------------
-function setValues!(sim_target::Controls, sim_source::Controls)
-    sim_target.θmax = sim_source.θmax
-    sim_target.umax = sim_source.umax
-    sim_target.Amax = sim_source.Amax
-    sim_target.θ_rng = Uniform(-sim_source.θmax,sim_source.θmax)
-    sim_target.u_rng = Uniform(-sim_source.umax,sim_source.umax)
-    sim_target.A_rng = Uniform(-sim_source.Amax,sim_source.Amax)
-    return 
-end
-
-# -------------------------------------------------------------------------------------------------
-function printSimControls(sim_list::Array{Controls})
-    println("State\tθmax\t\t\tumax\tAmax")
-    for i = 1:length(sim_list)
-        println("$i\t$(sim_list[i].θmax)\t$(sim_list[i].umax)\t$(sim_list[i].Amax)")
-    end
-    return
-end
-
-
-####################################################################################################
-#                            Functions for ::Neighbors, ::NextNeighbors, ::NNNeighbors
-#
-####################################################################################################
-
-# -------------------------------------------------------------------------------------------------
