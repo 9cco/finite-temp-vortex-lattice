@@ -108,7 +108,7 @@ function gaugeStiffness(ψ_list::Array{State,1})
     k₃ = [0.0, 0.0, 2π/L]
 
     @sync @parallel for m = 1:M
-        ρˣˣₖ₂[m], _, ρˣˣₖ₂[m] = gaugeStiffness(k₂, ψ_list[m])
+        ρˣˣₖ₂[m], _, ρᶻᶻₖ₂[m] = gaugeStiffness(k₂, ψ_list[m])
         ρˣˣₖ₃[m], ρʸʸₖ₃[m], _ = gaugeStiffness(k₃, ψ_list[m])
         _, ρʸʸₖ₁[m], ρᶻᶻₖ₁[m] = gaugeStiffness(k₁, ψ_list[m])
     end

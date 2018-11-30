@@ -781,7 +781,7 @@ end
 # Given np+1 uncorrelated states in ψ_list we use these to make M measurements of the states by splitting
 # the M measurements on the np workers as well as the master process. The measured states are continuously
 # stored in an file which can later be read to produce a measurement array of lattices.
-function measurementSeries!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δt::Int64; filename="state_list.data")
+function measurementSeries!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δt::Int64; filename="state_list.data", append=false)
     syst = ψ_list[1].consts
     L = syst.L
     
@@ -800,7 +800,11 @@ function measurementSeries!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δ
     length(ψ_list) >= np+1 || throw(error("ERROR: Not enough states in list"))
     
     # Initialize file
-    save([ψ_list[np+1]], filename)
+    if append
+        addToList(ψ_list[np+1], filename)
+    else
+        save([ψ_list[np+1]], filename)
+    end
     
     println("Starting $(M) measurements on $(np) processes doing max $(M_min + Int(ceil(nw/np))) measurements each
 on a $(L)×$(L) system giving in total $(M+1) measurements to file")

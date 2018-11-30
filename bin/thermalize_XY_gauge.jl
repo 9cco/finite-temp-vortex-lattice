@@ -32,8 +32,8 @@ g = 1.0    # Gauge coupling
 ν = 0.3    # Anisotropy
 
 # Other parameters
-L = 12     # System length
-L₃ = 12
+L = 32     # System length
+L₃ = 32
 T_list = [T for T = 1.2:0.2:6.0]
 κ₅ = 1.0
 
@@ -42,7 +42,7 @@ f = 0.0/L
 println("f set to $(f)")
 sim = Controls(π-π/12, 1.0, 4.0)
 
-M = 25
+M = 50
 # Setup measurement storage
 N_T = length(T_list)
 #u⁺_avg_by_T = Array{Float64}(N_T); u⁻_avg_by_T = Array{Float64}(N_T)
@@ -111,6 +111,7 @@ println([E(init_ψ_list[i])/length(init_ψ_list[i].lattice) for i = 1:length(ini
 
     # Load states to memory.
     ψ_measured = loadStates(MEASURE_FILE)
+    M = length(ψ_measured)
 
     # Use states to produce lists of order-parameters
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
