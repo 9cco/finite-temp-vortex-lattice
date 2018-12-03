@@ -97,23 +97,23 @@ function gaugeStiffness(ψ_list::Array{State,1})
     M = length(ψ_list)
     L = ψ_list[1].consts.L
 
-    ρˣˣₖ₂ = SharedArray{Float64}(M)
-    ρˣˣₖ₃ = SharedArray{Float64}(M)
-    ρʸʸₖ₁ = SharedArray{Float64}(M)
-    ρʸʸₖ₃ = SharedArray{Float64}(M)
-    ρᶻᶻₖ₁ = SharedArray{Float64}(M)
-    ρᶻᶻₖ₂ = SharedArray{Float64}(M)
+    ρˣˣₖ₂ = Array{Float64}(M)
+    ρˣˣₖ₃ = Array{Float64}(M)
+    ρʸʸₖ₁ = Array{Float64}(M)
+    ρʸʸₖ₃ = Array{Float64}(M)
+    ρᶻᶻₖ₁ = Array{Float64}(M)
+    ρᶻᶻₖ₂ = Array{Float64}(M)
     k₁ = [2π/L, 0.0, 0.0]
     k₂ = [0.0, 2π/L, 0.0]
     k₃ = [0.0, 0.0, 2π/L]
 
-    @sync @parallel for m = 1:M
+    for m = 1:M
         ρˣˣₖ₂[m], _, ρᶻᶻₖ₂[m] = gaugeStiffness(k₂, ψ_list[m])
         ρˣˣₖ₃[m], ρʸʸₖ₃[m], _ = gaugeStiffness(k₃, ψ_list[m])
         _, ρʸʸₖ₁[m], ρᶻᶻₖ₁[m] = gaugeStiffness(k₁, ψ_list[m])
     end
 
-    return sdata(ρˣˣₖ₂), sdata(ρˣˣₖ₃), sdata(ρʸʸₖ₁), sdata(ρʸʸₖ₃), sdata(ρᶻᶻₖ₁), sdata(ρᶻᶻₖ₂)
+    return ρˣˣₖ₂, ρˣˣₖ₃, ρʸʸₖ₁, ρʸʸₖ₃, ρᶻᶻₖ₁, ρᶻᶻₖ₂
 end
 
 
@@ -361,17 +361,22 @@ end
 # Calculates a list of helicity moduli Υ = (Υ_x + Υ_y)/2, one for each state, in parallel, and
 # returns this list. If twoD == true, we assume the states consist of independent 2D systems.
 function measureHelicityModulus(ψ_list::Array{State,1}; twoD=false)
+    # Problem with memory management by usage of SharedArray and @sync @parallel for loop
     M = length(ψ_list)
-    Υ_list = SharedArray{Float64}(M)
+#    Υ_list = SharedArray{Float64}(M)
+    Υ_list = Array{Float64}(M)
     if twoD
-        @sync @parallel for i = 1:M
+#        @sync @parallel for i = 1:M
+        for i = 1:M
             Υ_list[i] = helicityModulus2D(ψ_list[i]::State)
         end
     else
-        @sync @parallel for i = 1:M
+#        @sync @parallel for i = 1:M
+        for i = 1:M
             Υ_v = helicityModulus(ψ_list[i])
             Υ_list[i] = (Υ_v[1] + Υ_v[2])/2
         end
     end
-    return sdata(Υ_list)
+#    return sdata(Υ_list)
+    return Υ_list
 end

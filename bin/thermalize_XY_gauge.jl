@@ -42,7 +42,7 @@ f = 0.0/L
 println("f set to $(f)")
 sim = Controls(π-π/12, 1.0, 4.0)
 
-M = 300
+M = 600
 # Setup measurement storage
 N_T = length(T_list)
 #u⁺_avg_by_T = Array{Float64}(N_T); u⁻_avg_by_T = Array{Float64}(N_T)
@@ -51,11 +51,11 @@ N_T = length(T_list)
 #η⁺_avg_by_T = Array{Float64}(N_T); η⁻_avg_by_T = Array{Float64}(N_T)
 #η⁺_err_by_T = Array{Float64}(N_T); η⁻_err_by_T = Array{Float64}(N_T)
 
-Υ_avg_by_T = Array{Float64}(N_T)
-Υ_err_by_T = Array{Float64}(N_T);
+#Υ_avg_by_T = Array{Float64}(N_T)
+#Υ_err_by_T = Array{Float64}(N_T);
 
-ρˣ₂_avg_by_T = Array{Float64}(N_T); ρˣ₃_avg_by_T = Array{Float64}(N_T); ρʸ₁_avg_by_T = Array{Float64}(N_T)
-ρˣ₂_err_by_T = Array{Float64}(N_T); ρˣ₃_err_by_T = Array{Float64}(N_T); ρʸ₁_err_by_T = Array{Float64}(N_T)
+#ρˣ₂_avg_by_T = Array{Float64}(N_T); ρˣ₃_avg_by_T = Array{Float64}(N_T); ρʸ₁_avg_by_T = Array{Float64}(N_T)
+#ρˣ₂_err_by_T = Array{Float64}(N_T); ρˣ₃_err_by_T = Array{Float64}(N_T); ρʸ₁_err_by_T = Array{Float64}(N_T)
 
 # Make ab inito un-correlated phases state
 nw = max(1,nprocs()-1) # The number of low temperature states needed
@@ -78,7 +78,7 @@ plt = plot(1:size(E_matrix,2), [E_matrix[s,:]./N for s = 1:size(E_matrix,1)]; xl
 savefig(plt, "initial_states_thermalization_last_average.pdf")
 
 println("Initial energies:")
-println([E(init_ψ_list[i])/length(init_ψ_list[i].lattice) for i = 1:length(init_ψ_list)])
+println([E(init_ψ_list[i])/N for i = 1:length(init_ψ_list)])
 
 
 # Then preform thermalization and measurement for each temperature individually in separate folders
@@ -101,7 +101,16 @@ println([E(init_ψ_list[i])/length(init_ψ_list[i].lattice) for i = 1:length(ini
 
     # Thermalize states
     @time thermalized, t₀, ψ_ref, E_ref, sim_ref, ψ_w, E_w, sim_w = thermalizeLite!(ψ_ref, ψ_w, copy(sim); visible=true,
-        STABILITY_CUTOFF=10000)
+        STABILITY_CUTOFF=30000)
+    # If we didn't manage to thermalize, try to go back to larger simulation constants
+    #if !thermalized
+    #    ψ_list = [ψ_ref, ψ_w...]
+    #    sim_list = [copy(sim) for ψ in ψ_list]
+    #    # Run for 1/4 of the previous thermalization time with larger constants
+    #    ψ_list, E_matrix = nMCSEnergy(ψ_list, sim_list, floor(Int64, t₀/4)+1, [E(ψ) for ψ in ψ_list])
+
+    println("Thermalized energies:")
+    println([E(ψ_ref), [E(ψ) for ψ in ψ_w]...])
 
     # Preform measurements by saving states to file.
     ψ_list = [ψ_ref, ψ_w...]
@@ -110,8 +119,8 @@ println([E(init_ψ_list[i])/length(init_ψ_list[i].lattice) for i = 1:length(ini
     @time measurementSeries!(ψ_list, sim_ref, M, Δt; filename=MEASURE_FILE)
 
     # Load states to memory.
-    ψ_measured = loadStates(MEASURE_FILE)
-    M = length(ψ_measured)
+    #ψ_measured = loadStates(MEASURE_FILE)
+    #M = length(ψ_measured)
 
     # Use states to produce lists of order-parameters
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -130,30 +139,30 @@ println([E(init_ψ_list[i])/length(init_ψ_list[i].lattice) for i = 1:length(ini
     
     # Use states to produce list of helicity moduli
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    Υ_list = measureHelicityModulus(ψ_measured)
+    #Υ_list = measureHelicityModulus(ψ_measured)
     # Get averages and errors
-    Υ_avg, Υ_err = avgErr(Υ_list)
+    #Υ_avg, Υ_err = avgErr(Υ_list)
     # Get correlation times
-    Υ_τ = M/effective_sample_size(Υ_list)
-    Υ_avg_r, Υ_err_r = scientificRounding(Υ_avg, Υ_err)
-    println("⟨Υ⟩ = $(Υ_avg_r) ± $(Υ_err_r)\t\tτ = $(Υ_τ)")
+    #Υ_τ = M/effective_sample_size(Υ_list)
+    #Υ_avg_r, Υ_err_r = scientificRounding(Υ_avg, Υ_err)
+    #println("⟨Υ⟩ = $(Υ_avg_r) ± $(Υ_err_r)\t\tτ = $(Υ_τ)")
     
     # Save result to array
-    Υ_avg_by_T[i] = Υ_avg; Υ_err_by_T[i] = Υ_err
+    #Υ_avg_by_T[i] = Υ_avg; Υ_err_by_T[i] = Υ_err
 
     # Use states to produce lists of gauge-stiffnesses
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ρˣ₂_list, ρˣ₃_list, ρʸ₁_list, ρʸ₃_list, ρᶻ₁_list, ρᶻ₂_list = gaugeStiffness(ψ_measured)
+    #ρˣ₂_list, ρˣ₃_list, ρʸ₁_list, ρʸ₃_list, ρᶻ₁_list, ρᶻ₂_list = gaugeStiffness(ψ_measured)
     # Get averages and errors
-    ρˣ₂_avg, ρˣ₂_err = avgErr(ρˣ₂_list); ρˣ₃_avg, ρˣ₃_err = avgErr(ρˣ₃_list); ρʸ₁_avg, ρʸ₁_err = avgErr(ρʸ₁_list)
+    #ρˣ₂_avg, ρˣ₂_err = avgErr(ρˣ₂_list); ρˣ₃_avg, ρˣ₃_err = avgErr(ρˣ₃_list); ρʸ₁_avg, ρʸ₁_err = avgErr(ρʸ₁_list)
     # Get correlation times and rounding for print
-    ρˣ₂_τ = M/effective_sample_size(ρˣ₂_list)
-    ρˣ₂_avg_r, ρˣ₂_err_r = scientificRounding(ρˣ₂_avg, ρˣ₂_err);
-    println("ρˣ(k₂) = $(ρˣ₂_avg_r) ± $(ρˣ₂_err_r)\t\tτ = $(ρˣ₂_τ)")
+    #ρˣ₂_τ = M/effective_sample_size(ρˣ₂_list)
+    #ρˣ₂_avg_r, ρˣ₂_err_r = scientificRounding(ρˣ₂_avg, ρˣ₂_err);
+    #println("ρˣ(k₂) = $(ρˣ₂_avg_r) ± $(ρˣ₂_err_r)\t\tτ = $(ρˣ₂_τ)")
 
     # Save results to arrays
-    ρˣ₂_avg_by_T[i] = ρˣ₂_avg; ρˣ₃_avg_by_T[i] = ρˣ₃_avg; ρʸ₁_avg_by_T[i] = ρʸ₁_avg
-    ρˣ₂_err_by_T[i] = ρˣ₂_err; ρˣ₃_err_by_T[i] = ρˣ₃_err; ρʸ₁_err_by_T[i] = ρʸ₁_err
+    #ρˣ₂_avg_by_T[i] = ρˣ₂_avg; ρˣ₃_avg_by_T[i] = ρˣ₃_avg; ρʸ₁_avg_by_T[i] = ρʸ₁_avg
+    #ρˣ₂_err_by_T[i] = ρˣ₂_err; ρˣ₃_err_by_T[i] = ρˣ₃_err; ρʸ₁_err_by_T[i] = ρʸ₁_err
 
     # Use states to produce lists of order-parameter amplitudes
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -171,6 +180,7 @@ println([E(init_ψ_list[i])/length(init_ψ_list[i].lattice) for i = 1:length(ini
     #u⁺_err_by_T[i] = u⁺_err; u⁻_err_by_T[i] = u⁻_err;
 
     cd("../")
+    @everywhere gc()
 end
 
 
@@ -186,31 +196,31 @@ end
 #plt = scatter(T_list, η⁻_avg_by_T, yerror=η⁻_err_by_T; xlabel="T", ylabel="|⟨η⁻⟩|", title="OP T dependence")
 #savefig(plt, "OP-_by_T.pdf")
 
-plt = scatter(T_list, Υ_avg_by_T, yerror=Υ_err_by_T; xlabel="T", ylabel="Υ", title="Helicity modulus T dependence")
-savefig(plt, "Hel_Mod_by_T.pdf")
+#plt = scatter(T_list, Υ_avg_by_T, yerror=Υ_err_by_T; xlabel="T", ylabel="Υ", title="Helicity modulus T dependence")
+#savefig(plt, "Hel_Mod_by_T.pdf")
 
-plt = scatter(T_list, ρˣ₂_avg_by_T, yerror=ρˣ₂_err_by_T; xlabel="T", ylabel="⟨ρˣ₂⟩", title="|Σᵣ(∇×A)ˣeⁱᵏʳ)| for k = (0,2π/L,0)")
-savefig(plt, "x2_gauge_stiff_by_T.pdf")
-plt = scatter(T_list, ρˣ₃_avg_by_T, yerror=ρˣ₃_err_by_T; xlabel="T", ylabel="⟨ρˣ₃⟩", title="|Σᵣ(∇×A)ˣeⁱᵏʳ)| for k = (0,0,2π/L)")
-savefig(plt, "x3_gauge_stiff_by_T.pdf")
-plt = scatter(T_list, ρʸ₁_avg_by_T, yerror=ρʸ₁_err_by_T; xlabel="T", ylabel="⟨ρʸ₁⟩", title="|Σᵣ(∇×A)ʸeⁱᵏʳ)| for k = (2π/L,0,0)")
-savefig(plt, "x3_gauge_stiff_by_T.pdf")
+#plt = scatter(T_list, ρˣ₂_avg_by_T, yerror=ρˣ₂_err_by_T; xlabel="T", ylabel="⟨ρˣ₂⟩", title="|Σᵣ(∇×A)ˣeⁱᵏʳ)| for k = (0,2π/L,0)")
+#savefig(plt, "x2_gauge_stiff_by_T.pdf")
+#plt = scatter(T_list, ρˣ₃_avg_by_T, yerror=ρˣ₃_err_by_T; xlabel="T", ylabel="⟨ρˣ₃⟩", title="|Σᵣ(∇×A)ˣeⁱᵏʳ)| for k = (0,0,2π/L)")
+#savefig(plt, "x3_gauge_stiff_by_T.pdf")
+#plt = scatter(T_list, ρʸ₁_avg_by_T, yerror=ρʸ₁_err_by_T; xlabel="T", ylabel="⟨ρʸ₁⟩", title="|Σᵣ(∇×A)ʸeⁱᵏʳ)| for k = (2π/L,0,0)")
+#savefig(plt, "x3_gauge_stiff_by_T.pdf")
 
 
 # Save data
-mkcd("Data_Arrays")
-writedlm("Temp_list.data", T_list, ":")
+#mkcd("Data_Arrays")
+#writedlm("Temp_list.data", T_list, ":")
 #writedlm("eta+_avg.data", η⁺_avg_by_T, ":")
 #writedlm("eta+_err.data", η⁺_err_by_T, ":")
 #writedlm("eta-_avg.data", η⁻_avg_by_T, ":")
 #writedlm("eta-_err.data", η⁻_err_by_T, ":")
-writedlm("hel_mod_avg.data", Υ_avg_by_T, ":")
-writedlm("hel_mod_err.data", Υ_err_by_T, ":")
-writedlm("x2_gs_avg.data", ρˣ₂_avg_by_T, ":")
-writedlm("x2_gs_err.data", ρˣ₂_err_by_T, ":")
-writedlm("x3_gs_avg.data", ρˣ₃_avg_by_T, ":")
-writedlm("x3_gs_err.data", ρˣ₃_err_by_T, ":")
-writedlm("y1_gs_avg.data", ρʸ₁_avg_by_T, ":")
-writedlm("y1_gs_err.data", ρʸ₁_err_by_T, ":")
-cd("..")
+#writedlm("hel_mod_avg.data", Υ_avg_by_T, ":")
+#writedlm("hel_mod_err.data", Υ_err_by_T, ":")
+#writedlm("x2_gs_avg.data", ρˣ₂_avg_by_T, ":")
+#writedlm("x2_gs_err.data", ρˣ₂_err_by_T, ":")
+#writedlm("x3_gs_avg.data", ρˣ₃_avg_by_T, ":")
+#writedlm("x3_gs_err.data", ρˣ₃_err_by_T, ":")
+#writedlm("y1_gs_avg.data", ρʸ₁_avg_by_T, ":")
+#writedlm("y1_gs_err.data", ρʸ₁_err_by_T, ":")
+#cd("..")
 
