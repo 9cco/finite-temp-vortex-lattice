@@ -5,7 +5,7 @@
 @everywhere using StatsBase
 @everywhere using BenchmarkTools
 using MCMCDiagnostics
-@everywhere src_path = "../../../Source/"
+@everywhere src_path = "../../Source/"
 @everywhere include(src_path*"types.jl")
 @everywhere include(src_path*"functions_msc.jl")
 @everywhere include(src_path*"functions_neighbors.jl")
@@ -17,7 +17,7 @@ using MCMCDiagnostics
 @everywhere include(src_path*"functions_symmetries.jl")
 include(src_path*"functions_plots_and_files.jl")
 using Plots
-pyplot()
+gr()
 
 
 
@@ -32,9 +32,9 @@ g = 1.0    # Gauge coupling
 ν = 0.3    # Anisotropy
 
 # Other parameters
-L = 12     # System length
-L₃ = 12
-T_list = [T for T = 0.1:0.2:2.0]
+L = 20     # System length
+L₃ = 20
+T_list = [T for T = 0.1:0.05:2.4]
 κ₅ = 1.0
 
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
@@ -42,7 +42,7 @@ f = 0.0/L
 println("f set to $(f)")
 sim = Controls(π-π/12, 1.0, 4.0)
 
-M = 600
+M = 800
 # Setup measurement storage
 N_T = length(T_list)
 #u⁺_avg_by_T = Array{Float64}(N_T); u⁻_avg_by_T = Array{Float64}(N_T)
@@ -60,9 +60,9 @@ N_T = length(T_list)
 # Make ab inito un-correlated phases state
 nw = max(1,nprocs()-1) # The number of low temperature states needed
 init_syst_list = Array{SystConstants, 1}(nw+1)
-init_syst_list[1:nw] = [SystConstants(L, L₃, 1/g^2, ν, κ₅, f, 1/T_list[1]) for i = 1:nw] # Make nw low temp-states
-init_syst_list[nw+1] = SystConstants(L, L₃, 1/g^2, ν, κ₅, f, 1/T_list[end])              # Make final high temp state.
-init_ψ_list = [State(6, syst; u⁺=1.0, u⁻=0.0) for syst in init_syst_list]
+init_syst_list[1:nw] = [SystConstants(L, L₃, 1/g^2, ν, κ₅, f, 1/0.1) for i = 1:nw] # Make nw low temp-states
+init_syst_list[nw+1] = SystConstants(L, L₃, 1/g^2, ν, κ₅, f, 1/0.5)              # Make final high temp state.
+init_ψ_list = [State(1, syst; u⁺=1.0, u⁻=0.0) for syst in init_syst_list]
 init_sim_list = [copy(sim) for syst in init_syst_list];
 
 
@@ -70,7 +70,7 @@ init_sim_list = [copy(sim) for syst in init_syst_list];
 
 println("Thermalizing $(nw+1) initial states from correlated state")
 thermalized, time, init_ψ_list, init_sim_list, E_matrix = @time flatThermalization!(init_ψ_list, init_sim_list;
-    visible=true, N_SUBS=10);
+    visible=true, N_SUBS=10, T_AVG=5000, T_QUENCH=1000);
 
 N = length(init_ψ_list[1].lattice)
 # Plot last energies
@@ -179,8 +179,9 @@ println([E(init_ψ_list[i])/N for i = 1:length(init_ψ_list)])
     #u⁺_avg_by_T[i] = u⁺_avg; u⁻_avg_by_T[i] = u⁻_avg;
     #u⁺_err_by_T[i] = u⁺_err; u⁻_err_by_T[i] = u⁻_err;
 
-    cd("../")
     @everywhere gc()
+
+    cd("../")
 end
 
 

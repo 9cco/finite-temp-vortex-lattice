@@ -121,8 +121,14 @@ function copy(ψ::State)
     consts = copy(ψ.consts)
 	State(lattice, consts, nbl, nnbl, nnnbl)
 end
+function copy(ψ_list::Array{State,1})
+    return [copy(ψ) for ψ in ψ_list]
+end
 function copy(sim::Controls)
     return Controls(sim.θmax, sim.umax, sim.Amax)
+end
+function copy(sim_list::Array{Controls,1})
+    return [copy(sim) for sim in sim_list]
 end
 
 # -------------------------------------------------------------------------------------------------
@@ -232,12 +238,11 @@ function State(choice::Int64, consts::SystConstants; u⁺=1.0, u⁻=0.0, θ⁺=0
     if choice == 1
         # Mean field lattice sites for all fields.
         # Construct NxN lattice of NxN LatticeSites
-        lattice = [LatticeSite(A, θ⁺, θ⁻, u⁺, u⁻) for y=1:L, x=1:L, z=1:L₃]
+        lattice = [LatticeSite([A[1], A[2], A[3]], θ⁺, θ⁻, u⁺, u⁻) for y=1:L, x=1:L, z=1:L₃]
 		nb = latticeNeighbors(lattice,L,L₃)
 		nnb = latticeNextNeighbors(lattice,L,L₃)
 		nnnb = latticeNNNeighbors(lattice,L,L₃)
         ψ = State(lattice, consts, nb, nnb, nnnb)
-        
     # Construct random state
     elseif choice == 2
 		lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
@@ -248,21 +253,21 @@ function State(choice::Int64, consts::SystConstants; u⁺=1.0, u⁻=0.0, θ⁺=0
         ψ = State(lattice, consts, nb, nnb, nnnb)
     elseif choice == 3
         # Uniform mean field for all fields except u⁺ which is random.
-        lattice = [LatticeSite(A, θ⁺, θ⁻, umax*rand(), u⁻) for v=1:L, h=1:L, z=1:L₃]
+        lattice = [LatticeSite([A[1], A[2], A[3]], θ⁺, θ⁻, umax*rand(), u⁻) for v=1:L, h=1:L, z=1:L₃]
 		nb = latticeNeighbors(lattice,L,L₃)
 		nnb = latticeNextNeighbors(lattice,L,L₃)
 		nnnb = latticeNNNeighbors(lattice,L,L₃)
         ψ = State(lattice, consts, nb, nnb, nnnb)
     elseif choice == 4
         # Uniform mean field except for u⁺ and u⁻
-        lattice = [LatticeSite(A, θ⁺, θ⁻, umax*rand(), umax*rand()) for v=1:L, h=1:L, z=1:L₃]
+        lattice = [LatticeSite([A[1], A[2], A[3]], θ⁺, θ⁻, umax*rand(), umax*rand()) for v=1:L, h=1:L, z=1:L₃]
 		nb = latticeNeighbors(lattice,L,L₃)
 		nnb = latticeNextNeighbors(lattice,L,L₃)
 		nnnb = latticeNNNeighbors(lattice,L,L₃)
         ψ = State(lattice, consts, nb, nnb, nnnb)
     elseif choice == 5
         # Vary phases, all other fields are uniform mean fields.
-        lattice = [LatticeSite(A, rand(Uniform(0,2π)), rand(Uniform(0,2π)), u⁺, u⁻) for v=1:L, h=1:L, z=1:L₃]
+        lattice = [LatticeSite([A[1], A[2], A[3]], rand(Uniform(0,2π)), rand(Uniform(0,2π)), u⁺, u⁻) for v=1:L, h=1:L, z=1:L₃]
 		nb = latticeNeighbors(lattice,L,L₃)
 		nnb = latticeNextNeighbors(lattice,L,L₃)
 		nnnb = latticeNNNeighbors(lattice,L,L₃)

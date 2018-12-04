@@ -93,9 +93,10 @@ function mcSweepEn!(ψ::State, sim::Controls = Controls(π/3, 0.4, 3.0))
     δE = 0.0
     # Find size of the lattice L
     L::Int64 = ψ.consts.L
+    L₃::Int64 = ψ.consts.L₃
     
     # Update the bulk
-    for z_pos=1:ψ.consts.L₃, h_pos=1:L, v_pos=1:L
+    for z_pos=1:L₃, h_pos=1:L, v_pos=1:L
         δE += metropolisHastingUpdate!(ψ, [v_pos,h_pos,z_pos], sim)
     end
     return δE
@@ -216,32 +217,6 @@ function nMCSEnergy!(ψ_list::Array{State, 1}, sim_list::Array{Controls, 1}, n::
     return ψ_list, E_matrix
 end
 
-#---------------------------------------------------------------------------------------------------
-# Perform n MCsweeps and return the final state and an array with energies after each sweep
-# and updates simulation constants dynamically
-function nMCSEnergyDynamic(ψ::State, sim::Controls, n::Int64, adjust_int::Int64, E₀::Float64)
-	Es = Array{Float64,1}(n)
-    adjustment_mcs = 0
-
-	Es[1] = E₀ + mcSweepEn!(ψ,sim)
-    
-    for i=2:n
-        Es[i] = Es[i-1] + mcSweepEn!(ψ,sim)
-        
-        #Every adjust_int steps, update simulation constants if needed
-        if i % adjust_int == 0
-            #Testing
-            (ar, mcs) = adjustSimConstants!(sim, ψ)
-            adjustment_mcs += mcs
-            
-            #Update energy (since we do MCS in the update steps)
-            Es[i] = E(ψ)
-        end
-    end
-    return ψ, Es, sim, adjustment_mcs
-end    
-
-
 
 # -----------------------------------------------------------------------------------------------------------
 # Adjusts the simulation controls such that ψ has an AR larger than LOWER. Tries to find the simulation controls
@@ -361,6 +336,34 @@ function adjustSimConstants!(sim::Controls, ψ::State, M::Int64 = 40)
     return (proposedAR[i_max], adjustment_mcs, ψ, sim)
     # Return the acceptance ratio of the new sim and the number of Monte-Carlo Sweeps done during this adjustment.
 end
+
+#---------------------------------------------------------------------------------------------------
+# Perform n MCsweeps and return the final state and an array with energies after each sweep
+# and updates simulation constants dynamically
+function nMCSEnergyDynamic(ψ::State, sim::Controls, n::Int64, adjust_int::Int64, E₀::Float64)
+	Es = Array{Float64,1}(n)
+    adjustment_mcs = 0
+
+	Es[1] = E₀ + mcSweepEn!(ψ,sim)
+    
+    for i=2:n
+        Es[i] = Es[i-1] + mcSweepEn!(ψ,sim)
+        
+        #Every adjust_int steps, update simulation constants if needed
+        if i % adjust_int == 0
+            #Testing
+            (ar, mcs) = adjustSimConstants!(sim, ψ)
+            adjustment_mcs += mcs
+            
+            #Update energy (since we do MCS in the update steps)
+            Es[i] = E(ψ)
+        end
+    end
+    return ψ, Es, sim, adjustment_mcs
+end    
+
+
+
 
 # --------------------------------------------------------------------------------------------------
 # Adjust controls of all states in a list (as much as possible in parallel)
