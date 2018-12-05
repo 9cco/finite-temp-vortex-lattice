@@ -692,7 +692,7 @@ Thermalization will be ×$(floor(Int64, (nw+1)/(num_workers+1))) as long.")
                     printSimControls(sim_list)
                     println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))")
                 end
-                return true, t+T_AVG+adjustment_mcs, ψ_ref, E_ref, sim_ref, ψ_w, E_w, sim_w
+                return true, t+T_AVG+adjustment_mcs, ψ_list[1], E_ref, sim_list[1], ψ_list[2:end], E_w, sim_list[2:end]
             elseif t+T_AVG > STABILITY_CUTOFF
                 println("WARNING: Flat energy curves after $(t+T_AVG) MCS, but stabilized at different energies.
 Jagged energy landscape?")
@@ -701,7 +701,7 @@ Jagged energy landscape?")
                     printSimControls(sim_list)
                     println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))")
                 end
-                return false, t+T_AVG+adjustment_mcs, ψ_ref, E_ref, sim_ref, ψ_w, E_w, sim_w
+                return false, t+T_AVG+adjustment_mcs, ψ_list[1], E_ref, sim_list[1], ψ_list[2:end], E_w, sim_list[2:end]
             end
         end
         
@@ -725,5 +725,5 @@ Jagged energy landscape?")
         printSimControls(sim_list)
         println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))")
     end
-    return false, t-T_AVG+adjustment_mcs, ψ_ref, E_ref, sim_ref, ψ_w, E_w, sim_w
+    return false, t-T_AVG+adjustment_mcs, ψ_list[1], E_ref, sim_list[1], ψ_list[2:end], E_w, sim_list[2:end]
 end
