@@ -34,7 +34,7 @@ g = 1.0    # Gauge coupling
 # Other parameters
 L = 20     # System length
 L₃ = 20
-T_list = [T for T = 0.1:0.05:2.4]
+T_list = [T for T = 0.1:0.05:1.8]
 κ₅ = 1.0
 
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
@@ -42,7 +42,7 @@ f = 0.0/L
 println("f set to $(f)")
 sim = Controls(π-π/12, 1.0, 4.0)
 
-M = 800
+M = 300
 # Setup measurement storage
 N_T = length(T_list)
 #u⁺_avg_by_T = Array{Float64}(N_T); u⁻_avg_by_T = Array{Float64}(N_T)
