@@ -23,6 +23,7 @@ gr()
 
 THERM_FRAC = 1/10
 DT_MAX = 10000
+DT_MIN = 100
 MEASURE_FILE = "measured.statelist"
 
 @everywhere const two_pi = 2π
@@ -32,9 +33,9 @@ g = 1.0    # Gauge coupling
 ν = 0.3    # Anisotropy
 
 # Other parameters
-L = 20     # System length
-L₃ = 20
-T_list = [T for T = 0.1:0.05:1.8]
+L = 24     # System length
+L₃ = 24
+T_list = [T for T = 0.01:0.01:0.1]
 κ₅ = 1.0
 
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
@@ -42,7 +43,7 @@ f = 0.0/L
 println("f set to $(f)")
 sim = Controls(π-π/12, 1.0, 4.0)
 
-M = 300
+M = 600
 # Setup measurement storage
 N_T = length(T_list)
 #u⁺_avg_by_T = Array{Float64}(N_T); u⁻_avg_by_T = Array{Float64}(N_T)
@@ -70,7 +71,7 @@ init_sim_list = [copy(sim) for syst in init_syst_list];
 
 println("Thermalizing $(nw+1) initial states from correlated state")
 thermalized, time, init_ψ_list, init_sim_list, E_matrix = @time flatThermalization!(init_ψ_list, init_sim_list;
-    visible=true, N_SUBS=10, T_AVG=5000, T_QUENCH=1000);
+    visible=true, N_SUBS=10, T_AVG=2000, T_QUENCH=1000);
 
 N = length(init_ψ_list[1].lattice)
 # Plot last energies
@@ -92,6 +93,7 @@ println([E(init_ψ_list[i])/N for i = 1:length(init_ψ_list)])
     ψ_ref = copy(init_ψ_list[end])
     ψ_w = [copy(ψ) for ψ in init_ψ_list[1:nw]]
     println("Thermalizing from high (T=$(1/ψ_ref.consts.β)) and low temperature (T=$(1/ψ_w[1].consts.β))")
+    println([1/ψ_ref.consts.β, [1/ψ.consts.β for ψ in ψ_w]...])
     # Update to new temperature
     syst = SystConstants(L, L₃, 1/g^2, ν, κ₅, f, 1/T)
     ψ_ref.consts = syst
@@ -99,6 +101,8 @@ println([E(init_ψ_list[i])/N for i = 1:length(init_ψ_list)])
         ψ.consts = syst
     end
 
+    println("Energies before thermalization:")
+    println([E(ψ_ref)/N, [E(ψ) for ψ in ψ_w]...])
     # Thermalize states
     @time thermalized, t₀, ψ_ref, E_ref, sim_ref, ψ_w, E_w, sim_w = thermalizeLite!(ψ_ref, ψ_w, copy(sim); visible=true,
         STABILITY_CUTOFF=30000)
@@ -114,7 +118,7 @@ println([E(init_ψ_list[i])/N for i = 1:length(init_ψ_list)])
 
     # Preform measurements by saving states to file.
     ψ_list = [ψ_ref, ψ_w...]
-    Δt = min(DT_MAX, ceil(Int64, t₀*THERM_FRAC))
+    Δt = max(DT_MAX, min(DT_MAX, ceil(Int64, t₀*THERM_FRAC)))
     println("Δt = $(Δt), which means that we will do in total $(M*Δt) MCS")
     @time measurementSeries!(ψ_list, sim_ref, M, Δt; filename=MEASURE_FILE)
 
