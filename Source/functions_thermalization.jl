@@ -640,6 +640,8 @@ function thermalizeLite!(ψ_ref::State, ψ_w::Array{State,1}, sim::Controls; T_A
     
     mcs_ref = 0
     mcs_w = zeros(Int64, nw)
+    mcs_list = zeros(Int64, nw+1)
+    ar_list = zeros(Float64, nw+1)
     adjustment_mcs = 0
     
     # Check whether we have enough processes for efficiency
