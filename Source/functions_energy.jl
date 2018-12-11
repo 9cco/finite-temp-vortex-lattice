@@ -21,6 +21,7 @@ function fᵣ(ϕ::LatticeSite,nb::NearestNeighbors,h_pos::Int64,c::SystConstants
           + (ϕ.u⁻)^2 - ϕ.u⁻*ϕᵣ₊₁.u⁻*cos(ϕᵣ₊₁.θ⁻-ϕ.θ⁻-ϕ.A[1])
           + (ϕ.u⁻)^2 - ϕ.u⁻*ϕᵣ₊₂.u⁻*cos(ϕᵣ₊₂.θ⁻-ϕ.θ⁻-A₂)
     + c.κ₅*((ϕ.u⁻)^2 - ϕ.u⁻*ϕᵣ₊₃.u⁻*cos(ϕᵣ₊₃.θ⁻-ϕ.θ⁻-ϕ.A[3])))
+    Fₖt = -cos(ϕᵣ₊₁.θ⁺-ϕ.θ⁺-ϕ.A[1]) - cos(ϕᵣ₊₂.θ⁺-ϕ.θ⁺-ϕ.A[2]) - c.κ₅*cos(ϕᵣ₊₃.θ⁺-ϕ.θ⁺-ϕ.A[3])
     # Potential energy term
     Fᵥ = ((ϕ.u⁺*ϕ.u⁻)^2*(2+c.ν*cos(2*(ϕ.θ⁻-ϕ.θ⁺))) 
           -(1-1/c.β)*(ϕ.u⁺)^2 + 0.5*(ϕ.u⁺)^4
@@ -38,7 +39,7 @@ function fᵣ(ϕ::LatticeSite,nb::NearestNeighbors,h_pos::Int64,c::SystConstants
         - ϕ.u⁺*ϕᵣ₊₂.u⁻*sin(ϕᵣ₊₂.θ⁻-ϕ.θ⁺ - A₂)    # Here too
         + ϕ.u⁻*ϕᵣ₊₁.u⁺*sin(ϕᵣ₊₁.θ⁺ - ϕ.θ⁻ - ϕ.A[1]) 
         - ϕ.u⁺*ϕᵣ₊₁.u⁻*sin(ϕᵣ₊₁.θ⁻ - ϕ.θ⁺ - ϕ.A[1]))
-    energy = Fₖ # + Fᵥ + Fₐₙ + Fₘ
+    energy = Fₖt # + Fᵥ + Fₐₙ + Fₘ
 end
 
 # ---------------------------------------------------------------------------------------------------
@@ -147,6 +148,10 @@ function ΔE(ϕ′::LatticeSite, ϕ::LatticeSite, nb::NearestNeighbors, nnb::Nex
              - (ϕ.u⁻^2 - ϕ.u⁻*ϕᵣ₊₂.u⁻*cos(ϕᵣ₊₂.θ⁻-ϕ.θ⁻-ϕ.A[2]-A⁰) - ϕᵣ₋₂.u⁻*ϕ.u⁻*cos(ϕ.θ⁻-ϕᵣ₋₂.θ⁻-ϕᵣ₋₂.A[2]-A⁰))
      + c.κ₅*((ϕ′.u⁻^2 - ϕ′.u⁻*ϕᵣ₊₃.u⁻*cos(ϕᵣ₊₃.θ⁻-ϕ′.θ⁻-ϕ′.A[3]) - ϕᵣ₋₃.u⁻*ϕ′.u⁻*cos(ϕ′.θ⁻-ϕᵣ₋₃.θ⁻-ϕᵣ₋₃.A[3])) 
              - (ϕ.u⁻^2 - ϕ.u⁻*ϕᵣ₊₃.u⁻*cos(ϕᵣ₊₃.θ⁻-ϕ.θ⁻-ϕ.A[3]) - ϕᵣ₋₃.u⁻*ϕ.u⁻*cos(ϕ.θ⁻-ϕᵣ₋₃.θ⁻-ϕᵣ₋₃.A[3]))))
+    # Rewrite of the above for the case when u⁺=1, u⁻=0
+    δFₖt = -((cos(ϕᵣ₊₁.θ⁺-ϕ′.θ⁺-ϕ′.A[1]) - cos(ϕᵣ₊₁.θ⁺-ϕ.θ⁺-ϕ.A[1])) + (cos(ϕ′.θ⁺-ϕᵣ₋₁.θ⁺-ϕᵣ₋₁.A[1]) - cos(ϕ.θ⁺-ϕᵣ₋₁.θ⁺-ϕᵣ₋₁.A[1]))
+           + (cos(ϕᵣ₊₂.θ⁺-ϕ′.θ⁺-ϕ′.A[2]) + cos(ϕ′.θ⁺-ϕᵣ₋₂.θ⁺-ϕᵣ₋₂.A[2])) - (cos(ϕᵣ₊₂.θ⁺-ϕ.θ⁺-ϕ.A[2]) + cos(ϕ.θ⁺-ϕᵣ₋₂.θ⁺-ϕᵣ₋₂.A[2]))
+     + c.κ₅*((cos(ϕᵣ₊₃.θ⁺-ϕ′.θ⁺-ϕ′.A[3]) + cos(ϕ′.θ⁺-ϕᵣ₋₃.θ⁺-ϕᵣ₋₃.A[3])) - (cos(ϕᵣ₊₃.θ⁺-ϕ.θ⁺-ϕ.A[3]) + cos(ϕ.θ⁺-ϕᵣ₋₃.θ⁺-ϕᵣ₋₃.A[3]))))
 
     # Potential terms
     δFᵥ = (((ϕ′.u⁺*ϕ′.u⁻)^2*(2+c.ν*cos(2*(ϕ′.θ⁺-ϕ′.θ⁻))) - (1-1/c.β)*ϕ′.u⁺^2 + 0.5*ϕ′.u⁺^4 - (1-1/c.β)*ϕ′.u⁻^2 + 0.5*ϕ′.u⁻^4)
@@ -203,7 +208,7 @@ function ΔE(ϕ′::LatticeSite, ϕ::LatticeSite, nb::NearestNeighbors, nnb::Nex
     # Then we also have to include the position r-z
     δFₐ += maxwell(ϕᵣ₋₃, ϕᵣ₊₁₋₃, ϕᵣ₊₂₋₃, ϕ′, c.g⁻²) - maxwell(ϕᵣ₋₃, ϕᵣ₊₁₋₃, ϕᵣ₊₂₋₃, ϕ, c.g⁻²)
 
-	δE = δFₐ + δFₖ# + δFᵥ + δFₐₙ + δFₘ 
+	δE = δFₐ + δFₖt# + δFᵥ + δFₐₙ + δFₘ 
 end
 
 # --------------------------------------------------------------------------------------------------
@@ -323,7 +328,7 @@ function testEnDiff(ψ₀::State, ψ::State, dE::Float64)
     end
     if !same
         println("|(E′-E₀)-dE|/max(E′-E₀, dE) = $(abs((E′-E₀)-dE)/max(E′-E₀, dE))")
-        println("E₀\t\t\tΔE\t\t\tE′-E₀\t\t\t|ΔE-E₁-E₂|")
+        println("E₀\t\t\tΔE\t\t\tE′-E₀\t\t\t|ΔE-(E₂-E₁)|")
         println("$E₀\t$dE\t$(E′-E₀)\t$(abs(dE - (E′-E₀)))")
     end
     return same
