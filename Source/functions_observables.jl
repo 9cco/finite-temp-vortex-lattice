@@ -1,3 +1,18 @@
+# -----------------------------------------------------------------------------------------------------------
+# Calculates the plaquette sum of the gauge field at a position pos, with the plaquette plane perpenducular
+# to the x, y and z-axis. This corresponds to the different components of the curl of the gauge field
+# in the continuum limit.
+function fluxDensity(ψ::State, pos::Tuple{Int64, Int64, Int64})
+    ϕ = ψ.lattice[pos...]
+    ϕᵣ₊₁ = ψ.nb[pos...].ϕᵣ₊₁
+    ϕᵣ₊₂ = ψ.nb[pos...].ϕᵣ₊₂
+    ϕᵣ₊₃ = ψ.nb[pos...].ϕᵣ₊₃
+    cur_A_x = (ϕ.A[2] + ϕᵣ₊₂.A[3] - ϕᵣ₊₃.A[2] - ϕ.A[3])
+    cur_A_y = (ϕ.A[3] + ϕᵣ₊₃.A[1] - ϕᵣ₊₁.A[3] - ϕ.A[1])
+    cur_A_z = (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])
+    return cur_A_x, cur_A_y, cur_A_z
+end
+
 ####################################################################################################################
 #                            Planar Vorticity
 #

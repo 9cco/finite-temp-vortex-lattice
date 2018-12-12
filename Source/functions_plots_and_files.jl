@@ -195,6 +195,65 @@ end
 
 
 # -----------------------------------------------------------------------------------------------------------
+# Plots various observables and fields of a state.
+function diagnose(ψ::State; z=-1)
+    L = ψ.consts.L
+    L₃ = ψ.consts.L₃
+    N = length(ψ.lattice)
+    println("Checking state: $(checkState(ψ))")
+    println("Checking neighbors: $(@test checkNeighbors(ψ))")
+    println("Constants: g = $(sqrt(1/ψ.consts.g⁻²)), T = $(1/ψ.consts.β), L = $(ψ.consts.L), L₃ = $(ψ.consts.L₃)")
+    println("Average energy: $(E(ψ)/N)")
+    u⁺, u⁻ = meanAmplitudes(ψ)
+    println("⟨u⁺⟩: $(u⁺)")
+    Υˣ, Υʸ, Υᶻ = helicityModulus(ψ)
+    println("Helicity modulus: $((Υˣ + Υʸ)/2)")
+    println("⟨η⁺⟩: $(averageOrdParam(ψ)[1])")
+    V⁺, V⁻ = vortexSnapshot(ψ)
+    println("Sum of nᶻᵣ: $(sum(V⁺))")
+    ρˣˣₖ₂, ρˣˣₖ₃, ρʸʸₖ₁, ρʸʸₖ₃, ρᶻᶻₖ₁, ρᶻᶻₖ₂ = gaugeStiffness([ψ])
+    println("Dual stiffnesses:")
+    println("ρˣˣ(k₂) =\t$(ρˣˣₖ₂[1])")
+    println("ρˣˣ(k₃) =\t$(ρˣˣₖ₃[1])")
+    println("ρʸʸ(k₁) =\t$(ρʸʸₖ₁[1])")
+    println("ρʸʸ(k₃) =\t$(ρʸʸₖ₃[1])")
+    println("ρᶻᶻ(k₁) =\t$(ρᶻᶻₖ₁[1])")
+    println("ρᶻᶻ(k₂) =\t$(ρᶻᶻₖ₂[1])")
+    
+
+    # Find a random plane if not a valid plane has been specified.
+    if z <= 0 || z > L₃
+        z = rand(1:L₃)
+    end
+    println("\nLooking at plane $(z)")
+    flush(STDOUT)
+    phases = [ψ.lattice[v, h, z].θ⁺ for v = 1:L, h = 1:L]
+    plt1 = heatmap(phases; aspect_ratio=1.0, title="θ⁺", xlabel="x", ylabel="y",
+        colorbar_title="θ⁺", colorbar=:right, clims=(0,2π))
+    amp = [ψ.lattice[v, h, z].u⁺ for v = 1:L, h = 1:L]
+    plt2 = heatmap(amp; aspect_ratio=1.0, title="u⁺", xlabel="x", ylabel="y",
+        colorbar_title="u⁺", colorbar=:right, clims=(0,1))
+    plt = plot(plt1, plt2, layout=(1,2), size=(1000, 400))
+    display(plt)
+    Ax = [ψ.lattice[v, h, z].A[1] for v = 1:L, h = 1:L]
+    Ay = [ψ.lattice[v, h, z].A[2] for v = 1:L, h = 1:L]
+    Az = [ψ.lattice[v, h, z].A[3] for v = 1:L, h = 1:L]
+    plt_x = heatmap(Ax; aspect_ratio=1.0, title="Aˣ", xlabel="x", ylabel="y", colorbar=:right)
+    plt_y = heatmap(Ay; aspect_ratio=1.0, title="Aʸ", xlabel="x", ylabel="y",
+        colorbar=:right)
+    plt_z = heatmap(Az; aspect_ratio=1.0, title="Aᶻ", xlabel="x", ylabel="y",
+        colorbar=:right)
+    plt = plot(plt_x, plt_y, plt_z, layout=grid(1, 3, widths=[0.33, 0.33, 0.33]), legend=false, size=(1000,400))
+    display(plt)
+    flux_density_z = [fluxDensity(ψ, (v,h,z))[3] for v = 1:L, h = 1:L]
+    plt1 = heatmap(flux_density_z; aspect_ratio=1.0, title="(∇×A)ᶻ", xlabel="x", ylabel="y", colorbar=:right)
+    V⁺, V⁻ = vortexSnapshot(ψ)
+    plt2 = heatmap(V⁺[:,:,z]./two_pi; aspect_ratio=1.0, title="nᶻᵣ", xlabel="x", ylabel="y", colorbar=:right, clims=(-1,1))
+    plt = plot(plt1, plt2, layout=(1,2), size=(1000, 400))
+    display(plt)
+end
+
+# -----------------------------------------------------------------------------------------------------------
 # Testing how well our algorithms work for this choice of parameters.
 function testSystem(syst::SystConstants, sim::Controls, M::Int64=2000)
     # Let's first look at the time it takes to equilibrate the state
