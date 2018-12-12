@@ -27,7 +27,7 @@ function gaugeStiffnessZZ{T<:Real}(k::Array{T,1}, ψ::State)
         ϕᵣ₊₂ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₂
         sumGS += (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])*exp(im*(k⋅r))
     end
-    return (abs(sumGS))^2 / (2π*L)^3
+    return (abs(sumGS))^2 / (two_pi^2*L^3)
 end
 
 # xx-component gauge stiffness
@@ -45,7 +45,7 @@ function gaugeStiffnessXX{T<:Real}(k::Array{T,1}, ψ::State)
         ϕᵣ₊₃ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₃
         sumGS += (ϕ.A[2] + ϕᵣ₊₂.A[3] - ϕᵣ₊₃.A[2] - ϕ.A[3])*exp(im*(k⋅r))
     end
-    return (abs(sumGS))^2 / (2π*L)^3
+    return (abs(sumGS))^2 / (two_pi^2*L^3)
 end
 
 # yy-component gauge stiffness
@@ -63,7 +63,7 @@ function gaugeStiffnessYY{T<:Real}(k::Array{T,1}, ψ::State)
         ϕᵣ₊₃ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₃
         sumGS += (ϕ.A[3] + ϕᵣ₊₃.A[1] - ϕᵣ₊₁.A[3] - ϕ.A[1])*exp(im*(k⋅r))
     end
-    return (abs(sumGS))^2 / (2π*L)^3
+    return (abs(sumGS))^2 / (two_pi^2*L^3)
 end
 
 # -------------------------------------------------------------------------------------------------
