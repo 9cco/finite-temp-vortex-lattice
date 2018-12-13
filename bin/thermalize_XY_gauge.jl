@@ -22,7 +22,7 @@ gr()
 
 
 THERM_FRAC = 1/10
-DT_MAX = 10000
+DT_MAX = 5000
 DT_MIN = 100
 MEASURE_FILE = "measured.statelist"
 
@@ -35,7 +35,8 @@ g = 1.0    # Gauge coupling
 # Other parameters
 L = 24     # System length
 L₃ = 24
-T_list = [T for T = 0.01:0.01:0.1]
+T_list = [T for T = 1.5:0.02:2.0]
+T_list = reverse(T_list) # Thermalizing from high to low.
 κ₅ = 1.0
 
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
@@ -43,7 +44,7 @@ f = 0.0/L
 println("f set to $(f)")
 sim = Controls(π-π/12, 1.0, 4.0)
 
-M = 600
+M = 800
 # Setup measurement storage
 N_T = length(T_list)
 #u⁺_avg_by_T = Array{Float64}(N_T); u⁻_avg_by_T = Array{Float64}(N_T)
@@ -61,19 +62,21 @@ N_T = length(T_list)
 # Make ab inito un-correlated phases state
 nw = max(1,nprocs()-1) # The number of low temperature states needed
 init_syst_list = Array{SystConstants, 1}(nw+1)
-init_syst_list[1:nw] = [SystConstants(L, L₃, 1/g^2, ν, κ₅, f, 1/0.1) for i = 1:nw] # Make nw low temp-states
-init_syst_list[nw+1] = SystConstants(L, L₃, 1/g^2, ν, κ₅, f, 1/0.5)              # Make final high temp state.
+init_syst_list[1:nw] = [SystConstants(L, L₃, 1/g^2, ν, κ₅, f, 1/T_list[end]) for i = 1:nw] # Make nw low temp-states
+init_syst_list[nw+1] = SystConstants(L, L₃, 1/g^2, ν, κ₅, f, 1/T_list[1])              # Make final high temp state.
 init_ψ_list = [State(1, syst; u⁺=1.0, u⁻=0.0) for syst in init_syst_list]
 init_sim_list = [copy(sim) for syst in init_syst_list];
 
 
 # Run these states until the energy-curve is flat.
+println("Ab inito energies:")
+N = length(init_ψ_list[1].lattice)
+println([E(init_ψ_list[i])/N for i = 1:length(init_ψ_list)])
 
 println("Thermalizing $(nw+1) initial states from correlated state")
 thermalized, time, init_ψ_list, init_sim_list, E_matrix = @time flatThermalization!(init_ψ_list, init_sim_list;
-    visible=true, N_SUBS=10, T_AVG=2000, T_QUENCH=1000);
+    visible=true, N_SUBS=4, T_AVG=2000, T_QUENCH=1000);
 
-N = length(init_ψ_list[1].lattice)
 # Plot last energies
 plt = plot(1:size(E_matrix,2), [E_matrix[s,:]./N for s = 1:size(E_matrix,1)]; xlabel="MCS", ylabel="Total En", title="Last thermalization interval")
 savefig(plt, "initial_states_thermalization_last_average.pdf")
@@ -102,7 +105,7 @@ println([E(init_ψ_list[i])/N for i = 1:length(init_ψ_list)])
     end
 
     println("Energies before thermalization:")
-    println([E(ψ_ref)/N, [E(ψ) for ψ in ψ_w]...])
+    println([E(ψ_ref)/N, [E(ψ)/N for ψ in ψ_w]...])
     # Thermalize states
     @time thermalized, t₀, ψ_ref, E_ref, sim_ref, ψ_w, E_w, sim_w = thermalizeLite!(ψ_ref, ψ_w, copy(sim); visible=true,
         STABILITY_CUTOFF=30000)
@@ -114,13 +117,16 @@ println([E(init_ψ_list[i])/N for i = 1:length(init_ψ_list)])
     #    ψ_list, E_matrix = nMCSEnergy(ψ_list, sim_list, floor(Int64, t₀/4)+1, [E(ψ) for ψ in ψ_list])
 
     println("Thermalized energies:")
-    println([E(ψ_ref), [E(ψ) for ψ in ψ_w]...])
+    println([E(ψ_ref)/N, [E(ψ)/N for ψ in ψ_w]...])
 
     # Preform measurements by saving states to file.
-    ψ_list = [ψ_ref, ψ_w...]
+    ψ_list = [ψ_w..., ψ_ref]
     Δt = max(DT_MAX, min(DT_MAX, ceil(Int64, t₀*THERM_FRAC)))
     println("Δt = $(Δt), which means that we will do in total $(M*Δt) MCS")
     @time measurementSeries!(ψ_list, sim_ref, M, Δt; filename=MEASURE_FILE)
+
+    # Finally let the initial states of the next temperature iteration be the last thermalized states
+    init_ψ_list = ψ_list
 
     # Load states to memory.
     #ψ_measured = loadStates(MEASURE_FILE)
@@ -183,7 +189,7 @@ println([E(init_ψ_list[i])/N for i = 1:length(init_ψ_list)])
     #u⁺_avg_by_T[i] = u⁺_avg; u⁻_avg_by_T[i] = u⁻_avg;
     #u⁺_err_by_T[i] = u⁺_err; u⁻_err_by_T[i] = u⁻_err;
 
-    @everywhere gc()
+    #@everywhere gc()
 
     cd("../")
 end

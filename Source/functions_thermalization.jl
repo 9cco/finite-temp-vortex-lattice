@@ -416,7 +416,7 @@ end
 # --------------------------------------------------------------------------------------------------
 # Checks if a list of energies is more or less flat by dividing in intervals and checking that
 # the average in each of the intervals is more or less the same (within MC error)
-function flatThermalization{T<:Real}(E_list::Array{T, 1}; N_SUBS=3, ERR_WEIGHT=2.0)
+function flatThermalization{T<:Real}(E_list::Array{T, 1}; N_SUBS=3, ERR_WEIGHT=3.0)
     L = length(E_list)
     
     # Length of the first N_SUBS-1 intervals
@@ -455,7 +455,7 @@ end
 # Checks if multiple lists of energies are flat, where these lists are given as a matrix such that
 # each row is a list of energies for a specific measurement series and the different rows then give
 # different measurement series (typically produced by different workers)
-function flatThermalization(E_w::Array{Float64, 2}; N_SUBS=3, visible=false)
+function flatThermalization(E_w::Array{Float64, 2}; N_SUBS=3, visible=false, ERR_WEIGHT=3.0)
     nw = size(E_w, 1)
     
     # Setup storage
@@ -463,7 +463,7 @@ function flatThermalization(E_w::Array{Float64, 2}; N_SUBS=3, visible=false)
     
     # Go through all workers and check if their energies are flat
     for w = 1:nw
-        isflat, avg_last[w], avg_first[w], err[w] = flatThermalization(E_w[w, :]; N_SUBS=N_SUBS)
+        isflat, avg_last[w], avg_first[w], err[w] = flatThermalization(E_w[w, :]; N_SUBS=N_SUBS, ERR_WEIGHT=ERR_WEIGHT)
         if !isflat
             if visible
                 println("Worker $(w) not flat.\t⟨ΔE⟩ = $(avg_last[w]-avg_first[w]) ± $(err[w])")
@@ -557,8 +557,8 @@ end
 # the sub-intervals are compared with the MC error. The control constants are attempted updated
 # after each energy-interval is calculated.
 function flatThermalization!(ψ_list::Array{State,1}, sim_list::Array{Controls, 1};
-        T_AVG::Int64=2000, N_SUBS::Int64=3, CUTOFF_MAX::Int64=400000, T_QUENCH::Int64=1000, 
-        visible::Bool=false, temp_states_filename::AbstractString="therm_temp.statelist")
+        T_AVG::Int64=2000, N_SUBS::Int64=4, CUTOFF_MAX::Int64=400000, T_QUENCH::Int64=1000, 
+        visible::Bool=false, temp_states_filename::AbstractString="therm_temp.statelist", ERR_WEIGHT=2.0)
     
     # Setup storage
     adjustment_mcs = 0
@@ -601,7 +601,7 @@ Thermalization will be ×$(floor(Int64, n_state/(n_workers+1))) as long.")
         save(ψ_list, temp_states_filename)
         
         # Check if we have thermalization
-        if flatThermalization(E_matrix; visible=visible, N_SUBS=N_SUBS)
+        if flatThermalization(E_matrix; visible=visible, N_SUBS=N_SUBS, ERR_WEIGHT=ERR_WEIGHT)
             if visible
                 println("All state energy-curves are flat after $(t+T_AVG+adjustment_mcs)\n\nFinal control constants:")
                 printSimControls(sim_list)
