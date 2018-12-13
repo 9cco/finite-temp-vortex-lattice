@@ -626,8 +626,8 @@ Thermalization will be ×$(floor(Int64, n_state/(n_workers+1))) as long.")
 end
 
 # --------------------------------------------------------------------------------------------------
-function thermalizeLite!(ψ_ref::State, ψ_w::Array{State,1}, sim::Controls; T_AVG = 2500, T_QUENCH = 1000,
-        CUTOFF_MAX = 200000, N_SUBS=10, AVG_EX = 1.5, STABILITY_CUTOFF = 4000, adjust=true,
+function thermalizeLite!(ψ_ref::State, ψ_w::Array{State,1}, sim::Controls; T_AVG = 2500, T_QUENCH = 3000,
+        CUTOFF_MAX = 200000, N_SUBS=4, AVG_EX = 1.5, STABILITY_CUTOFF = 4000, adjust=true,
     temp_ref_filename="therm_temp_ref.state", temp_workers_filename="therm_temp_workers.statelist", visible=false)
     
     nw = length(ψ_w)
