@@ -566,3 +566,100 @@ function maxMinAmplitudes(ψ::State)
 	return ex_u⁺[1], ex_u⁺[2], ex_u⁻[1], ex_u⁻[2]
 end
 
+
+####################################################################################################
+#                            Functions for ::StateArray
+#
+####################################################################################################
+
+# -------------------------------------------------------------------------------------------------
+# StateArray constructor. Requires that the filename is of a file with a list of states with the
+# convention given by save(::Array{State,1},...)
+function StateArray(filename::AbstractString)
+    if !isfile(filename)
+        throw(error("ERROR: File $(filename) does not exist"))
+    end
+        
+    syst = SystConstants(10, 10, 1/0.3^2, 0.5, 1.0, 1.0, 1.0) # Just dummy initialization.
+    M₀ = 0
+    # Get length of existing list and check that constants are the same as state.
+    open(filename, "r") do file
+        line = readline(file)
+        if line != "state array"
+            throw(error("ERROR: Start of file $(filename) is $(line)"))
+        end
+        M₀ = parse(Int64, readline(file))
+        M₀ > 0 || throw(error("ERROR: Number of states in list is set to $(M₀)"))
+        c_values = split(readline(file), ":")
+        L = parse(Int64, c_values[1])
+        L > 0 || throw(error("ERROR: States L is $(L)"))
+        L₃ = parse(Int64, c_values[2])
+        L₃ > 0 || throw(error("ERROR: States L₃ is $(L₃)"))
+#        γ = parse(Float64, c_values[3])
+        g⁻² = parse(Float64, c_values[3])
+        ν = parse(Float64, c_values[4])
+        κ₅ = parse(Float64, c_values[5])
+        f = parse(Float64, c_values[6])
+        β = parse(Float64, c_values[7])
+        syst = SystConstants(L, L₃, g⁻², ν, κ₅, f, β)
+    end
+    StateArray(filename, syst, M₀)
+end
+
+# -------------------------------------------------------------------------------------------------
+# Assuming an open IOStream that has been read until the start of a state,
+# read the state and create corresponding state in memory.
+function readState(file::IOStream, syst::SystConstants)
+    line = readline(file)
+    if line != "state start"
+        throw(DomainError())
+    end
+    L = syst.L
+    L₃ = syst.L₃
+    lattice = Array{LatticeSite, 3}(L,L,L₃)
+    for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
+        ϕ_values = split(readline(file), ":")
+        A₁ = parse(Float64, ϕ_values[1])
+        A₂ = parse(Float64, ϕ_values[2])
+        A₃ = parse(Float64, ϕ_values[3])
+        θ⁺ = parse(Float64, ϕ_values[4])
+        θ⁻ = parse(Float64, ϕ_values[5])
+        u⁺ = parse(Float64, ϕ_values[6])
+        u⁻ = parse(Float64, ϕ_values[7])
+        lattice[v_pos,h_pos,z_pos] = LatticeSite([A₁, A₂, A₃], θ⁺, θ⁻, u⁺, u⁻)
+    end
+
+    nbl = latticeNeighbors(lattice,L,L₃)
+    nnbl = latticeNextNeighbors(lattice,L,L₃)
+    nnnbl = latticeNNNeighbors(lattice,L,L₃)
+
+    return State(lattice, syst, nbl, nnbl, nnnbl)
+end
+
+# -------------------------------------------------------------------------------------------------
+# Take an index and a state array, and output the corresponding state in the state-list. To do this
+# we overload the getindex function which makes us able to do stuff like state_array[1].
+import Base.getindex
+function getindex(sa::StateArray, i::Int64)
+    # Checking that integer wanted is within the size of the array
+    if i>sa.M || i < 1
+        throw(error("ERROR: $(i) is not a valid array index in array of length $(sa.M)"))
+    end
+    # At this point in the code then i ∈ [1, M]
+    ψ = State(1, sa.syst) # Initialize state
+    N = sa.syst.L^2*sa.syst.L₃
+    open(sa.fn, "r") do file
+        # First we skip over the first 3 lines which gives the state constants, etc.
+        for j = 1:3; readline(file); end
+        
+        # Each state will consist of L⋅L⋅L₃+1 = N+1 lines: one for each lattice site + state start line.
+        # We need to skip i-1 number of states
+        for j = 1:i-1
+            for l = 1:N+1; readline(file); end
+        end
+        
+        # Now we should be at the start of the desired state.
+        ψ = readState(file, sa.syst)
+    end
+    return ψ
+end

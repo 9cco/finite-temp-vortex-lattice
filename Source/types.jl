@@ -64,3 +64,8 @@ mutable struct State
 	nnb::Array{NextNeighbors,3}
 	nnnb::Array{NNNeighbors,3}
 end
+mutable struct StateArray
+    fn::AbstractString
+    syst::SystConstants
+    M::Int64
+end
