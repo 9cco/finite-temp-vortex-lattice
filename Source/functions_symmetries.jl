@@ -288,7 +288,7 @@ function parallelMeasureGS!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δ
 end
 
 #--------------------------------------------------------------------------------------------------   
-#Functionality to measure the helicity modulus
+#Functionality to measure the helicity modulus 
 function helicityModulusContribution(ψ::State)
     sumCosX = 0.0
     sumCosY = 0.0
@@ -380,3 +380,80 @@ function measureHelicityModulus(ψ_list::Array{State,1}; twoD=false)
 #    return sdata(Υ_list)
     return Υ_list
 end
+
+###################################################################################################
+#   Helicity modulus of the frozen 2-component superconductor, with only kinetic + maxwell terms
+#
+###################################################################################################
+
+#--------------------------------------------------------------------------------------------------
+# Takes a list of states and calculates the helicity modulus. Output returned as a three elements,
+# one entry for each direction. This assumes that the hamiltonian is the frozen 2-component
+# superconductor.
+function helModFrozen2comp(ψ_list::Array{State,1})
+    #Calculate the two average quantities needed to calculate the helicity modulus
+    M = length(ψ_list)
+    Υx_list = Array{Float64}(M)
+    Υy_list = Array{Float64}(M)
+    Υz_list = Array{Float64}(M)
+    for i=1:M
+        Υx_list[i], Υy_list[i], Υz_list[i] = helModF2compContributions(ψ_list[i])
+    end
+    return (Υx_list, Υy_list, Υz_list)
+end
+
+#--------------------------------------------------------------------------------------------------
+# For a list of states, calculates the two average quantities required to calculate the helicity
+# modulus, for each direction in the lattice.
+function helModF2compContributions(ψ::State)
+    L = ψ.consts.L
+    L₃ = ψ.consts.L₃
+    β = ψ.consts.β
+    if L != L₃
+        println("Warning from function helModF2compContributions: L and L₃ not equal")
+    end
+    
+    sumcos_x = 0.0; sumcos_y = 0.0; sumcos_z = 0.0
+    sumsin_x = 0.0; sumsin_y = 0.0; sumsin_z = 0.0         
+    #Sum over lattice, calculating the contributions
+    for h=1:L, v=1:L, z=1:L₃
+        pos = [h,v,z]
+        ϕ = ψ.lattice[pos...]
+        ϕᵣ₊₁ = ψ.nb[pos...].ϕᵣ₊₁
+        ϕᵣ₊₂ = ψ.nb[pos...].ϕᵣ₊₂
+        ϕᵣ₊₃ = ψ.nb[pos...].ϕᵣ₊₃
+
+        sumcos_x += 4*cos( (ϕᵣ₊₁.θ⁺ + ϕᵣ₊₁.θ⁻ - ϕ.θ⁺ - ϕ.θ⁻)/2.0 - ϕ.A[1] )*cos( (ϕᵣ₊₁.θ⁺ - ϕᵣ₊₁.θ⁻ - ϕ.θ⁺ + ϕ.θ⁻)/2.0 )
+        sumsin_x += 4*cos( (ϕᵣ₊₁.θ⁺ + ϕᵣ₊₁.θ⁻ - ϕ.θ⁺ - ϕ.θ⁻)/2.0 - ϕ.A[1] )*sin( (ϕᵣ₊₁.θ⁺ - ϕᵣ₊₁.θ⁻ - ϕ.θ⁺ + ϕ.θ⁻)/2.0 )
+
+        sumcos_y += 4*cos( (ϕᵣ₊₂.θ⁺ + ϕᵣ₊₂.θ⁻ - ϕ.θ⁺ - ϕ.θ⁻)/2.0 - ϕ.A[2] )*cos( (ϕᵣ₊₂.θ⁺ - ϕᵣ₊₂.θ⁻ - ϕ.θ⁺ + ϕ.θ⁻)/2.0 )
+        sumsin_y += 4*cos( (ϕᵣ₊₂.θ⁺ + ϕᵣ₊₂.θ⁻ - ϕ.θ⁺ - ϕ.θ⁻)/2.0 - ϕ.A[2] )*sin( (ϕᵣ₊₂.θ⁺ - ϕᵣ₊₂.θ⁻ - ϕ.θ⁺ + ϕ.θ⁻)/2.0 )
+
+        sumcos_z += 4*cos( (ϕᵣ₊₃.θ⁺ + ϕᵣ₊₃.θ⁻ - ϕ.θ⁺ - ϕ.θ⁻)/2.0 - ϕ.A[3] )*cos( (ϕᵣ₊₃.θ⁺ - ϕᵣ₊₃.θ⁻ - ϕ.θ⁺ + ϕ.θ⁻)/2.0 )
+        sumsin_z += 4*cos( (ϕᵣ₊₃.θ⁺ + ϕᵣ₊₃.θ⁻ - ϕ.θ⁺ - ϕ.θ⁻)/2.0 - ϕ.A[3] )*sin( (ϕᵣ₊₃.θ⁺ - ϕᵣ₊₃.θ⁻ - ϕ.θ⁺ + ϕ.θ⁻)/2.0 )
+        
+    end
+    norm = L^3
+    Υx = (sumcos_x - β*sumsin_x^2)/norm
+    Υy = (sumcos_y - β*sumsin_y^2)/norm
+    Υz = (sumcos_z - β*sumsin_z^2)/norm
+    return Υx, Υy, Υz
+end
+
+###################################################################################################
+#       Order parameter(s) to measure the Chiral symmetry breaking
+#
+###################################################################################################
+
+# Structure function for Bojesens "Z2 magnetization" order parameter.
+function Z2magStructFunc{T<:Real}(ψ::State, q::Array{T,1}, mid::Array{T,1})
+
+end
+
+function Z2magnetization(ϕ::LatticeSite)
+    if (ϕ.θ⁺-ϕ.θ⁻) < π
+        return 1
+    else
+        return -1
+    end
+end 
