@@ -573,6 +573,24 @@ end
 ####################################################################################################
 
 # -------------------------------------------------------------------------------------------------
+# Assume that the file metadata is read such that the rest of the file contains states. Finds the
+# file positions of the beginnings of these states and returns these positions in a vector.
+function enumerateStates(file::IOStream)
+    pos = Array{Int64}(1)
+    line = readline(file)
+    line == "state start" || throw(error("ERROR: Could not find start of state after reading meta info"))
+    pos[1] = position(file)-12
+    line = readline(file)
+    while line != ""
+        if line == "state start"
+            push!(pos, position(file)-12)
+        end
+        line = readline(file)
+    end
+    return pos
+end
+
+# -------------------------------------------------------------------------------------------------
 # StateArray constructor. Requires that the filename is of a file with a list of states with the
 # convention given by save(::Array{State,1},...)
 function StateArray(filename::AbstractString)
@@ -582,7 +600,8 @@ function StateArray(filename::AbstractString)
         
     syst = SystConstants(10, 10, 1/0.3^2, 0.5, 1.0, 1.0, 1.0) # Just dummy initialization.
     M₀ = 0
-    # Get length of existing list and check that constants are the same as state.
+    pos = Array{Int64}(1)
+    # Get length of existing list
     open(filename, "r") do file
         line = readline(file)
         if line != "state array"
@@ -602,8 +621,11 @@ function StateArray(filename::AbstractString)
         f = parse(Float64, c_values[6])
         β = parse(Float64, c_values[7])
         syst = SystConstants(L, L₃, g⁻², ν, κ₅, f, β)
+        
+        # Now we enumerate the positions of the states in the file and save this in the pos array.
+        pos = enumerateStates(file)
     end
-    StateArray(filename, syst, M₀)
+    StateArray(filename, syst, M₀, pos)
 end
 
 # -------------------------------------------------------------------------------------------------
@@ -649,17 +671,11 @@ function getindex(sa::StateArray, i::Int64)
     ψ = State(1, sa.syst) # Initialize state
     N = sa.syst.L^2*sa.syst.L₃
     open(sa.fn, "r") do file
-        # First we skip over the first 3 lines which gives the state constants, etc.
-        for j = 1:3; readline(file); end
+        # Find the start position of state # i
+        pos = sa.pos[i]
         
-        # Each state will consist of L⋅L⋅L₃+1 = N+1 lines: one for each lattice site + state start line.
-        # We need to skip i-1 number of states
-        for j = 1:i-1
-            for l = 1:N+1; readline(file); end
-        end
-        
-        # Now we should be at the start of the desired state.
-        ψ = readState(file, sa.syst)
+        # Now we read the state that is at this position.
+        ψ = readState(file, sa.syst, pos)
     end
     return ψ
 end

@@ -68,4 +68,5 @@ mutable struct StateArray
     fn::AbstractString
     syst::SystConstants
     M::Int64
+    pos::Array{Int64,1}
 end

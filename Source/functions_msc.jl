@@ -3,6 +3,7 @@
 #
 ####################################################################################################
 
+using Primes
 
 
 # --------------------------------------------------------------------------------------------------
@@ -178,20 +179,14 @@ function autocorrTime{T<:Real}(O::Array{T,1}, c::Float64=5.0)
 end
 
 # --------------------------------------------------------------------------------------------------
-# Finds the highest divisor of M that is less than or equal to N.
-# If none of the divisors of M are less than N, then 
-# We assume that M,N>1
-function highestDivisor(M::Int, N::Int)
-    m = M
-    if m <= N
-        return m
-    end
-    # Now we know that M > N
+# Returns a sorted array of divisors of M except for 1 and M.
+function divisors(M::Int; sorting=true)
     # First we calculate all the divisors of M except for 1 and M
     # and save them in the divisors array.
     pr = primes(2,Int(floor(sqrt(M)))+2)
     L = size(pr, 1)
     divisors = Array{Int}(0)
+    m = M
     for i = 1:L
         while(m%pr[i]==0)
             m /= pr[i]
@@ -205,8 +200,29 @@ function highestDivisor(M::Int, N::Int)
     
     # Then we sort this array so that high divisors come first and
     # iterate through it until a match is found.
-    divisors = sort(divisors, rev=true)
-    for div in divisors
+    if sorting
+        return sort(unique(divisors), rev=true)
+    else
+        return unique(divisors)
+    end
+end
+
+
+
+# --------------------------------------------------------------------------------------------------
+# Finds the highest divisor of M that is less than or equal to N.
+# If none of the divisors of M are less than N, then 
+# We assume that M,N>1
+function highestDivisor(M::Int, N::Int)
+    m = M
+    if m <= N
+        return m
+    end
+    # Now we know that M > N
+    # First we calculate all the divisors of M except for 1 and M
+    # and save them in the divisors array.
+    divs = divisors(M)
+    for div in divs
         if div <= N
             return div
         end
