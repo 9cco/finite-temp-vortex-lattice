@@ -34,7 +34,7 @@ function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 
     t₀ = T
 
 	println("Performing initial $(T) MCS")
-	flush(STDOUT)
+	flush(stdout)
     
     E₁[1] = E(ψ₁)
     E₂[1] = E(ψ₂)
@@ -58,7 +58,7 @@ function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 
     while tₛ < CUTOFF_MAX
         # Find the first occurence of dE <= 0 if it exists
         println("Searching for ΔE <= 0..")
-		flush(STDOUT)
+		flush(stdout)
         t₀ = T
         for i = (tₛ+1):T
             if dE[i] <= 0
@@ -107,8 +107,8 @@ function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 
             # in dE where dE[t₀] <= 0
         end
         println("ΔE <= 0 found at t₀ = $(t₀)!\nChecking if average is close to 0..")
-		println("$(Int(round(T/CUTOFF_MAX*100,0)))% of max") # Debug
-		flush(STDOUT)
+		println("$(Int(round(T/CUTOFF_MAX*100; digits=0)))% of max") # Debug
+		flush(stdout)
         
         # Now we make sure that T is large enough such that [1,T] includes an interval [t₀, t₀+t₀/div]
         # so that an average can be performed
@@ -141,8 +141,8 @@ function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 
         if abs(av) <= STD_NUMBER*st
             println("Equilibrium found at time $(T+adjustment_mcs)
 over the interval [$(t₀), $(T)]
-s.t. <ΔE> = $(round(av,2)) ± $(round(st/sqrt(size(int,1)), 1))
-std(ΔE) = $(round(st, 1))")
+s.t. <ΔE> = $(round(av; digits=2)) ± $(round(st/sqrt(size(int,1)); digits=1))
+std(ΔE) = $(round(st; digits=1))")
             return (T+adjustment_mcs, E₁[1:T], E₂[1:T], dE[1:T], ψ₁, ψ₂, sim₁, sim₂)
         end
         
@@ -178,9 +178,9 @@ end
 # accepts pr proposal over mcSweep and how close that is to 1/2.
 
 #--------------------------------------------------------------------------------------------------
-function meanAndStd{T<:Real, I<:Int}(E_ref::Array{T,1}, E_w::Array{T,2}, w::I, t_start::I, t_end::I)
+function meanAndStd(E_ref::Array{T,1}, E_w::Array{T,2}, w::I, t_start::I, t_end::I) where {T<:Real, I<:Int}
     N = t_end-t_start+1
-    dE = Array{T,1}(N)
+    dE = Array{T,1}(undef, N)
     for i=1:N
         dE[i] = E_ref[t_start+i-1] - E_w[w,t_start+i-1]
     end
@@ -197,8 +197,8 @@ function checkThermalization(E_ref::Array{Float64,1}, E_workers::Array{Float64,2
     n_workers = size(E_workers,1)
 
 	future_array = [Future() for i = 1:n_workers]
-	av = Array{Float64,1}(n_workers)
-	st = Array{Float64,1}(n_workers)
+	av = Array{Float64,1}(undef, n_workers)
+	st = Array{Float64,1}(undef, n_workers)
 
 	for w = 1:n_workers
 		#future_array[w] = @spawn meanAndStd(E_ref[t_start:t_end], E_workers[w,t_start:t_end])
@@ -244,7 +244,7 @@ end
 #--------------------------------------------------------------------------------------------------
 # Find first occurrence of when the values in the arrays cross eachother in the interval
 # between iₛ and iₑ
-function firstZero{T<:Real}(E_ref::Array{T, 1}, E_w::Array{T, 2}, w::Int64, iₛ::Int64, iₑ::Int64, ref_highest::Bool)
+function firstZero(E_ref::Array{T, 1}, E_w::Array{T, 2}, w::Int64, iₛ::Int64, iₑ::Int64, ref_highest::Bool) where T<:Real
     if ref_highest
         for i = iₛ:iₑ
             if E_ref[i] <= E_w[w,i]
@@ -275,11 +275,11 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
 
     #Initialisation
     NWS=length(ψ_w)                     #Number of states in ψ_list
-	E_w = Array{Float64, 2}(NWS, CUTOFF_MAX)        #Matrix to store energies of worker states
+	E_w = Array{Float64, 2}(undef, NWS, CUTOFF_MAX)        #Matrix to store energies of worker states
 	for w = 1:NWS
 		E_w[w, 1] = E(ψ_w[w])
 	end
-	E_ref = Array{Float64, 1}(CUTOFF_MAX)           #Array to store energies of reference state
+	E_ref = Array{Float64, 1}(undef, CUTOFF_MAX)           #Array to store energies of reference state
 	E_ref[1] = E(ψ_ref)
 
 	# Checking whether reference or worker has highest energy.
@@ -340,7 +340,7 @@ Thermalization will be ×$(floor(Int64, (NWS+1)/(np+1))) as long.")
 			if i != -1
                 E_check_workers[w] = i
                 println("Worker $(w) initially thermalised after $(i) steps")
-                flush(STDOUT)
+                flush(stdout)
 			end
 		end
 
@@ -348,7 +348,7 @@ Thermalization will be ×$(floor(Int64, (NWS+1)/(np+1))) as long.")
             tₛ = T
             T = min(Int(ceil(T*ex)), CUTOFF_MAX)
 			println("Increasing simulation time such that tₛ = $(tₛ) and T = $(T)")
-			flush(STDOUT)
+			flush(stdout)
             if T == CUTOFF_MAX
                 println("Failed to find a point where ΔE <= 0")
                 return (-1, tₛ, T,  E_ref[1:tₛ], E_w[:,1:tₛ], ψ_ref, ψ_w, sim_ref, sim_w)
@@ -356,10 +356,10 @@ Thermalization will be ×$(floor(Int64, (NWS+1)/(np+1))) as long.")
         else
             tₛ = maximum(E_check_workers)
             println("All workers initially thermalized after $(T) steps")
-			flush(STDOUT)
+			flush(stdout)
             thermalized_init = true
         end
-        gc() # Trying to run garbage collection manually since Vilje seems to be running out of memory at long thermalizations.
+        GC.gc() # Trying to run garbage collection manually since Vilje seems to be running out of memory at long thermalizations.
     end
 
     tₛ = T+1
@@ -370,17 +370,19 @@ Thermalization will be ×$(floor(Int64, (NWS+1)/(np+1))) as long.")
     #Increase simulation time by ADJUST_INT_THERM and try to find an interval with small average dE
     while T<CUTOFF_MAX
 		println("Checking average ∈ [$tₛ, $T]")
-        flush(STDOUT)
+        flush(stdout)
 
         #Start by updating the simulation constants
-        for w=1:NWS
-            ψ_future_list[w] = @spawn(adjustSimConstantsPar(sim_w[w], ψ_w[w]))
-        end
-        ψ_ref, sim_ref, mcs_ref = adjustSimConstantsPar(sim_ref, ψ_ref)
-        for w=1:NWS
-            ψ_w[w], sim_w[w], mcs_w[w] = fetch(ψ_future_list[w]) 
-        end
-        adjustment_mcs += max(maximum(mcs_w),mcs_ref)
+        ψ_list = [ψ_ref, ψ_w...]; sim_list = [sim_ref, sim_w...];
+        mcs_list, _ = adjustSimConstants!(ψ_list, sim_list)
+#        for w=1:NWS
+#            ψ_future_list[w] = @spawn(adjustSimConstantsPar(sim_w[w], ψ_w[w]))
+#        end
+#        ψ_ref, sim_ref, mcs_ref = adjustSimConstantsPar(sim_ref, ψ_ref)
+#        for w=1:NWS
+#            ψ_w[w], sim_w[w], mcs_w[w] = fetch(ψ_future_list[w]) 
+#        end
+        adjustment_mcs += maximum(mcs_list)#max(maximum(mcs_w),mcs_ref)
 
 		# Correct energy for built-up floating point errors
 		E_ref[tₛ-1] = E(ψ_ref)
@@ -416,7 +418,7 @@ end
 # --------------------------------------------------------------------------------------------------
 # Checks if a list of energies is more or less flat by dividing in intervals and checking that
 # the average in each of the intervals is more or less the same (within MC error)
-function flatThermalization{T<:Real}(E_list::Array{T, 1}; N_SUBS=3, ERR_WEIGHT=3.0)
+function flatThermalization(E_list::Array{T, 1}; N_SUBS=3, ERR_WEIGHT=3.0) where T<:Real
     L = length(E_list)
     
     # Length of the first N_SUBS-1 intervals
@@ -424,8 +426,8 @@ function flatThermalization{T<:Real}(E_list::Array{T, 1}; N_SUBS=3, ERR_WEIGHT=3
     # Length of the last interval
     L_s⁺ = L_s⁻ + L%N_SUBS
     
-    E_avg = Array{Float64, 1}(N_SUBS)
-    E_err = Array{Float64, 1}(N_SUBS)
+    E_avg = Array{Float64, 1}(undef, N_SUBS)
+    E_err = Array{Float64, 1}(undef, N_SUBS)
     
     # Calculate average for the first N_SUBS-1 intervals
     for s = 1:N_SUBS-1
@@ -459,7 +461,7 @@ function flatThermalization(E_w::Array{Float64, 2}; N_SUBS=3, visible=false, ERR
     nw = size(E_w, 1)
     
     # Setup storage
-    avg_last = Array{Float64, 1}(nw); avg_first = Array{Float64, 1}(nw); err = Array{Float64, 1}(nw)
+    avg_last = Array{Float64, 1}(undef, nw); avg_first = Array{Float64, 1}(undef, nw); err = Array{Float64, 1}(undef, nw)
     
     # Go through all workers and check if their energies are flat
     for w = 1:nw
@@ -493,8 +495,8 @@ function thermalizeToZero!(ψ_ref::State, ψ_w::Array{State, 1}, sim_ref::Contro
     ψ_future_list = [Future() for i=1:nw]
     
     # Setup storage
-    E_ref = Array{Float64, 1}(T_QUENCH)
-    E_w = Array{Float64, 2}(nw, T_QUENCH)
+    E_ref = Array{Float64, 1}(undef, T_QUENCH)
+    E_w = Array{Float64, 2}(undef, nw, T_QUENCH)
     E_check_workers = zeros(Int64, nw)
     
     # Checking whether reference or worker has highest energy.
@@ -531,7 +533,7 @@ function thermalizeToZero!(ψ_ref::State, ψ_w::Array{State, 1}, sim_ref::Contro
             if i != -1
                 E_check_workers[w] = i
                 println("Worker $(w) initially thermalised after $(i) steps")
-                flush(STDOUT)
+                flush(stdout)
             end
         end
 
@@ -541,7 +543,7 @@ function thermalizeToZero!(ψ_ref::State, ψ_w::Array{State, 1}, sim_ref::Contro
         else
             t_final = maximum(E_check_workers)
             println("All workers initially thermalized after $(t_final) steps")
-            flush(STDOUT)
+            flush(stdout)
             return t_final, ψ_ref, E_ref[1:t], ψ_w, E_w[:,1:t]
         end
     end
@@ -563,7 +565,7 @@ function flatThermalization!(ψ_list::Array{State,1}, sim_list::Array{Controls, 
     # Setup storage
     adjustment_mcs = 0
     n_state = length(ψ_list)
-    E_matrix = Array{Float64, 2}(n_state, T_AVG)
+    E_matrix = Array{Float64, 2}(undef, n_state, T_AVG)
     ψ_future_list = [Future() for i = 1:n_state]
     
     # Check whether we have enough processes for efficiency
@@ -583,7 +585,7 @@ Thermalization will be ×$(floor(Int64, n_state/(n_workers+1))) as long.")
         println("Controls after initial adjustment:")
         printSimControls(sim_list)
         println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))\n")
-        flush(STDOUT)
+        flush(stdout)
     end
     
     # Go T_AVG at a time until we reach CUTOFF_MAX
@@ -606,14 +608,14 @@ Thermalization will be ×$(floor(Int64, n_state/(n_workers+1))) as long.")
                 println("All state energy-curves are flat after $(t+T_AVG+adjustment_mcs)\n\nFinal control constants:")
                 printSimControls(sim_list)
                 println("With lowest AR: $(minimum(ar_list)),\thighest AR: $(maximum(ar_list))")
-                flush(STDOUT)
+                flush(stdout)
             end
             return true, t+T_AVG+adjustment_mcs, ψ_list, sim_list, E_matrix
         end
         
         if visible
             println("Thermalization not yet reached after $(t) MCS")
-            flush(STDOUT)
+            flush(stdout)
         end
         t += T_AVG
     end
@@ -632,9 +634,9 @@ function thermalizeLite!(ψ_ref::State, ψ_w::Array{State,1}, sim::Controls; T_A
     
     nw = length(ψ_w)
     # Setup storage
-    E_ref = Array{Float64, 1}(T_AVG)
-    ΔE_w = Array{Float64, 2}(nw, T_AVG)
-    E_w = Array{Float64, 2}(nw, T_AVG)
+    E_ref = Array{Float64, 1}(undef, T_AVG)
+    ΔE_w = Array{Float64, 2}(undef, nw, T_AVG)
+    E_w = Array{Float64, 2}(undef, nw, T_AVG)
     sim_ref = copy(sim)
     sim_w = [copy(sim) for i = 1:nw]
     

@@ -334,3 +334,24 @@ function testEnDiff(ψ₀::State, ψ::State, dE::Float64)
     return same
 end
 
+# -------------------------------------------------------------------------------------------------
+# Function that uses that changes one lattice site at the time in the whole lattice of the State and
+# calculates the difference in energy between using E(ψ′)-E(ψ) or using ΔE to calculate energy differences.
+function testEnDiff(ψ₀::State)
+    println("Checking that ΔE gives same result as E'-E on all different sites of the lattice")
+    L₃ = ψ₀.consts.L₃
+    L = ψ₀.consts.L
+    ψ = copy(ψ₀)
+    dE = 0
+    for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
+        ψ = copy(ψ₀)
+        ϕ′ = LatticeSite()
+        dE = ΔE(ϕ′, ψ₀.lattice[v_pos,h_pos,z_pos],ψ₀.nb[v_pos,h_pos,z_pos],ψ₀.nnb[v_pos,h_pos,z_pos],ψ₀.nnnb[v_pos,h_pos,z_pos],h_pos,ψ₀.consts)
+        set!(ψ.lattice[v_pos,h_pos,z_pos], ϕ′)
+        if !testEnDiff(ψ₀, ψ, dE)
+            println("[$(v_pos), $(h_pos), $(z_pos)]")
+        end
+        #@test isapprox(E(ψ₁)-E(ψ₂), dE; atol=0, rtol=1e-13)
+    end
+    return @test isapprox(E(ψ)-dE, E(ψ₀); atol=0, rtol=1e-13)
+end

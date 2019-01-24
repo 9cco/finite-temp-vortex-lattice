@@ -1,3 +1,4 @@
+
 # -----------------------------------------------------------------------------------------------------------
 # Calculates the plaquette sum of the gauge field at a position pos, with the plaquette plane perpenducular
 # to the x, y and z-axis. This corresponds to the different components of the curl of the gauge field
@@ -22,7 +23,7 @@ end
 # New version of nᵣ based on suggestion by Troels. We are drawing the gauge-invariant phase
 # difference back to [-π, π) instead of [0, 2π) and also adding 2πf so that we are measuring
 # n instead of (n-f) which we would do by just doing the gauge-invariant phase difference.
-function drawback{T<:Real}(x::T)
+function drawback(x::T) where T<:Real
     return mod2pi(x+π)-π
 end
 function nᵣ(c::SystConstants, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₁₊₂::LatticeSite, h_pos::Int64)
@@ -82,7 +83,7 @@ end
 # 0: (-1, -1), 1: (-1, 0), 2: (-1, 1)
 # 3: (0, -1), 4: (0, 0), 5: (0, 1)
 # 6: (1, -1), 7: (1, 0), 8: (1, 1)
-function combineVortexLattices{T<:Real}(vortex_matrix⁺::Array{T, 2}, vortex_matrix⁻::Array{T,2})
+function combineVortexLattices(vortex_matrix⁺::Array{T, 2}, vortex_matrix⁻::Array{T,2}) where T<:Real
     L = size(vortex_matrix⁺,1)
     A = [-1 for x=1:L, y=1:L]
     for v_pos = 1:L, h_pos = 1:L
@@ -117,7 +118,7 @@ end
 
 # --------------------------------------------------------------------------------------------------
 # Projects 3D vorticity space down on 2D through an averaging over the z-dimension.
-function avgVort{T<:Real}(V::Array{T,3})
+function avgVort(V::Array{T,3}) where T<:Real
     L = size(V,1)
     L₃ = size(V,3)
     avg_V = zeros(L,L)
@@ -139,7 +140,7 @@ end
 # V⁺ and V⁻ are LxL matrices of plaquettes containing the vorticities nᵣ of the two components averaged over
 # the z-direction.
 # Returns the structure function at k of both vorticities.
-function structureFunction{T<:Real, I<:Real}(k::Array{T,1}, ψ::State, V⁺::Array{I,2}, V⁻::Array{I,2})
+function structureFunction(k::Array{T,1}, ψ::State, V⁺::Array{I,2}, V⁻::Array{I,2}) where {T<:Real, I<:Real}
     sum⁺ = Complex(0)
     sum⁻ = Complex(0)
     L = ψ.consts.L
@@ -150,15 +151,15 @@ function structureFunction{T<:Real, I<:Real}(k::Array{T,1}, ψ::State, V⁺::Arr
     for h_pos = 1:L
         for v_pos = 1:L
             r = [h_pos-1-origo_l, origo_r+1-v_pos]
-            sum⁺ += V⁺[v_pos,h_pos]*exp(im*(k⋅r))
-            sum⁻ += V⁻[v_pos,h_pos]*exp(im*(k⋅r))
+            sum⁺ += V⁺[v_pos,h_pos]*exp(im*dot(k,r))
+            sum⁻ += V⁻[v_pos,h_pos]*exp(im*dot(k,r))
         end
     end
     
     return (abs2(sum⁺),abs2(sum⁻))
 end
 # If V⁺ and V⁻ are not known, they have to be calculated.
-function structureFunction{T<:Real}(k::Array{T,1}, ψ::State)
+function structureFunction(k::Array{T,1}, ψ::State) where T<:Real
     sum⁺ = Complex(0)
     sum⁻ = Complex(0)
     L = ψ.consts.L
@@ -182,8 +183,8 @@ function structureFunction{T<:Real}(k::Array{T,1}, ψ::State)
         end
         vort_θ⁺ /= L₃
         vort_θ⁻ /= L₃
-        sum⁺ += vort_θ⁺*exp(im*(k⋅r))
-        sum⁻ += vort_θ⁻*exp(im*(k⋅r))
+        sum⁺ += vort_θ⁺*exp(im*dot(k,r))
+        sum⁻ += vort_θ⁻*exp(im*dot(k,r))
     end
     
     return (abs2(sum⁺),abs2(sum⁻))
@@ -198,8 +199,8 @@ end
 # Take in a matrix of k-values and calculate both the vorticity of θ⁺ and θ⁻, as well as an average over the
 # real space vortex lattice.
 # Assumes input state is at equilibrium.
-function structureFunctionVortexLatticeAvg!{T<:Real}(ks::Array{Array{T, 1}, 2}, 
-        ψ::State, sim::Controls, M::Int64, Δt::Int64)
+function structureFunctionVortexLatticeAvg!(ks::Array{Array{T, 1}, 2}, 
+        ψ::State, sim::Controls, M::Int64, Δt::Int64) where T<:Real
     syst = ψ.consts
     L = syst.L
     
@@ -223,8 +224,8 @@ function structureFunctionVortexLatticeAvg!{T<:Real}(ks::Array{Array{T, 1}, 2},
     println("Making $(M) measurements using $(M*Δt) MCS over a $(Lkx)×$(Lky) matrix of ks.")
     # Loop over M measurements
     for m = 1:M
-        print("Measurement progress: $(Int(round(m/M*100,0)))% \r")
-        flush(STDOUT)
+        print("Measurement progress: $(Int(round(m/M*100; digits=0)))% \r")
+        flush(stdout)
         
         # Take Δt MCS
         for i = 1:Δt
@@ -232,7 +233,8 @@ function structureFunctionVortexLatticeAvg!{T<:Real}(ks::Array{Array{T, 1}, 2},
         end
         
         # Find n_z(r) of the lattice.
-        (V⁺[m], V⁻[m]) = vortexSnapshot(ψ)
+        V⁺_t, V⁻_t = vortexSnapshot(ψ)
+        (V⁺[m], V⁻[m]) = avgVort(V⁺_t), avgVort(V⁻_t)
         
         # Calculate average of vorticity second moment. 
         for y = 1:L, x = 1:L
@@ -299,7 +301,7 @@ end
 
 # --------------------------------------------------------------------------------------------------
 # Makes M measurements of both the vortex lattice and the structure factor.
-function sfvlaMeasure!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Controls, M::Int64, Δt::Int64)
+function sfvlaMeasure!(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Controls, M::Int64, Δt::Int64) where T<:Real
     L = ψ.consts.L
     L₃ = ψ.consts.L₃
     L_k = size(ks, 1)
@@ -322,8 +324,8 @@ function sfvlaMeasure!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Contr
     
     # For each measurement
     for m = 2:M
-#        print("Measurement progress: $(Int(round(m/M*100,0)))% \r")
-#        flush(STDOUT)
+#        print("Measurement progress: $(Int(round(m/M*100; digits=0)))% \r")
+#        flush(stdout)
         
         # Take Δt MCS
         for i = 1:Δt
@@ -345,8 +347,8 @@ function sfvlaMeasure!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Contr
 end
 
 # Same as above, but now prints progress to STDOUT
-function sfvlaMeasure!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Controls, M::Int64,
-        Δt::Int64, option::AbstractString)
+function sfvlaMeasure!(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Controls, M::Int64,
+        Δt::Int64, option::AbstractString) where T<:Real
 	PROG_NUM = 10		# Adjusts the number of times progress is reported while measuring.
     L = ψ.consts.L
     L₃ = ψ.consts.L₃
@@ -372,8 +374,8 @@ function sfvlaMeasure!{T<:Real}(ks::Array{Array{T, 1}, 2}, ψ::State, sim::Contr
 	prog_int = floor(Int64, M/PROG_NUM)
     for m = 2:M
 		if m % prog_int == 0
-			println("Measurement progress: $(Int(round(m/M*100,0)))%")
-        	flush(STDOUT)
+			println("Measurement progress: $(Int(round(m/M*100; digits=0)))%")
+        	flush(stdout)
 		end
         
         # Take Δt MCS
@@ -399,8 +401,8 @@ end
 # Given np+1 uncorrelated states in ψ_list we use these to make M measurements of the vortex lattice by splitting
 # the M measurements on the np workers as well as the master process. In this version we continuously discard
 # the measurements and only save the averages and second moments.
-function parallelSFVLA!{T<:Real}(ks::Array{Array{T, 1}, 2}, 
-        ψ_list::Array{State,1}, sim::Controls, M::Int64, Δt::Int64)
+function parallelSFVLA!(ks::Array{Array{T, 1}, 2}, 
+        ψ_list::Array{State,1}, sim::Controls, M::Int64, Δt::Int64) where T<:Real
     syst = ψ_list[1].consts
     L = syst.L
     
@@ -467,10 +469,10 @@ on a $(L)×$(L) system, corresponding to $((M_min+ceil(Int64, nw/np))*Δt) MCS p
     sm_V⁺ = zeros(L,L)
     sm_V⁻ = zeros(L,L)
     for m = 1:M
-        sm_S⁺ += S⁺[m].^2
-        sm_S⁻ += S⁻[m].^2
-        sm_V⁺ += V⁺[m].^2
-        sm_V⁻ += V⁻[m].^2
+        sm_S⁺ .+= S⁺[m].^2
+        sm_S⁻ .+= S⁻[m].^2
+        sm_V⁺ .+= V⁺[m].^2
+        sm_V⁻ .+= V⁻[m].^2
     end
     sm_S⁺ = sm_S⁺./M
     sm_S⁻ = sm_S⁻./M;
@@ -481,15 +483,15 @@ on a $(L)×$(L) system, corresponding to $((M_min+ceil(Int64, nw/np))*Δt) MCS p
     τ_V⁺ = [1/ess_factor_estimate([V⁺[m][y,x] for m=1:M])[1] for y=1:L, x=1:L]
     τ_V⁻ = [1/ess_factor_estimate([V⁻[m][y,x] for m=1:M])[1] for y=1:L, x=1:L]
     
-    err_V⁺ = (1+2.*τ_V⁺).*(sm_V⁺ - av_V⁺.^2)./(M-1)
-    err_V⁻ = (1+2.*τ_V⁻).*(sm_V⁻ - av_V⁻.^2)./(M-1)
+    err_V⁺ = (1+2 .*τ_V⁺).*(sm_V⁺ - av_V⁺.^2)./(M-1)
+    err_V⁻ = (1+2 .*τ_V⁻).*(sm_V⁻ - av_V⁻.^2)./(M-1)
     
     # Error calculation of structure factor.
     τ_S⁺ = [1/ess_factor_estimate([S⁺[m][y,x] for m=1:M])[1] for y=1:L_k, x=1:L_k]
     τ_S⁻ = [1/ess_factor_estimate([S⁻[m][y,x] for m=1:M])[1] for y=1:L_k, x=1:L_k]
     
-    err_S⁺ = (1+2.*τ_S⁺).*(sm_S⁺ - av_S⁺.^2)./(M-1)
-    err_S⁻ = (1+2.*τ_S⁻).*(sm_S⁻ - av_S⁻.^2)./(M-1)
+    err_S⁺ = (1+2 .*τ_S⁺).*(sm_S⁺ - av_S⁺.^2)./(M-1)
+    err_S⁻ = (1+2 .*τ_S⁻).*(sm_S⁻ - av_S⁻.^2)./(M-1)
 
 	# Sum of all vorticities
 	println("\nSum of vorticity of random snapshot:\nV⁺: \t$(sum(V⁺[rand(1:M)]))
@@ -518,7 +520,7 @@ end
 
 # --------------------------------------------------------------------------------------------------
 # Takes in a list of states and measures the vorticity and structure function for each of them.
-function structureFunctionWork{T<:Real}(k_matrix::Array{Array{T,1},2}, ψ_list::Array{State,1}; visible=false)
+function structureFunctionWork(k_matrix::Array{Array{T,1},2}, ψ_list::Array{State,1}; visible=false) where T<:Real
     PROG_NUM = 10
     M = length(ψ_list)
     L_k1 = size(k_matrix, 1)
@@ -557,7 +559,7 @@ function normalizeSFVL!(S⁺, S⁻, V⁺, V⁻, syst)
 end
 
 # --------------------------------------------------------------------------------------------------
-function structureFunction{T<:Real}(filename::AbstractString, k_matrix::Array{Array{T, 1},2})
+function structureFunction(filename::AbstractString, k_matrix::Array{Array{T, 1},2}) where T<:Real
     
     # Get pre-measured states.
     ψ_list = loadStates(filename)
@@ -573,8 +575,8 @@ function structureFunction{T<:Real}(filename::AbstractString, k_matrix::Array{Ar
     np, M_min, nw = splitParallell(M)
     
     # Setup storage.
-    S⁺ = Array{Array{Float64, 2},1}(M); S⁻ = Array{Array{Float64, 2},1}(M)
-    V⁺ = Array{Array{Float64, 2},1}(M); V⁻ = Array{Array{Float64, 2},1}(M)
+    S⁺ = Array{Array{Float64, 2},1}(undef, M); S⁻ = Array{Array{Float64, 2},1}(undef, M)
+    V⁺ = Array{Array{Float64, 2},1}(undef, M); V⁻ = Array{Array{Float64, 2},1}(undef, M)
     
     # Make sure that we have enough states
     length(ψ_list) >= np || throw(error("ERROR: Not enough states in list"))
@@ -671,7 +673,7 @@ end
 function measureMeanAmplitudes(ψ_list::Array{State,1})
     M = length(ψ_list)
     u⁺_meas = SharedArray{Float64}(M); u⁻_meas = SharedArray{Float64}(M);
-    @sync @parallel for i = 1:M
+    @sync @distributed for i = 1:M
         u⁺_meas[i], u⁻_meas[i] = meanAmplitudes(ψ_list[i])
     end
     return sdata(u⁺_meas), sdata(u⁻_meas)
@@ -681,7 +683,7 @@ end
 function avgAmpMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64; visible=false)
     
     PROG_NUM = 10
-    u⁺_list = Array{Float64, 1}(M); u⁻_list = Array{Float64, 1}(M)
+    u⁺_list = Array{Float64, 1}(undef, M); u⁻_list = Array{Float64, 1}(undef, M)
     u⁺_list[1], u⁻_list[1] = meanAmplitudes(ψ)
     
     prog_int = floor(Int64, M/PROG_NUM)
@@ -690,8 +692,8 @@ function avgAmpMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64; visible=
             nMCS(ψ, sim, Δt)
             u⁺_list[m], u⁻_list[m] = meanAmplitudes(ψ)
             if m % prog_int == 0
-                println("Measurement progress: $(Int(round(m/M*100,0)))%")
-                flush(STDOUT)
+                println("Measurement progress: $(Int(round(m/M*100; digits=0)))%")
+                flush(stdout)
             end
         end
     else # If not visible
@@ -713,7 +715,7 @@ function averageAmplitudes!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δ
     L = syst.L
     
     # Setup storage for measurements of average amplitudes
-    u⁺_list = Array{Float64, 1}(M); u⁻_list = Array{Float64, 1}(M);
+    u⁺_list = Array{Float64, 1}(undef, M); u⁻_list = Array{Float64, 1}(undef, M);
     
     # Splitting the problem into np sub-problems.
     np = nprocs()
@@ -862,8 +864,8 @@ end
 function ordParamMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64; visible=false)
     
     PROG_NUM = 10
-    c⁺_list = Array{Float64, 1}(M); c⁻_list = Array{Float64, 1}(M)
-    u⁺_list = Array{Float64, 1}(M); u⁻_list = Array{Float64, 1}(M)
+    c⁺_list = Array{Float64, 1}(undef, M); c⁻_list = Array{Float64, 1}(undef,M)
+    u⁺_list = Array{Float64, 1}(undef, M); u⁻_list = Array{Float64, 1}(undef,M)
     c⁺_list[1], c⁻_list[1] = meanCosine(ψ)
     u⁺_list[1], u⁻_list[1] = meanAmplitudes(ψ)
     
@@ -874,8 +876,8 @@ function ordParamMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64; visibl
             c⁺_list[m], c⁻_list[m] = meanCosine(ψ)
             u⁺_list[m], u⁻_list[m] = meanAmplitudes(ψ)
             if m % prog_int == 0
-                println("Measurement progress: $(Int(round(m/M*100,0)))%")
-                flush(STDOUT)
+                println("Measurement progress: $(Int(round(m/M*100; digits=0)))%")
+                flush(stdout)
             end
         end
     else # If not visible
@@ -898,8 +900,8 @@ function averageOrdParam!(ψ_list::Array{State,1}, sim::Controls, M::Int64, Δt:
     L = syst.L
     
     # Setup storage for measurements of average amplitudes
-    c⁺_list = Array{Float64, 1}(M); c⁻_list = Array{Float64, 1}(M);
-    u⁺_list = Array{Float64, 1}(M); u⁻_list = Array{Float64, 1}(M);
+    c⁺_list = Array{Float64, 1}(undef, M); c⁻_list = Array{Float64, 1}(undef, M);
+    u⁺_list = Array{Float64, 1}(undef, M); u⁻_list = Array{Float64, 1}(undef, M);
     
     # Splitting the problem into np sub-problems.
     np = nprocs()
@@ -975,13 +977,13 @@ end
 # Given a list of states measured by MCMC calculation, calculate the average order parameter over this list 
 function measureOrdParam(ψ_list::Array{State,1}; twoD=false)
     M = length(ψ_list)
-    η⁺_abs_meas = SharedArray{Float64}(M); η⁻_abs_meas = SharedArray{Float64}(M)
+    η⁺_abs_meas = SharedArray{Float64}(undef, M); η⁻_abs_meas = SharedArray{Float64}(undef, M)
     if twoD
-        @sync @parallel for i = 1:M
+        @sync @distributed for i = 1:M
             η⁺_abs_meas[i], η⁻_abs_meas[i] = averageOrdParam2D(ψ_list[i])
         end
     else
-        @sync @parallel for i = 1:M
+        @sync @distributed for i = 1:M
             η⁺_abs_meas[i], η⁻_abs_meas[i] = averageOrdParam(ψ_list[i])
         end
     end

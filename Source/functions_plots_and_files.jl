@@ -1,5 +1,5 @@
 using Distributions
-using Base.Test
+using Test
 using StatsBase
 using Plots
 gr()
@@ -11,8 +11,8 @@ gr()
 # Plotting result of structureFunctionVortexLatticeAvg!
 # -----------------------------------------------------------------------------------------------------------
 # Plotting result of structureFunctionVortexLatticeAvg!
-function plotStructureFunctionVortexLattice{T<:Real, R<:Real}(avV⁺::Array{T, 2}, avV⁻::Array{T, 2}, 
-        V⁺::Array{R, 2}, V⁻::Array{R,2}, avS⁺::Array{T, 2}, avS⁻::Array{T,2}, ks::Array{Array{T,1}, 2})
+function plotStructureFunctionVortexLattice(avV⁺::Array{T, 2}, avV⁻::Array{T, 2}, 
+        V⁺::Array{R, 2}, V⁻::Array{R,2}, avS⁺::Array{T, 2}, avS⁻::Array{T,2}, ks::Array{Array{T,1}, 2}) where {T<:Real, R<:Real}
     L = size(avV⁺,1)
     # Plotting structure factor
     L_k = size(ks, 1)
@@ -94,8 +94,8 @@ end
 # -----------------------------------------------------------------------------------------------------------
 # Plotting and saving result of structureFunctionVortexLatticeAvg!
 # Should be run inside of designated directory.
-function plotStructureFunctionVortexLatticeS{T<:Real}(ψ::State, avV⁺::Array{T, 2}, avV⁻::Array{T, 2}, 
-        avS⁺::Array{T, 2}, avS⁻::Array{T,2}, ks::Array{Array{T,1}, 2})
+function plotStructureFunctionVortexLatticeS(ψ::State, avV⁺::Array{T, 2}, avV⁻::Array{T, 2}, 
+        avS⁺::Array{T, 2}, avS⁻::Array{T,2}, ks::Array{Array{T,1}, 2}) where T<:Real
     L = size(avV⁺,1)
     # Plotting structure factor
     L_k = size(ks, 1)
@@ -445,8 +445,8 @@ function initializeParallelStatesS(syst::SystConstants, sim::Controls, dir::Abst
 	n_workers == size(E_w,1) || throw(error("ERROR: Somehow the number of workers changed during thermalization"))
 
 	# Converting the misc. energies into an array of arrays of energies
-	energies = Array{Array{Float64, 1}, 1}(n_workers+1)
-	labels = Array{String, 1}(n_workers+1)
+	energies = Array{Array{Float64, 1}, 1}(undef, n_workers+1)
+	labels = Array{String, 1}(undef, n_workers+1)
 	energies[n_workers+1] = E_ref[int]
 	labels[n_workers+1] = "reference"
 	for w = 1:n_workers

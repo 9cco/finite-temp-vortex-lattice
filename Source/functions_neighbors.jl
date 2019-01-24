@@ -8,7 +8,7 @@
 # nearest neighbor LatticeSites of the LatticeSite in the mirror lattice that is at the corresponding position
 # of the Neighbor object.
 function latticeNeighbors(lattice::Array{LatticeSite, 3}, L::Int64, L₃::Int64)
-    nb = Array{NearestNeighbors,3}(L,L,L₃)
+    nb = Array{NearestNeighbors,3}(undef, L,L,L₃)
 
     for z_pos = 1:L₃, v_pos=1:L, h_pos=1:L
         ϕᵣ₊₁ = lattice[v_pos, mod(h_pos+1-1,L)+1, z_pos]
@@ -104,7 +104,7 @@ end
 
 # --------------------------------------------------------------------------------------------------
 function latticeNextNeighbors(lattice::Array{LatticeSite,3}, L::Int64, L₃::Int64)
-    nnb = Array{NextNeighbors,3}(L,L,L₃)
+    nnb = Array{NextNeighbors,3}(undef, L,L,L₃)
 
     for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
         ϕᵣ₊₁₊₂ = lattice[mod(v_pos-1-1,L)+1,mod(h_pos+1-1,L)+1,z_pos]
@@ -200,7 +200,7 @@ end
 # --------------------------------------------------------------------------------------------------
 # Constructs lattice of next next nearest neighbor sites of the corresponding lattice LatticeSites
 function latticeNNNeighbors(lattice::Array{LatticeSite, 3}, L::Int64, L₃::Int64)
-    nnnb = Array{NNNeighbors,3}(L,L,L₃)
+    nnnb = Array{NNNeighbors,3}(undef, L,L,L₃)
     for z_pos = 1:L₃, h_pos=1:L, v_pos=1:L
         ϕᵣ₊₁₁ = lattice[v_pos, mod(h_pos+2-1,L)+1, z_pos]
         ϕᵣ₋₁₁ = lattice[v_pos, mod(h_pos-2-1,L)+1, z_pos]
