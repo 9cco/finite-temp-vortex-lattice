@@ -445,15 +445,40 @@ end
 #
 ###################################################################################################
 
-# Structure function for Bojesens "Z2 magnetization" order parameter.
-function Z2magStructFunc{T<:Real}(ψ::State, q::Array{T,1}, mid::Array{T,1})
+#Correlation function for sin(θ⁺-θ⁻)
+#function Z2magStructFunc{T<:Real}(ψ::State, q::Array{T,1}, mid::Array{T,1})
+#    L = ψ.consts.L
+#    L₃ = ψ.consts.L₃
+#    
+#    sumZ2 = Complex(0.0)
+#    θ_diff_mid = (ψ[mid[1],mid[2],mid[3]].θ⁺-
+#    for v_pos=1:L, h_pos=1:L, z_pos=1:L
+#        delta = [h_pos-1-mid[1], L-h_pos-mid[2], L-z_pos-mid[3]]
+            
+        
 
-end
 
-function Z2magnetization(ϕ::LatticeSite)
-    if (ϕ.θ⁺-ϕ.θ⁻) < π
-        return 1
-    else
-        return -1
+#end
+
+#function Z2magnetization(ϕ::LatticeSite)
+#    return sin(ϕ.θ⁺-ϕ.θ⁻)
+#end 
+
+###################################################################################################
+
+#Measuring when the phase difference is affected by Josephson ⟨cos(2(θ⁺-θ⁻))⟩
+
+function josephsonResponse(ψ_list::Array{State,1})
+    M = length(ψ_list)
+    j_response_list = Array{Float64}(M)
+    for i = 1:M
+        ψ = ψ_list[i]
+        sum = 0.0
+        for h_pos=1:L, v_pos=1:L, z_pos=1:L
+            ϕ = ψ.lattice[h_pos, v_pos, z_pos]
+            sum += cos(2*(ϕ.θ⁺-ϕ.θ⁻))
+        end
+        j_response_list[i] = sum/ψ.consts.L^3
     end
-end 
+    return j_response_list
+end
