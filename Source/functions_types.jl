@@ -378,9 +378,9 @@ function readState(filename::AbstractString)
         κ₅ = parse(Float64, readline(file))
         f = parse(Float64, readline(file))
         β = parse(Float64, readline(file))
-        syst = SystConstants(L, g⁻², ν, f, β)
+        syst = SystConstants(L, L₃, g⁻², ν, κ₅, f, β)
         
-        lattice = Array{LatticeSite, 3}(L,L,L₃)
+        lattice = Array{LatticeSite, 3}(undef, L,L,L₃)
         for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
             ϕ_values = split(readline(file), ":")
             A₁ = parse(Float64, ϕ_values[1])
@@ -393,9 +393,9 @@ function readState(filename::AbstractString)
             lattice[v_pos,h_pos,z_pos] = LatticeSite([A₁, A₂, A₃], θ⁺, θ⁻, u⁺, u⁻)
         end
         
-        nbl = latticeNeighbors(lattice,L)
-        nnbl = latticeNextNeighbors(lattice,L)
-        nnnbl = latticeNNNeighbors(lattice,L)
+        nbl = latticeNeighbors(lattice,L,L₃)
+        nnbl = latticeNextNeighbors(lattice,L,L₃)
+        nnnbl = latticeNNNeighbors(lattice,L,L₃)
         
         return State(lattice, syst, nbl, nnbl, nnnbl)
     end
@@ -411,7 +411,7 @@ function save(ψ_list::Array{State, 1}, filename::AbstractString="state_list.dat
     MAX_NUM_DIGITS = 10
     open(filename, "w") do f
         write(f, "state array\n")
-        M = digits(length(ψ_list), 10, MAX_NUM_DIGITS)
+        M = digits(length(ψ_list); base=10, pad=MAX_NUM_DIGITS)
         for i = 1:MAX_NUM_DIGITS
             write(f, "$(M[MAX_NUM_DIGITS-i+1])")
         end
@@ -442,7 +442,7 @@ end
 # Adds a state to a list already created by the save(::Array{State,1}, ::AbstractString; different=false) function.
 function addToList(ψ::State, filename::AbstractString)
     MAX_NUM_DIGITS = 10 # Has to be the same as number used in save(::Array{State,1}, ::AbstractString)
-    M₀ = 0
+    M₀ = 0; L = 1; L₃ = 1
     # Get length of existing list and check that constants are the same as state.
     open(filename, "r") do file
         line = readline(file)
@@ -482,7 +482,7 @@ input:\t$(ψ.consts.L)\t$(ψ.consts.L₃)\t$(ψ.consts.g⁻²)\t$(ψ.consts.ν)\
     # Update length of list by 1.
     open(filename, "r+") do file
         line = readline(file)
-        M_list = digits(M₀+1, 10, MAX_NUM_DIGITS)
+        M_list = digits(M₀+1; base=10, pad=MAX_NUM_DIGITS)
         for i = 1:MAX_NUM_DIGITS
             write(file, "$(M_list[MAX_NUM_DIGITS-i+1])")
         end
@@ -502,7 +502,7 @@ function loadStates(filename::AbstractString)
         end
         M = parse(Int64, readline(file))
         M > 0 || throw(DomainError())
-        ψ_l = Array{State, 1}(M)
+        ψ_l = Array{State, 1}(undef, M)
         c_values = split(readline(file), ":")
         L = parse(Int64, c_values[1])
         L > 0 || throw(DomainError())
@@ -520,7 +520,7 @@ function loadStates(filename::AbstractString)
                 throw(DomainError())
             end
             syst = SystConstants(L,L₃,g⁻²,ν,κ₅,f,β)
-            lattice = Array{LatticeSite, 3}(L,L,L₃)
+            lattice = Array{LatticeSite, 3}(undef, L,L,L₃)
             for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
                 ϕ_values = split(readline(file), ":")
                 A₁ = parse(Float64, ϕ_values[1])
@@ -547,7 +547,7 @@ end
 # Return the max and min amplitudes of the two components
 # max(u⁺), min(u⁺), max(u⁻), min(u⁻)
 function maxMinAmplitudes(ψ::State)
-	ϕ = ψ.lattice[1,1]
+	ϕ = ψ.lattice[1,1,1]
 	L = ψ.consts.L
 	ex_u⁺ = [ϕ.u⁺, ϕ.u⁺]
 	ex_u⁻ = [ϕ.u⁻, ϕ.u⁻]
@@ -576,7 +576,7 @@ end
 # Assume that the file metadata is read such that the rest of the file contains states. Finds the
 # file positions of the beginnings of these states and returns these positions in a vector.
 function enumerateStates(file::IOStream)
-    pos = Array{Int64}(1)
+    pos = Array{Int64}(undef,1)
     line = readline(file)
     line == "state start" || throw(error("ERROR: Could not find start of state after reading meta info"))
     pos[1] = position(file)-12
@@ -600,7 +600,7 @@ function StateArray(filename::AbstractString)
         
     syst = SystConstants(10, 10, 1/0.3^2, 0.5, 1.0, 1.0, 1.0) # Just dummy initialization.
     M₀ = 0
-    pos = Array{Int64}(1)
+    pos = Array{Int64}(undef, 1)
     # Get length of existing list
     open(filename, "r") do file
         line = readline(file)
@@ -631,14 +631,15 @@ end
 # -------------------------------------------------------------------------------------------------
 # Assuming an open IOStream that has been read until the start of a state,
 # read the state and create corresponding state in memory.
-function readState(file::IOStream, syst::SystConstants)
+function readState(file::IOStream, syst::SystConstants, file_pos::Int64)
+    seek(file, file_pos)
     line = readline(file)
     if line != "state start"
         throw(DomainError())
     end
     L = syst.L
     L₃ = syst.L₃
-    lattice = Array{LatticeSite, 3}(L,L,L₃)
+    lattice = Array{LatticeSite, 3}(undef, L,L,L₃)
     for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
         ϕ_values = split(readline(file), ":")
         A₁ = parse(Float64, ϕ_values[1])

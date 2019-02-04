@@ -13,7 +13,7 @@
 # zz components separately
 #--------------------------------------------------------------------------------------------------
 # zz-component gauge stiffness
-function gaugeStiffnessZZ{T<:Real}(k::Array{T,1}, ψ::State)
+function gaugeStiffnessZZ(k::Array{T,1}, ψ::State) where T<:Real
     sumGS = Complex(0.0)
     L = ψ.consts.L
     if (L != ψ.consts.L₃)
@@ -25,13 +25,13 @@ function gaugeStiffnessZZ{T<:Real}(k::Array{T,1}, ψ::State)
         ϕ = ψ.lattice[v_pos, h_pos, z_pos]
         ϕᵣ₊₁ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₁
         ϕᵣ₊₂ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₂
-        sumGS += (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])*exp(im*(k⋅r))
+        sumGS += (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])*exp(im*dot(k,r))
     end
     return (abs(sumGS))^2 / (two_pi^2*L^3)
 end
 
 # xx-component gauge stiffness
-function gaugeStiffnessXX{T<:Real}(k::Array{T,1}, ψ::State)
+function gaugeStiffnessXX(k::Array{T,1}, ψ::State) where T<:Real
     sumGS = Complex(0.0)
     L = ψ.consts.L
     if (L != ψ.consts.L₃)
@@ -43,13 +43,13 @@ function gaugeStiffnessXX{T<:Real}(k::Array{T,1}, ψ::State)
         ϕ = ψ.lattice[v_pos, h_pos, z_pos]
         ϕᵣ₊₂ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₂
         ϕᵣ₊₃ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₃
-        sumGS += (ϕ.A[2] + ϕᵣ₊₂.A[3] - ϕᵣ₊₃.A[2] - ϕ.A[3])*exp(im*(k⋅r))
+        sumGS += (ϕ.A[2] + ϕᵣ₊₂.A[3] - ϕᵣ₊₃.A[2] - ϕ.A[3])*exp(im*dot(k,r))
     end
     return (abs(sumGS))^2 / (two_pi^2*L^3)
 end
 
 # yy-component gauge stiffness
-function gaugeStiffnessYY{T<:Real}(k::Array{T,1}, ψ::State)
+function gaugeStiffnessYY(k::Array{T,1}, ψ::State) where T<:Real
     sumGS = Complex(0.0)
     L = ψ.consts.L
     if (L != ψ.consts.L₃)
@@ -61,14 +61,14 @@ function gaugeStiffnessYY{T<:Real}(k::Array{T,1}, ψ::State)
         ϕ = ψ.lattice[v_pos, h_pos, z_pos]
         ϕᵣ₊₁ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₁
         ϕᵣ₊₃ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₃
-        sumGS += (ϕ.A[3] + ϕᵣ₊₃.A[1] - ϕᵣ₊₁.A[3] - ϕ.A[1])*exp(im*(k⋅r))
+        sumGS += (ϕ.A[3] + ϕᵣ₊₃.A[1] - ϕᵣ₊₁.A[3] - ϕ.A[1])*exp(im*dot(k,r))
     end
     return (abs(sumGS))^2 / (two_pi^2*L^3)
 end
 
 # -------------------------------------------------------------------------------------------------
 # Calculate gauge stiffness more effectively as a triplet
-function gaugeStiffness{T<:Real}(k::Array{T,1}, ψ::State)
+function gaugeStiffness(k::Array{T,1}, ψ::State) where T<:Real
     gs_xx = Complex(0.0); gs_yy = Complex(0.0); gs_zz = Complex(0.0)
     L = ψ.consts.L
     if (L != ψ.consts.L₃)
@@ -81,9 +81,9 @@ function gaugeStiffness{T<:Real}(k::Array{T,1}, ψ::State)
         ϕᵣ₊₁ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₁
         ϕᵣ₊₂ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₂
         ϕᵣ₊₃ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₃
-        gs_xx += (ϕ.A[2] + ϕᵣ₊₂.A[3] - ϕᵣ₊₃.A[2] - ϕ.A[3])*exp(im*(k⋅r))
-        gs_yy += (ϕ.A[3] + ϕᵣ₊₃.A[1] - ϕᵣ₊₁.A[3] - ϕ.A[1])*exp(im*(k⋅r))
-        gs_zz += (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])*exp(im*(k⋅r))
+        gs_xx += (ϕ.A[2] + ϕᵣ₊₂.A[3] - ϕᵣ₊₃.A[2] - ϕ.A[3])*exp(im*dot(k,r))
+        gs_yy += (ϕ.A[3] + ϕᵣ₊₃.A[1] - ϕᵣ₊₁.A[3] - ϕ.A[1])*exp(im*dot(k,r))
+        gs_zz += (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])*exp(im*dot(k,r))
     end
 
     norm = two_pi^2*L^3
@@ -97,12 +97,12 @@ function gaugeStiffness(ψ_list::Array{State,1})
     M = length(ψ_list)
     L = ψ_list[1].consts.L
 
-    ρˣˣₖ₂ = Array{Float64}(M)
-    ρˣˣₖ₃ = Array{Float64}(M)
-    ρʸʸₖ₁ = Array{Float64}(M)
-    ρʸʸₖ₃ = Array{Float64}(M)
-    ρᶻᶻₖ₁ = Array{Float64}(M)
-    ρᶻᶻₖ₂ = Array{Float64}(M)
+    ρˣˣₖ₂ = Array{Float64}(undef, M)
+    ρˣˣₖ₃ = Array{Float64}(undef, M)
+    ρʸʸₖ₁ = Array{Float64}(undef, M)
+    ρʸʸₖ₃ = Array{Float64}(undef, M)
+    ρᶻᶻₖ₁ = Array{Float64}(undef, M)
+    ρᶻᶻₖ₂ = Array{Float64}(undef, M)
     k₁ = [2π/L, 0.0, 0.0]
     k₂ = [0.0, 2π/L, 0.0]
     k₃ = [0.0, 0.0, 2π/L]
@@ -123,25 +123,25 @@ function gaugeStiffnessMeasure!(ψ::State, sim::Controls, M::Int64, Δt::Int64)
     L = ψ.consts.L
     
     #Itialialise measurement arrays and fourrier modes
-    ρˣˣₖ₂ = Array{Float64}(M)
-    ρˣˣₖ₃ = Array{Float64}(M)
-    ρʸʸₖ₃ = Array{Float64}(M)
-    ρʸʸₖ₁ = Array{Float64}(M)
-    ρᶻᶻₖ₁ = Array{Float64}(M)
-    ρᶻᶻₖ₂ = Array{Float64}(M)
+    ρˣˣₖ₂ = Array{Float64}(undef, M)
+    ρˣˣₖ₃ = Array{Float64}(undef, M)
+    ρʸʸₖ₃ = Array{Float64}(undef, M)
+    ρʸʸₖ₁ = Array{Float64}(undef, M)
+    ρᶻᶻₖ₁ = Array{Float64}(undef, M)
+    ρᶻᶻₖ₂ = Array{Float64}(undef, M)
     k₁ = [2π/L, 0.0, 0.0]
     k₂ = [0.0, 2π/L, 0.0]
     k₃ = [0.0, 0.0, 2π/L]
-    u⁺_array = Array{Float64}(M)
-    u⁻_array = Array{Float64}(M)
-    A_array = Array{Float64}(M)
-    E_array = Array{Float64}(M)
-    ΥcosX = Array{Float64}(M)
-    ΥsinX = Array{Float64}(M)
-    ΥcosY = Array{Float64}(M)
-    ΥsinY = Array{Float64}(M)
-    ΥcosZ = Array{Float64}(M)
-    ΥsinZ = Array{Float64}(M)
+    u⁺_array = Array{Float64}(undef, M)
+    u⁻_array = Array{Float64}(undef, M)
+    A_array = Array{Float64}(undef, M)
+    E_array = Array{Float64}(undef, M)
+    ΥcosX = Array{Float64}(undef, M)
+    ΥsinX = Array{Float64}(undef, M)
+    ΥcosY = Array{Float64}(undef, M)
+    ΥsinY = Array{Float64}(undef, M)
+    ΥcosZ = Array{Float64}(undef, M)
+    ΥsinZ = Array{Float64}(undef, M)
     
     #Initial measurement
     ρˣˣₖ₂[1] = gaugeStiffnessXX(k₂, ψ)
@@ -364,7 +364,7 @@ function measureHelicityModulus(ψ_list::Array{State,1}; twoD=false)
     # Problem with memory management by usage of SharedArray and @sync @parallel for loop
     M = length(ψ_list)
 #    Υ_list = SharedArray{Float64}(M)
-    Υ_list = Array{Float64}(M)
+    Υ_list = Array{Float64}(undef, M)
     if twoD
 #        @sync @parallel for i = 1:M
         for i = 1:M
@@ -445,26 +445,6 @@ end
 #
 ###################################################################################################
 
-#Correlation function for sin(θ⁺-θ⁻)
-#function Z2magStructFunc{T<:Real}(ψ::State, q::Array{T,1}, mid::Array{T,1})
-#    L = ψ.consts.L
-#    L₃ = ψ.consts.L₃
-#    
-#    sumZ2 = Complex(0.0)
-#    θ_diff_mid = (ψ[mid[1],mid[2],mid[3]].θ⁺-
-#    for v_pos=1:L, h_pos=1:L, z_pos=1:L
-#        delta = [h_pos-1-mid[1], L-h_pos-mid[2], L-z_pos-mid[3]]
-            
-        
-
-
-#end
-
-#function Z2magnetization(ϕ::LatticeSite)
-#    return sin(ϕ.θ⁺-ϕ.θ⁻)
-#end 
-
-###################################################################################################
 
 #Measuring when the phase difference is affected by Josephson ⟨cos(2(θ⁺-θ⁻))⟩
 

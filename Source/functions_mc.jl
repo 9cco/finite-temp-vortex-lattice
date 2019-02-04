@@ -30,7 +30,7 @@ end
 # Performes a Metropolis Hasting update on a lattice site at position pos in state ψ given an inverse temperature
 # β and where ϕᵣ... gives nearest and next nearest neighbor sites. Note that pos gives [y,x] of the position of
 # the lattice site in normal array notation such that [1,1] is the upper left corner.
-function metropolisHastingUpdate!(ψ::State, pos::Array{Int64,1}, sim::Controls)
+function metropolisHastingUpdate!(ψ::State, pos::Tuple{Int64, Int64, Int64}, sim::Controls)
 	# Save the lattice site at the targeted position in a temporary variable ϕ and use the lattice site
 	# as a basis for proposing a new lattice site ϕ′. Then find the energy difference between having
 	# ϕ′ or ϕ at position pos.
@@ -65,7 +65,7 @@ function mcSweep!(ψ::State, sim::Controls = Controls(π/3, 0.4, 3.0))
     L₃::Int64 = ψ.consts.L₃
     
     for z_pos = 1:L₃, h_pos = 1:L, v_pos = 1:L
-        metropolisHastingUpdate!(ψ, [v_pos,h_pos,z_pos], sim)
+        metropolisHastingUpdate!(ψ, (v_pos,h_pos,z_pos), sim)
     end
 end
 
@@ -77,7 +77,7 @@ function mcSweepFrac!(ψ::State, sim::Controls = Controls(π/3, 0.4, 1.0))
     L = ψ.consts.L
     L₃ = ψ.consts.L₃
     for z_pos=1:L₃, h_pos=1:L, v_pos=1:L
-        if metropolisHastingUpdate!(ψ,[v_pos,h_pos,z_pos], sim) != 0.0
+        if metropolisHastingUpdate!(ψ,(v_pos,h_pos,z_pos), sim) != 0.0
             count += 1
         end
     end
@@ -97,7 +97,7 @@ function mcSweepEn!(ψ::State, sim::Controls = Controls(π/3, 0.4, 3.0))
     
     # Update the bulk
     for z_pos=1:L₃, h_pos=1:L, v_pos=1:L
-        δE += metropolisHastingUpdate!(ψ, [v_pos,h_pos,z_pos], sim)
+        δE += metropolisHastingUpdate!(ψ, (v_pos,h_pos,z_pos), sim)
     end
     return δE
 end
@@ -177,7 +177,7 @@ end
 # --------------------------------------------------------------------------------------------------
 # Perform n MCsweeps and return the final state and an array with energies after each sweep
 function nMCSEnergy(ψ::State, sim::Controls, n::Int64, E₀::Float64)
-	E_array = Array{Float64,1}(n)
+	E_array = Array{Float64,1}(undef, n)
 	E_array[1] = E₀ + mcSweepEn!(ψ,sim)
     for i=2:n
         E_array[i] = E_array[i-1] + mcSweepEn!(ψ,sim)
@@ -191,7 +191,7 @@ end
 function nMCSEnergy!(ψ_list::Array{State, 1}, sim_list::Array{Controls, 1}, n::Int64, E₀_list::Array{Float64, 1})
     nw = nprocs()-1
     n_state = length(ψ_list)
-    E_matrix = Array{Float64, 2}(n_state, n)
+    E_matrix = Array{Float64, 2}(undef, n_state, n)
     
     i = 0 # Index in ψ_list of states already updated.
     while i < n_state
@@ -311,7 +311,7 @@ function adjustSimConstants!(sim::Controls, ψ::State, M::Int64 = 40)
         # as high is possible so that we can get more proposals.
         accept_ratios = vcat(f_A, f_u, f_θ)
         tries = vcat(tries_A, tries_u, tries_θ)
-        i_max = indmax(accept_ratios)   # Finding index of sim that gave highest accept ratio.
+        i_max = argmax(accept_ratios)   # Finding index of sim that gave highest accept ratio.
         s₀ = tries[i_max]               # Setting this sim to the initial one.
         
         
@@ -330,7 +330,7 @@ function adjustSimConstants!(sim::Controls, ψ::State, M::Int64 = 40)
     for i = 1:proposals
         norms[i] = proposedConstants[i].θmax^2 + proposedConstants[i].umax^2 + proposedConstants[i].Amax^2
     end
-    i_max = indmax(norms)
+    i_max = argmax(norms)
     setValues!(sim, proposedConstants[i_max]) # Finally we update the simulation constants to the sim that has 
     # highest norm, and an accept ratio above LOWER.
     return (proposedAR[i_max], adjustment_mcs, ψ, sim)
@@ -341,7 +341,7 @@ end
 # Perform n MCsweeps and return the final state and an array with energies after each sweep
 # and updates simulation constants dynamically
 function nMCSEnergyDynamic(ψ::State, sim::Controls, n::Int64, adjust_int::Int64, E₀::Float64)
-	Es = Array{Float64,1}(n)
+	Es = Array{Float64,1}(undef, n)
     adjustment_mcs = 0
 
 	Es[1] = E₀ + mcSweepEn!(ψ,sim)
@@ -371,7 +371,7 @@ function adjustSimConstants!(ψ_list::Array{State, 1}, sim_list::Array{Controls,
     nw = nprocs()-1
     n_state = length(ψ_list)
     mcs_list = zeros(Int64, n_state)
-    ar_list = Array{Float64, 1}(n_state)
+    ar_list = Array{Float64, 1}(undef, n_state)
     
     i = 0 # Index in ψ_list of states already updated.
     while i < n_state
