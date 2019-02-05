@@ -445,15 +445,20 @@ end
 #
 ###################################################################################################
 
-# Structure function for Bojesens "Z2 magnetization" order parameter.
-#function Z2magStructFunc(ψ::State, q::Array{T,1}, mid::Array{T,1}) where T<:Real
 
-#end
+#Measuring when the phase difference is affected by Josephson ⟨cos(2(θ⁺-θ⁻))⟩
 
-function Z2magnetization(ϕ::LatticeSite)
-    if (ϕ.θ⁺-ϕ.θ⁻) < π
-        return 1
-    else
-        return -1
+function josephsonResponse(ψ_list::Array{State,1})
+    M = length(ψ_list)
+    j_response_list = Array{Float64}(M)
+    for i = 1:M
+        ψ = ψ_list[i]
+        sum = 0.0
+        for h_pos=1:L, v_pos=1:L, z_pos=1:L
+            ϕ = ψ.lattice[h_pos, v_pos, z_pos]
+            sum += cos(2*(ϕ.θ⁺-ϕ.θ⁻))
+        end
+        j_response_list[i] = sum/ψ.consts.L^3
     end
-end 
+    return j_response_list
+end
