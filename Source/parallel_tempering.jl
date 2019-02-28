@@ -166,7 +166,7 @@ function PTStep!(pt::PTRun)
     end
     
     # Distribute the new temperatures to worker processes
-    distributeTemperatures!(pt.dr_list, pt.β_list[pt.rep_map[pt.rep_map]])
+    distributeTemperatures!(pt.dr_list, pt.β_list[pt.rep_map])
     
     # Finally increment number of PT steps done and set the end states
     # Since the lowest temperature is at index 1, we set the replica at rep_map[1] to be a up-mover.
@@ -174,6 +174,12 @@ function PTStep!(pt::PTRun)
     pt.N_pt += 1
     setStates(pt.dr_list, pt.rep_map[1], pt.rep_map[pt.N_temp])
     
+    nothing
+end
+
+function updateEn(pt::PTRun)
+    dmutate(R -> R.En = E(R.ψ), pt.dr_list)
+    pt.E_list = dmap(R -> R.En, pt.dr_list);
     nothing
 end
 

@@ -310,18 +310,6 @@ end
 #
 ####################################################################################################################
 
-function mkcd(dir_name::AbstractString; visible=false)
-    if ispath(dir_name)
-        if visible
-            println("Directory $(dir_name) already exists.. entering.")
-        end
-        cd(dir_name)
-    else
-        mkdir(dir_name)
-        cd(dir_name)
-    end
-end
-
 # -----------------------------------------------------------------------------------------------------------
 # Creates a new directory based on the simulation constants and enters it for further writing of files.
 function mkcdSystemDirectory(syst::SystConstants, M::Int64, Δt::Int64)

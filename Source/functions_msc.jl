@@ -235,3 +235,15 @@ function highestDivisor(M::Int, N::Int)
     end
     
 end
+
+function mkcd(dir_name::AbstractString; visible=false)
+    if ispath(dir_name)
+        if visible
+            println("Directory $(dir_name) already exists.. entering.")
+        end
+        cd(dir_name)
+    else
+        mkdir(dir_name)
+        cd(dir_name)
+    end
+end
