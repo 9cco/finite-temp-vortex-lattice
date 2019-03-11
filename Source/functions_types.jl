@@ -27,12 +27,12 @@ function setValues!(sim_target::Controls, sim_source::Controls)
 end
 
 # -------------------------------------------------------------------------------------------------
-function printSimControls(sim_list::Array{Controls})
+function printSimControls(sim_list::Array{Controls, 1})
     println("State\tθmax\t\t\tumax\tAmax")
     for i = 1:length(sim_list)
         println("$i\t$(sim_list[i].θmax)\t$(sim_list[i].umax)\t$(sim_list[i].Amax)")
     end
-    return
+    nothing
 end
 
 ####################################################################################################
@@ -228,6 +228,7 @@ end
 # 3:    u⁺ is random, the rest are mean field.
 # 4:    u⁺ and u⁻ are random, the rest are mean field.
 # 5:    θ⁺ and θ⁻ are random, the rest are mean field.
+# 6:    All fields except u⁺ and u⁻ random.
 function State(choice::Int64, consts::SystConstants; u⁺=1.0, u⁻=0.0, θ⁺=0.0, θ⁻=0.0, A=[0.0, 0.0, 0.0])
     L = consts.L
     L₃ = consts.L₃

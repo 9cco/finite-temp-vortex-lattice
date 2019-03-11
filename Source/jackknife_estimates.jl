@@ -1,6 +1,9 @@
 # Types and function for calculating jackknife estimates
 # Requires: divisors(::Int64) and mkcd(::AbstractString) from functions_msc.jl and the FerrenbergSwendsenReweighting package.
 #
+using Statistics
+using Plots
+pyplot()
 
 ####################################################################################################
 #                            Types needed
@@ -392,7 +395,7 @@ function varianceByBlockLengthPlots(O_by_T::Vector{Vector{T}}, E_by_T::Vector{Ve
     end
 
     if plot_all
-        titles = ["Variance of blocks with length Nb, T=$(round(1/β; digits=1))" for β ∈ β_list]
+        titles = ["Variance of blocks with length Nb, T=$(round(1/β; digits=3))" for β ∈ β_list]
         # We start by creating the observable plots
         mkcd(obs_folder)
         multipleSeriesVariancePlots(O_by_T, num_blocks; file_ending=file_ending, titles=titles)
@@ -408,7 +411,7 @@ function varianceByBlockLengthPlots(O_by_T::Vector{Vector{T}}, E_by_T::Vector{Ve
         prob_indices = findProblemSeries(O_by_T; num_blocks=num_blocks)
         if length(prob_indices) >= 1
             prob_series = [O_by_T[k] for k ∈ prob_indices]
-            titles = ["Variance of blocks with length Nb, T=$(round(1/β_list[k]; digits=1))" for k ∈ prob_indices]
+            titles = ["Variance of blocks with length Nb, T=$(round(1/β_list[k]; digits=3))" for k ∈ prob_indices]
             mkcd(obs_folder)
             multipleSeriesVariancePlots(prob_series, num_blocks; file_ending=file_ending, titles=titles)
             cd("../")
@@ -437,7 +440,7 @@ end
 # the observables to a new (inverse) temperature range at rwt_βs. The error in the new reweighted observables is  found
 # by creating jackknife blocks of the O_by_T and E_by_T sets.
 function reweightWithError(O_by_T::Vector{Vector{T}}, E_by_T::Vector{Vector{R}}, orig_βs::Vector{R},
-        rwt_βs::Vector{R}; num_blocks=2^7, skip_check=false, make_plots=false, file_ending="png") where {T, R<:Real}
+        rwt_βs::Vector{R}; num_blocks=2^7, skip_check=true, make_plots=true, file_ending="png") where {T, R<:Real}
     
     (N₀ = length(orig_βs)) == length(O_by_T) == length(E_by_T) || throw(error("ERROR: Length of input vectors did not agree.
 Are you sure that we have corresponding observables, energies and inverse temperatures?"))

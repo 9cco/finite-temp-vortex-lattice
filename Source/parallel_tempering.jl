@@ -59,6 +59,10 @@ function PTRun(ψ_list::Array{State,1}, sim_list::Array{Controls,1}, N_mc::Int64
     return PTRun(dr_list, accepts, histograms, β_list, rep_map, E_list, N_mc, 0, N)
 end
 
+function E(pt::PTRun)
+    return pt.E_list[pt.rep_map]
+end
+
 @everywhere function nMCS!(R::Replica, n::Int64)
     En = R.En
     for i=1:n

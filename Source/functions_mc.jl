@@ -156,7 +156,7 @@ function nMCS!(ψ_list::Array{State, 1}, sim_list::Array{Controls, 1}, N::Int64)
         
         worker_jobs = min(nw, n_state-1-i) # Number of needed jobs given to workers
         # Start the max number of workers if that wouldn't be too much.
-        work_futures = [Future() for w = 1:worker_jobs]
+        work_futures = Array{Future, 1}(undef, worker_jobs)#[Future() for w = 1:worker_jobs]
         
         for w = 1:worker_jobs
             work_futures[w] = @spawn nMCS(ψ_list[i+w], sim_list[i+w], N)

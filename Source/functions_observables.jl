@@ -158,6 +158,40 @@ function structureFunction(k::Array{T,1}, ψ::State, V⁺::Array{I,2}, V⁻::Arr
     
     return (abs2(sum⁺),abs2(sum⁻))
 end
+function structureFunction(k::Array{T,1}, V⁺::Array{R,2}, V⁻::Array{R,2}) where {T<:Real, R<:Real}
+    sum⁺ = Complex(0)
+    sum⁻ = Complex(0)
+    L = size(V⁺, 1)
+    origo_l = Int(floor((L-1)/2))
+    origo_r = L-1-origo_l # For a lattice where L is odd, origo will be in the center.
+    
+    # Sum over all the plaquettes in the whole lattice
+    for h_pos = 1:L
+        for v_pos = 1:L
+            r = [h_pos-1-origo_l, origo_r+1-v_pos]
+            sum⁺ += V⁺[v_pos,h_pos]*exp(im*dot(k,r))
+            sum⁻ += V⁻[v_pos,h_pos]*exp(im*dot(k,r))
+        end
+    end
+    
+    return (abs2(sum⁺),abs2(sum⁻))
+end
+function structureFunction(k::Array{T,1}, V::Array{R,2}) where {T<:Real, R<:Real}
+    sum_s = Complex(0)
+    L = size(V, 1)
+    origo_l = Int(floor((L-1)/2))
+    origo_r = L-1-origo_l # For a lattice where L is odd, origo will be in the center.
+    
+    # Sum over all the plaquettes in the whole lattice
+    for h_pos = 1:L
+        for v_pos = 1:L
+            r = [h_pos-1-origo_l, origo_r+1-v_pos]
+            sum_s += V[v_pos,h_pos]*exp(im*dot(k,r))
+        end
+    end
+    
+    return abs2(sum_s)
+end
 # If V⁺ and V⁻ are not known, they have to be calculated.
 function structureFunction(k::Array{T,1}, ψ::State) where T<:Real
     sum⁺ = Complex(0)
