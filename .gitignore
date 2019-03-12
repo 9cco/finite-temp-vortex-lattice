@@ -1,0 +1,27 @@
+# Ignoring specific files in Notebooks directory
+Notebooks/Test*
+
+# Ignore data directory
+Data/
+
+# Ignoring data-directories created from Scripts
+Scripts/*/
+
+# Ignore data directories created from Notebooks
+Notebooks/*/
+
+# Ignore data files
+*.data
+
+# Ignoring temporary vim files
+*.swp
+
+# Ignoring LaTeX compile files
+*.aux
+*.bbl
+*.blg
+*.log
+
+# Ignore plots and pictures
+*.png
+Notebooks/*.pdf
