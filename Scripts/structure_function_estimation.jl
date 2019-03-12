@@ -37,17 +37,17 @@ g = 0.1    # Gauge coupling
 ν = 0.3    # Anisotropy
 
 # Other parameters
-M_th = 2^13  # Number of PT-steps to do for thermalization.
+M_th = 2^14  # Number of PT-steps to do for thermalization.
 M = 2^12    # Number of measurements
-Δt = 16    # Number of PT-steps between each measurement
+Δt = 19    # Number of PT-steps between each measurement
 N_mc = 1   # Number of MCS between each PT-step
 # L is assumed to be even.
 L = 32     # System length
 L₃ = 32
 N = L^2*L₃
 # Make geometric progression of temperatures between T₁ and Tₘ
-T₁ = 0.5
-Tₘ = 0.8
+T₁ = 1.81
+Tₘ = 2.0
 N_temp = 3*2^0
 R = (Tₘ/T₁)^(1/(N_temp-1))
 temps = [T₁*R^(k-1) for k = 1:N_temp]
@@ -89,11 +89,11 @@ t_meas = @elapsed for i = 1:M_est
         PTStep!(pt)
     end
 
-    all_res = dmap(R -> gaugeStiffness([R.ψ]), pt.dr_list)
+    all_res = dmap(R -> gaugeStiffness([R.ψ]), pt)
     En_res = E(pt)
    
     # Measure vortices and structure function
-    vortices_by_T = dmap(R -> vortexSnapshot(R.ψ), pt.dr_list)
+    vortices_by_T = dmap(R -> vortexSnapshot(R.ψ), pt)
     for k = 1:N_T
         V⁺, V⁻ = vortices_by_T[k]
         # Take the average over the z-direction.
@@ -151,8 +151,8 @@ println("Thermalization used $(round(t_th/60; digits=1)) m. Energy plots saved t
 ################################################################################################
 
 println("Adjusting simulation constants.")
-ψs = [R.ψ for R in localize(pt.dr_list)]
-adjust_sims = [R.sim for R in localize(pt.dr_list)]
+ψs = [R.ψ for R in localize(pt.dr_list)[pt.rep_map]]
+adjust_sims = [R.sim for R in localize(pt.dr_list)[pt.rep_map]]
 @time adjustSimConstants!(ψs, adjust_sims);
 println("Controls after adjustment, choosing number 1 for later simulations:")
 printSimControls(adjust_sims)
@@ -184,7 +184,7 @@ S⁻_by_T = [[Array{Float64, 2}(undef, L,L) for m = 1:M] for k = 1:N_T]
     for j = 1:Δt
         PTStep!(pt)
     end
-    all_res = dmap(R -> gaugeStiffness([R.ψ]), pt.dr_list)
+    all_res = dmap(R -> gaugeStiffness([R.ψ]), pt)
     En_res = E(pt)
     # Sort results in terms of temperature and extract ρˣˣₖ₂.
     for (i, res) = enumerate(all_res[pt.rep_map])
@@ -193,7 +193,7 @@ S⁻_by_T = [[Array{Float64, 2}(undef, L,L) for m = 1:M] for k = 1:N_T]
     end
 
     # Measure vortices and structure function
-    vortices_by_T = dmap(R -> vortexSnapshot(R.ψ), pt.dr_list)
+    vortices_by_T = dmap(R -> vortexSnapshot(R.ψ), pt)
     for k = 1:N_T
         V⁺, V⁻ = vortices_by_T[k]
         # Take the average over the z-direction.
@@ -204,8 +204,8 @@ S⁻_by_T = [[Array{Float64, 2}(undef, L,L) for m = 1:M] for k = 1:N_T]
         end
     end
 end
-vortices_by_T = dmap(R -> vortexSnapshot(R.ψ), pt.dr_list)
-ψs = [R.ψ for R in localize(pt.dr_list)]
+vortices_by_T = dmap(R -> vortexSnapshot(R.ψ), pt)
+ψs = [R.ψ for R in localize(pt.dr_list)[pt.rep_map]]
 
 
 

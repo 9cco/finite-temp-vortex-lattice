@@ -102,6 +102,10 @@ function incrementHistograms!(pt::PTRun)
     end
 end
 
+function dmap(f::Function, pt::PTRun)
+    return dmap(f, pt.dr_list)[pt.rep_map]
+end
+
 function ptSwap!(pt::PTRun, i::Int64, j::Int64)
     # i and j refer to the indices in the temperature array. We swap the contents of rep_map at these indices.
     # This means that effectively we swap the states associated with the temperatures at i and j.
