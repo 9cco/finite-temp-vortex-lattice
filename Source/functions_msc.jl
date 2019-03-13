@@ -13,6 +13,18 @@ function getMomMatrix(L::Int64)
 end
 
 # --------------------------------------------------------------------------------------------------
+# Translates the 2d matrix V in each dimension by an index length tr_i and tr_j. Elements that fall
+# outside the length of the array wraps around.
+function translate2DMat(V::Array{T, 2}, tr_i::Int, tr_j::Int) where {T}
+    Li = size(V, 1); Lj = size(V, 2)
+    V_new = Array{T, 2}(undef, Li, Lj)
+    for i = 1:Li, j = 1:Lj
+        V_new[Int(mod(i + tr_i - 1, Li)+1), Int(mod(j + tr_j - 1, Lj)+1)] = V[i,j]
+    end
+    V_new
+end
+
+# --------------------------------------------------------------------------------------------------
 # Given two matrices where the second is assumed to contain the errors of the matrix elements
 # of the first, we calculate the relative error and returns the one with the largest relative error
 # as well as its matrix indices.

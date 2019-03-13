@@ -38,9 +38,9 @@ g = 0.1    # Gauge coupling
 
 # Other parameters
 M_th = 2^14  # Number of PT-steps to do for thermalization.
-M = 2^12    # Number of measurements
+M = 2^13    # Number of measurements
 Δt = 19    # Number of PT-steps between each measurement
-N_mc = 1   # Number of MCS between each PT-step
+N_mc = 4   # Number of MCS between each PT-step
 # L is assumed to be even.
 L = 32     # System length
 L₃ = 32
@@ -48,7 +48,7 @@ N = L^2*L₃
 # Make geometric progression of temperatures between T₁ and Tₘ
 T₁ = 1.81
 Tₘ = 2.0
-N_temp = 3*2^0
+N_temp = 3*2^1
 R = (Tₘ/T₁)^(1/(N_temp-1))
 temps = [T₁*R^(k-1) for k = 1:N_temp]
 temps = reverse(temps)
@@ -99,9 +99,7 @@ t_meas = @elapsed for i = 1:M_est
         # Take the average over the z-direction.
         proj_V⁺ = avgVort(V⁺); proj_V⁻ = avgVort(V⁻)
         # Find the Fourier transform of the projected vortices ∀ k ∈ k_matrix
-        for ix = 1:L, iy = 1:L
-            structureFunction(k_matrix[iy,ix], proj_V⁺, proj_V⁻)
-        end
+        structureFunction(proj_V⁺, proj_V⁻)
     end
 
 end
@@ -176,8 +174,8 @@ for i = 1:length(temps)
     E_by_T[i] = Array{Float64}(undef, M)
 end
 # Storage for vortices and dual vortices
-S⁺_by_T = [[Array{Float64, 2}(undef, L,L) for m = 1:M] for k = 1:N_T]
-S⁻_by_T = [[Array{Float64, 2}(undef, L,L) for m = 1:M] for k = 1:N_T]
+S⁺_by_T = [Array{Array{Float64, 2},1}(undef, M) for k = 1:N_T]
+S⁻_by_T = [Array{Array{Float64, 2},1}(undef, M) for k = 1:N_T]
 
 # We preform M measurements
 @time for m = 1:M
@@ -199,9 +197,7 @@ S⁻_by_T = [[Array{Float64, 2}(undef, L,L) for m = 1:M] for k = 1:N_T]
         # Take the average over the z-direction.
         proj_V⁺ = avgVort(V⁺); proj_V⁻ = avgVort(V⁻)
         # Find the Fourier transform of the projected vortices ∀ k ∈ k_matrix
-        for ix = 1:L, iy = 1:L
-            S⁺_by_T[k][m][iy,ix], S⁻_by_T[k][m][iy,ix] = structureFunction(k_matrix[iy,ix], proj_V⁺, proj_V⁻)
-        end
+        S⁺_by_T[k][m], S⁻_by_T[k][m] = structureFunction(proj_V⁺, proj_V⁻)
     end
 end
 vortices_by_T = dmap(R -> vortexSnapshot(R.ψ), pt)
