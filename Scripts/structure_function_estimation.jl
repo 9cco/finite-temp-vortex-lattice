@@ -33,7 +33,7 @@ using JLD
 # Enter data directory for structure function
 fixRC()
 # We run a simulation with the parameters
-g = 0.1    # Gauge coupling
+g = 1.0    # Gauge coupling
 ν = 0.3    # Anisotropy
 
 # Other parameters
@@ -46,7 +46,7 @@ L = 32     # System length
 L₃ = 32
 N = L^2*L₃
 # Make geometric progression of temperatures between T₁ and Tₘ
-T₁ = 1.81
+T₁ = 1.8
 Tₘ = 2.0
 N_temp = 3*2^1
 R = (Tₘ/T₁)^(1/(N_temp-1))
@@ -112,6 +112,7 @@ This yields $(round(t_MCS*1000; digits=1)) ms on average for each MCS.")
 println("Measurements and thermalization will do $((Δt*M + M_th)*pt.N_mc) MCS pr temperature which has an 
 ETC of $(round((Δt*M + M_th)*N_T*pt.N_mc*t_MCS/3600; digits=2)) h")
 print("Continue with thermalization and measurements? (y/n): ")
+flush(stdout)
 
 user_input = readline(stdin)
 if user_input == "n"
@@ -166,13 +167,14 @@ ETC of $(round(Δt*M*t_PT/3600; digits=2)) h")
 println("Started measurements at: $(Dates.format(now(), "HH:MM"))")
 flush(stdout)
 
-# Setup storage for ρˣˣₖ₂
-ρˣ₂_by_T = Array{Array{Float64, 1}}(undef, length(temps))
-E_by_T = Array{Array{Float64, 1}}(undef, length(temps))
-for i = 1:length(temps)
-    ρˣ₂_by_T[i] = Array{Float64}(undef, M)
-    E_by_T[i] = Array{Float64}(undef, M)
-end
+# Setup storage for dual stifness and energy
+ρˣ₂_by_T = [Array{Float64, 1}(undef, M) for k = 1:N_T]
+ρˣ₃_by_T = [Array{Float64, 1}(undef, M) for k = 1:N_T]
+ρʸ₁_by_T = [Array{Float64, 1}(undef, M) for k = 1:N_T]
+ρʸ₃_by_T = [Array{Float64, 1}(undef, M) for k = 1:N_T]
+ρᶻ₁_by_T = [Array{Float64, 1}(undef, M) for k = 1:N_T]
+ρᶻ₂_by_T = [Array{Float64, 1}(undef, M) for k = 1:N_T]
+E_by_T = [Array{Float64, 1}(undef, M) for k = 1:N_T]
 # Storage for vortices and dual vortices
 S⁺_by_T = [Array{Array{Float64, 2},1}(undef, M) for k = 1:N_T]
 S⁻_by_T = [Array{Array{Float64, 2},1}(undef, M) for k = 1:N_T]
@@ -186,7 +188,9 @@ S⁻_by_T = [Array{Array{Float64, 2},1}(undef, M) for k = 1:N_T]
     En_res = E(pt)
     # Sort results in terms of temperature and extract ρˣˣₖ₂.
     for (i, res) = enumerate(all_res[pt.rep_map])
-        ρˣ₂_by_T[i][m] = res[1][1]
+        ρˣ₂_by_T[i][m] = res[1][1]; ρˣ₂_by_T[i][m] = res[1][2]
+        ρʸ₁_by_T[i][m] = res[1][3]; ρʸ₃_by_T[i][m] = res[1][4]
+        ρᶻ₁_by_T[i][m] = res[1][5]; ρᶻ₂_by_T[i][m] = res[1][6]
         E_by_T[i][m] = En_res[i]
     end
 
@@ -212,6 +216,7 @@ writedlm("dual_stiffs.data", ρˣ₂_by_T, ':')
 writedlm("energies.data", E_by_T, ':')
 writedlm("temps.data", temps, ':')
 
+JLD.save("dual_stiffs.jld", "x2", ρˣ₂_by_T, "x3", ρˣ₃_by_T, "y1", ρʸ₁_by_T, "y3", ρʸ₃_by_T, "z1", ρᶻ₁_by_T, "z2", ρᶻ₂_by_T)
 JLD.save("meta.jld", "L", L, "L3", L₃, "M", M, "dt", Δt, "temps", temps, "f", f, "kappa", κ₅, "Psi", ψs)
 JLD.save("vorticity.jld", "vortexes", vortices_by_T, "sp", S⁺_by_T, "sm", S⁻_by_T)
 #rev_temps = reverse(temps)

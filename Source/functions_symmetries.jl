@@ -77,13 +77,10 @@ function gaugeStiffness(k::Array{T,1}, ψ::State) where T<:Real
 
     for v_pos = 1:L, h_pos = 1:L, z_pos = 1:L
         r = [h_pos-1, L-v_pos, L-z_pos] #Spør 9cco om dette, tror det blir riktig
-        ϕ = ψ.lattice[v_pos, h_pos, z_pos]
-        ϕᵣ₊₁ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₁
-        ϕᵣ₊₂ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₂
-        ϕᵣ₊₃ = ψ.nb[v_pos, h_pos, z_pos].ϕᵣ₊₃
-        gs_xx += (ϕ.A[2] + ϕᵣ₊₂.A[3] - ϕᵣ₊₃.A[2] - ϕ.A[3])*exp(im*dot(k,r))
-        gs_yy += (ϕ.A[3] + ϕᵣ₊₃.A[1] - ϕᵣ₊₁.A[3] - ϕ.A[1])*exp(im*dot(k,r))
-        gs_zz += (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])*exp(im*dot(k,r))
+        plaq_x, plaq_y, plaq_z = fluxDensity(ψ, [v_pos, h_pos, z_pos])
+        gs_xx += plaq_x*exp(im*dot(k,r))
+        gs_yy += plaq_y*exp(im*dot(k,r))
+        gs_zz += plaq_z*exp(im*dot(k,r))
     end
 
     norm = two_pi^2*L^3
