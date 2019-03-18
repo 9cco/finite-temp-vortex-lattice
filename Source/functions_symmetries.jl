@@ -77,7 +77,7 @@ function gaugeStiffness(k::Array{T,1}, ψ::State) where T<:Real
 
     for v_pos = 1:L, h_pos = 1:L, z_pos = 1:L
         r = [h_pos-1, L-v_pos, L-z_pos] #Spør 9cco om dette, tror det blir riktig
-        plaq_x, plaq_y, plaq_z = fluxDensity(ψ, [v_pos, h_pos, z_pos])
+        plaq_x, plaq_y, plaq_z = fluxDensity(ψ, (v_pos, h_pos, z_pos))
         gs_xx += plaq_x*exp(im*dot(k,r))
         gs_yy += plaq_y*exp(im*dot(k,r))
         gs_zz += plaq_z*exp(im*dot(k,r))
