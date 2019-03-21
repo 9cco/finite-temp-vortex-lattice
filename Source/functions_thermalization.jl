@@ -19,7 +19,7 @@ function findEquilibrium(c::SystConstants, sim₁::Controls=Controls(π/3, 0.4, 
     
     ψ₂ = State(2, c)
     sim₂ = copy(sim₁)
-    ψ₁ = State(1, c)
+    ψ₁ = State(1, c) 
     dE = zeros(CUTOFF_MAX)
     E₁ = zeros(CUTOFF_MAX)
     E₂ = zeros(CUTOFF_MAX)
@@ -267,8 +267,8 @@ end
 # along with (#available cores - 1) low T states, where energies are compared to ensure proper
 # convergence.
 function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystConstants,
-        sim::Controls, T::Int64=1000, ex::Float64=1.8, STD_NUMBER::Float64=0.5)
-    CUTOFF_MAX::Int64=2000000           #Max number of MCS before the function terminates
+        sim::Controls; T::Int64=1000, ex::Float64=1.8, STD_NUMBER::Float64=0.9)
+    CUTOFF_MAX::Int64=200000           #Max number of MCS before the function terminates
     ADJUST_INTERVAL=400                 #Number of MCS between each sim_const adjustment while finding dE<0
     AVERAGING_INT_FRAC=1/4                 #Similiar for 2nd loop, also the interval that is averaged over
     AVERAGING_INT_EX = 1.4
@@ -277,10 +277,18 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
     NWS=length(ψ_w)                     #Number of states in ψ_list
 	E_w = Array{Float64, 2}(undef, NWS, CUTOFF_MAX)        #Matrix to store energies of worker states
 	for w = 1:NWS
-		E_w[w, 1] = E(ψ_w[w])
+        if ψ_w[w].PBC
+		    E_w[w, 1] = E(ψ_w[w])
+        else
+            E_w[w, 1] = E_APBC(ψ_w[w])
+        end
 	end
 	E_ref = Array{Float64, 1}(undef, CUTOFF_MAX)           #Array to store energies of reference state
-	E_ref[1] = E(ψ_ref)
+    if ψ_ref.PBC
+	    E_ref[1] = E(ψ_ref)
+    else
+        E_ref[1] = E_APBC(ψ_ref)
+    end
 
 	# Checking whether reference or worker has highest energy.
 	ref_highest = [true for i = 1:NWS]
@@ -301,7 +309,7 @@ function parallelThermalization!(ψ_ref::State, ψ_w::Array{State,1}, c::SystCon
     E_check_workers = zeros(Int64, NWS) #Check the requirement dE <= 0 for each process
     tₛ=2                                # First free time-index after last update of energy array.
     thermalized_init = false
-    N = (ψ_ref.consts.L)^2              #Number of lattice sites
+    N = (ψ_ref.consts.L)^3              #Number of lattice sites
 
     #Find the number of available workers
     np = nprocs()-1
@@ -385,9 +393,17 @@ Thermalization will be ×$(floor(Int64, (NWS+1)/(np+1))) as long.")
         adjustment_mcs += maximum(mcs_list)#max(maximum(mcs_w),mcs_ref)
 
 		# Correct energy for built-up floating point errors
-		E_ref[tₛ-1] = E(ψ_ref)
+        if ψ_ref.PBC
+		    E_ref[tₛ-1] = E(ψ_ref)
+        else
+            E_ref[tₛ-1] = E_APBC(ψ_ref)
+        end
 		for w=1:NWS
-			E_w[w,tₛ-1] = E(ψ_w[w])
+            if ψ_w[w].PBC
+			    E_w[w,tₛ-1] = E(ψ_w[w])
+            else
+                E_w[w,tₛ-1] = E_APBC(ψ_w[w])
+            end
 		end
         
         # Do MCS to find average
@@ -410,7 +426,7 @@ Thermalization will be ×$(floor(Int64, (NWS+1)/(np+1))) as long.")
         tₛ = T + 1
         T = tₛ + averaging_int - 1
         println("Increasing simulation time to T = $(T)")
-        gc() # Trying to run garbage collection manually since Vilje seems to be running out of memory at long thermalizations.
+        GC.gc() # Trying to run garbage collection manually since Vilje seems to be running out of memory at long thermalizations.
     end
     return -1, tₛ, CUTOFF_MAX, E_ref, E_w, ψ_ref, ψ_w, sim_ref, sim_w
 end
@@ -593,7 +609,11 @@ Thermalization will be ×$(floor(Int64, n_state/(n_workers+1))) as long.")
     while t < CUTOFF_MAX
         
         # Preform T_AVG updates and store energies for flatness calculation
-        ψ_list, E_matrix = nMCSEnergy!(ψ_list, sim_list, T_AVG, [E(ψ) for ψ in ψ_list])
+        if ψ_list[1].PBC
+            ψ_list, E_matrix = nMCSEnergy!(ψ_list, sim_list, T_AVG, [E(ψ) for ψ in ψ_list])
+        else
+            ψ_list, E_matrix = nMCSEnergy!(ψ_list, sim_list, T_AVG, [E_APBC(ψ) for ψ in ψ_list])
+        end
         
         # Adjust constants
         mcs_list, ar_list = adjustSimConstants!(ψ_list, sim_list)

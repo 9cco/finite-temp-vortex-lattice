@@ -8,7 +8,7 @@
 function proposeLocalUpdate(ϕ::LatticeSite, sim::Controls)
     UMAX::Int64 = 4
     u⁺ = 1.0#mod(ϕ.u⁺ + rand(Uniform(-sim.umax,sim.umax)), UMAX) # This does not allow u⁺ = UMAX, is this a problem?
-	u⁻ = 0.0#mod(ϕ.u⁻ + rand(Uniform(-sim.umax,sim.umax)), UMAX)
+	u⁻ = 1.0#mod(ϕ.u⁻ + rand(Uniform(-sim.umax,sim.umax)), UMAX)
     # Construct new configuration at lattice site.
     #return LatticeSite([ϕ.A[1]+rand(Uniform(-sim.Amax,sim.Amax)), ϕ.A[2]+rand(Uniform(-sim.Amax,sim.Amax)),
     #                    ϕ.A[3]+rand(Uniform(-sim.Amax,sim.Amax))],
@@ -36,8 +36,11 @@ function metropolisHastingUpdate!(ψ::State, pos::Tuple{Int64, Int64, Int64}, si
 	# ϕ′ or ϕ at position pos.
     ϕ = ψ.lattice[pos...]
     ϕ′ = proposeLocalUpdate(ϕ, sim)
-    δE = ΔE(ϕ′, ϕ, ψ.nb[pos...], ψ.nnb[pos...], ψ.nnnb[pos...], pos[2], ψ.consts)
-    
+    if ψ.PBC
+        δE = ΔE(ϕ′, ϕ, ψ.nb[pos...], ψ.nnb[pos...], ψ.nnnb[pos...], pos[2], ψ.consts)
+    else
+        δE = ΔE_APBC(ϕ′, ϕ, ψ.nb[pos...], ψ.nnb[pos...], ψ.nnnb[pos...], pos[2], ψ.consts)
+    end
     # Create random number ran ∈ (0,1].
     ran = 1-rand()
 #    if ran==0.0
@@ -147,32 +150,32 @@ end
 
 # --------------------------------------------------------------------------------------------------
 # Preform nMCS for all states in a list, as much as possible in parallell.
-function nMCS!(ψ_list::Array{State, 1}, sim_list::Array{Controls, 1}, N::Int64)
-    nw = nprocs()-1
-    n_state = length(ψ_list)
-    
-    i = 0 # Index in ψ_list of states already updated.
-    while i < n_state
+#function nMCS!(ψ_list::Array{State, 1}, sim_list::Array{Controls, 1}, N::Int64)
+#    nw = nprocs()-1
+#    n_state = length(ψ_list)
+#    
+#    i = 0 # Index in ψ_list of states already updated.
+#    while i < n_state
         
-        worker_jobs = min(nw, n_state-1-i) # Number of needed jobs given to workers
+#        worker_jobs = min(nw, n_state-1-i) # Number of needed jobs given to workers
         # Start the max number of workers if that wouldn't be too much.
-        work_futures = [Future() for w = 1:worker_jobs]
+#        work_futures = [Future() for w = 1:worker_jobs]
         
-        for w = 1:worker_jobs
-            work_futures[w] = @spawn nMCS(ψ_list[i+w], sim_list[i+w], N)
-        end
-        nMCS(ψ_list[i+worker_jobs+1], sim_list[i+worker_jobs+1], N)
+#        for w = 1:worker_jobs
+#            work_futures[w] = @spawn nMCS(ψ_list[i+w], sim_list[i+w], N)
+#        end
+#        nMCS(ψ_list[i+worker_jobs+1], sim_list[i+worker_jobs+1], N)
         
-        for w = 1:worker_jobs
-            ψ_list[i+w] = fetch(work_futures[w])
-        end
+#        for w = 1:worker_jobs
+#            ψ_list[i+w] = fetch(work_futures[w])
+#        end
         
-        i += worker_jobs+1
-    end
+#        i += worker_jobs+1
+#    end
     
     # After this, all states should have been updated
-    return ψ_list
-end
+#    return ψ_list
+#end
 
 # --------------------------------------------------------------------------------------------------
 # Perform n MCsweeps and return the final state and an array with energies after each sweep
@@ -188,34 +191,34 @@ end
 
 # --------------------------------------------------------------------------------------------------
 # Preform nMCSEnergy on a list of states (as much as possible in paralllel)
-function nMCSEnergy!(ψ_list::Array{State, 1}, sim_list::Array{Controls, 1}, n::Int64, E₀_list::Array{Float64, 1})
-    nw = nprocs()-1
-    n_state = length(ψ_list)
-    E_matrix = Array{Float64, 2}(undef, n_state, n)
+#function nMCSEnergy!(ψ_list::Array{State, 1}, sim_list::Array{Controls, 1}, n::Int64, E₀_list::Array{Float64, 1})
+#    nw = nprocs()-1
+#    n_state = length(ψ_list)
+#    E_matrix = Array{Float64, 2}(undef, n_state, n)
     
-    i = 0 # Index in ψ_list of states already updated.
-    while i < n_state
+#    i = 0 # Index in ψ_list of states already updated.
+#    while i < n_state
         
-        worker_jobs = min(nw, n_state-1-i) # Number of needed jobs given to workers
+#        worker_jobs = min(nw, n_state-1-i) # Number of needed jobs given to workers
         # Start the max number of workers if that wouldn't be too much.
-        work_futures = [Future() for w = 1:worker_jobs]
+#        work_futures = [Future() for w = 1:worker_jobs]
         
-        for w = 1:worker_jobs
-            work_futures[w] = @spawn nMCSEnergy(ψ_list[i+w], sim_list[i+w], n, E₀_list[i+w])
-        end
-        index = i+worker_jobs+1
-        ψ_list[index], E_matrix[index, :] =  nMCSEnergy(ψ_list[index], sim_list[index], n, E₀_list[index])
+#        for w = 1:worker_jobs
+#            work_futures[w] = @spawn nMCSEnergy(ψ_list[i+w], sim_list[i+w], n, E₀_list[i+w])
+#        end
+#        index = i+worker_jobs+1
+#        ψ_list[index], E_matrix[index, :] =  nMCSEnergy(ψ_list[index], sim_list[index], n, E₀_list[index])
         
-        for w = 1:worker_jobs
-            ψ_list[i+w], E_matrix[i+w, :] = fetch(work_futures[w])
-        end
+#        for w = 1:worker_jobs
+#            ψ_list[i+w], E_matrix[i+w, :] = fetch(work_futures[w])
+#        end
         
-        i += worker_jobs+1
-    end
+#        i += worker_jobs+1
+#    end
     
     # After this, all states should have been updated
-    return ψ_list, E_matrix
-end
+#    return ψ_list, E_matrix
+#end
 
 
 # -----------------------------------------------------------------------------------------------------------
@@ -356,7 +359,11 @@ function nMCSEnergyDynamic(ψ::State, sim::Controls, n::Int64, adjust_int::Int64
             adjustment_mcs += mcs
             
             #Update energy (since we do MCS in the update steps)
-            Es[i] = E(ψ)
+            if ψ.PBC
+                Es[i] = E(ψ)
+            else
+                Es[i] = E_APBC(ψ)
+            end
         end
     end
     return ψ, Es, sim, adjustment_mcs
@@ -389,7 +396,7 @@ function adjustSimConstants!(ψ_list::Array{State, 1}, sim_list::Array{Controls,
         
         # Fetch futures
         for w = 1:worker_jobs
-            ar_list[i+w], mcs_list[i+w], ψ_list[i+w], sim_list[i+w] = fetch(work_futures[w])
+           ar_list[i+w], mcs_list[i+w], ψ_list[i+w], sim_list[i+w] = fetch(work_futures[w])
         end
         
         i += worker_jobs+1

@@ -158,7 +158,7 @@ function LatticeSite()
     A_max = 3.0
     u⁺ = rand()
     LatticeSite([rand(Uniform(-A_max, A_max)), rand(Uniform(-A_max, A_max)), rand(Uniform(-A_max,A_max))],
-                two_pi*rand(), two_pi*rand(), u⁺, √(1-u⁺^2))
+                2*π*rand(), 2*π*rand(), u⁺, √(1-u⁺^2))
 end
 
 # -------------------------------------------------------------------------------------------------
@@ -198,7 +198,7 @@ function State(choice::Int64, L::Int64)
 		nbl = latticeNeighbors(lattice,L,L)
 		nnbl = latticeNextNeighbors(lattice,L,L)
 		nnnbl = latticeNNNeighbors(lattice,L,L)
-        ψ = State(lattice, consts, nbl, nnbl, nnnbl)
+        ψ = State(lattice, consts, nbl, nnbl, nnnbl, true)
         
     # Construct random state
     elseif choice == 2
@@ -213,7 +213,7 @@ function State(choice::Int64, L::Int64)
 		nb = latticeNeighbors(lattice,L,L)
 		nnb = latticeNextNeighbors(lattice,L,L)
 		nnnb = latticeNNNeighbors(lattice,L,L)
-        ψ = State(lattice, consts, nb, nnb, nnnb)
+        ψ = State(lattice, consts, nb, nnb, nnnb, true)
         
     # We only have choices 1 and 2 so far so other values for choice will give an error.
     else
@@ -228,11 +228,14 @@ end
 # 3:    u⁺ is random, the rest are mean field.
 # 4:    u⁺ and u⁻ are random, the rest are mean field.
 # 5:    θ⁺ and θ⁻ are random, the rest are mean field.
-function State(choice::Int64, consts::SystConstants; u⁺=1.0, u⁻=0.0, θ⁺=0.0, θ⁻=0.0, A=[0.0, 0.0, 0.0])
+# 6:    All fields random expect amplitudes
+# 7:    Ordered state with zero gauge field, meanfield amplitudes and 
+#        with θ⁺ - θ⁻ = 0 or π/2, depending on sign(ν)
+function State(choice::Int64, consts::SystConstants; u⁺=1.0, u⁻=1.0, θ⁺=0.0, θ⁻=0.0, A=[0.0, 0.0, 0.0])
     L = consts.L
     L₃ = consts.L₃
     L <= 4 && throw(DomainError())
-    Amax::Int64 = 10
+    Amax::Int64 = 5
     umax::Int64 = 3
     # Construct ordered state 
     if choice == 1
@@ -242,7 +245,7 @@ function State(choice::Int64, consts::SystConstants; u⁺=1.0, u⁻=0.0, θ⁺=0
 		nb = latticeNeighbors(lattice,L,L₃)
 		nnb = latticeNextNeighbors(lattice,L,L₃)
 		nnnb = latticeNNNeighbors(lattice,L,L₃)
-        ψ = State(lattice, consts, nb, nnb, nnnb)
+        ψ = State(lattice, consts, nb, nnb, nnnb, true)
     # Construct random state
     elseif choice == 2
 		lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
@@ -250,28 +253,28 @@ function State(choice::Int64, consts::SystConstants; u⁺=1.0, u⁻=0.0, θ⁺=0
 		nb = latticeNeighbors(lattice,L,L₃)
 		nnb = latticeNextNeighbors(lattice,L,L₃)
 		nnnb = latticeNNNeighbors(lattice,L,L₃)
-        ψ = State(lattice, consts, nb, nnb, nnnb)
+        ψ = State(lattice, consts, nb, nnb, nnnb, true)
     elseif choice == 3
         # Uniform mean field for all fields except u⁺ which is random.
         lattice = [LatticeSite([A[1], A[2], A[3]], θ⁺, θ⁻, umax*rand(), u⁻) for v=1:L, h=1:L, z=1:L₃]
 		nb = latticeNeighbors(lattice,L,L₃)
 		nnb = latticeNextNeighbors(lattice,L,L₃)
 		nnnb = latticeNNNeighbors(lattice,L,L₃)
-        ψ = State(lattice, consts, nb, nnb, nnnb)
+        ψ = State(lattice, consts, nb, nnb, nnnb, true)
     elseif choice == 4
         # Uniform mean field except for u⁺ and u⁻
         lattice = [LatticeSite([A[1], A[2], A[3]], θ⁺, θ⁻, umax*rand(), umax*rand()) for v=1:L, h=1:L, z=1:L₃]
 		nb = latticeNeighbors(lattice,L,L₃)
 		nnb = latticeNextNeighbors(lattice,L,L₃)
 		nnnb = latticeNNNeighbors(lattice,L,L₃)
-        ψ = State(lattice, consts, nb, nnb, nnnb)
+        ψ = State(lattice, consts, nb, nnb, nnnb, true)
     elseif choice == 5
         # Vary phases, all other fields are uniform mean fields.
         lattice = [LatticeSite([A[1], A[2], A[3]], rand(Uniform(0,2π)), rand(Uniform(0,2π)), u⁺, u⁻) for v=1:L, h=1:L, z=1:L₃]
 		nb = latticeNeighbors(lattice,L,L₃)
 		nnb = latticeNextNeighbors(lattice,L,L₃)
 		nnnb = latticeNNNeighbors(lattice,L,L₃)
-        ψ = State(lattice, consts, nb, nnb, nnnb)
+        ψ = State(lattice, consts, nb, nnb, nnnb, true)
     elseif choice == 6
         # All fields random except for amplitudes
         lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
@@ -279,14 +282,73 @@ function State(choice::Int64, consts::SystConstants; u⁺=1.0, u⁻=0.0, θ⁺=0
 		nb = latticeNeighbors(lattice,L,L₃)
 		nnb = latticeNextNeighbors(lattice,L,L₃)
 		nnnb = latticeNNNeighbors(lattice,L,L₃)
-        ψ = State(lattice, consts, nb, nnb, nnnb)
-    # We only have choices 1 - 6 so far so other values for choice will give an error.
+        ψ = State(lattice, consts, nb, nnb, nnnb, true)
+    elseif choice == 7
+        if consts.ν >= 0
+            lattice = [LatticeSite([0.0, 0.0, 0.0], 3π/2, π/2, u⁺, u⁻) for v=1:L, h=1:L, z=1:L₃]
+            nb = latticeNeighbors(lattice,L,L₃)
+            nnb = latticeNextNeighbors(lattice,L,L₃)
+            nnnb = latticeNNNeighbors(lattice,L,L₃)
+            ψ = State(lattice, consts, nb, nnb, nnnb, true)
+        else
+            lattice = [LatticeSite([0.0, 0.0, 0.0], 0.0, 0.0, u⁺, u⁻) for v=1:L, h=1:L, z=1:L₃]
+            nb = latticeNeighbors(lattice,L,L₃)
+            nnb = latticeNextNeighbors(lattice,L,L₃)
+            nnnb = latticeNNNeighbors(lattice,L,L₃)
+            ψ = State(lattice, consts, nb, nnb, nnnb, true)
+        end
+    # We only have choices 1 - 7 so far so other values for choice will give an error.
     else
         throw(DomainError())
     end
     ψ
 end
 
+#State constructor for a state with antiperiodic boundaryconditions
+# 1: Correlated mean-field groundstate where we force in one domain wall
+#    Carefull that the GS depends on ν, νₐₙ, νₘ...
+# 2: High temp completely uncorrelated state in the London limit
+# 3: 
+function State_APBC(choice::Int64, consts::SystConstants; u⁺=1.0, u⁻=1.0)
+    L = consts.L
+    L₃ = consts.L₃
+    Amax = 2.0
+    if choice == 1
+        if consts.ν >= 0.0
+            lattice = [LatticeSite([0.0, 0.0, 0.0], π, π/2, u⁺, u⁻) for v=1:L, h=1:L, z=1:L₃]
+            nb = latticeNeighbors(lattice,L,L₃)
+            nnb = latticeNextNeighbors(lattice,L,L₃)
+            nnnb = latticeNNNeighbors(lattice,L,L₃)
+        else
+            lattice = [LatticeSite([0.0, 0.0, 0.0], 0.0, 0.0, u⁺, u⁻) for v=1:L, h=1:L, z=1:L₃]
+            nb = latticeNeighbors(lattice,L,L₃)
+            nnb = latticeNextNeighbors(lattice,L,L₃)
+            nnnb = latticeNNNeighbors(lattice,L,L₃)
+        end
+        for v=1:L, h=1:Int64(floor(L/2)), z = 1:L₃
+            lattice[v,h,z].θ⁺ = lattice[v,h,z].θ⁺ + π/2
+            lattice[v,h,z].θ⁻ = lattice[v,h,z].θ⁻ - π/2
+        end
+        ψ = State(lattice, consts, nb, nnb, nnnb, false)
+    elseif choice == 2
+        lattice = [LatticeSite([rand(Uniform(-Amax, Amax)), rand(Uniform(-Amax, Amax)), rand(Uniform(-Amax, Amax))],
+                    rand(Uniform(0, 2π)), rand(Uniform(0, 2π)), u⁺, u⁻) for v=1:L, h=1:L, z=1:L₃]
+        nb = latticeNeighbors(lattice,L,L₃)
+        nnb = latticeNextNeighbors(lattice,L,L₃)
+        nnnb = latticeNNNeighbors(lattice,L,L₃) 
+        ψ = State(lattice, consts, nb, nnb, nnnb, false)
+    elseif choice == 3
+        lattice = [LatticeSite([0.0, 0.0, 0.0], π, π/2, u⁺, u⁻) for v=1:L, h=1:L, z=1:L]
+        nb = latticeNeighbors(lattice,L,L₃)
+        nnb = latticeNextNeighbors(lattice,L,L₃)
+        nnnb = latticeNNNeighbors(lattice,L,L₃)
+        ψ = State(lattice, consts, nb, nnb, nnnb, false)
+    else
+        throw(DomainError())
+    end
+    ψ
+end
+        
 # -------------------------------------------------------------------------------------------------
 # Checks if any of the lattice sites in the lattices of two states are equal and returns false in
 # this case, returns true otherwise.

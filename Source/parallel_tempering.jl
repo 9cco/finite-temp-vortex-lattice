@@ -13,7 +13,12 @@
 end
 
 function Replica(ψ::State, sim::Controls)
-    Replica(ψ, 3, E(ψ), sim)
+    if ψ.PBC
+        out = Replica(ψ, 3, E(ψ), sim)
+    else
+        out = Replica(ψ, 3, E_APBC(ψ), sim)
+    end
+    return out
 end
 
 mutable struct PTRun
@@ -57,6 +62,10 @@ function PTRun(ψ_list::Array{State,1}, sim_list::Array{Controls,1}, N_mc::Int64
     histograms = [[0,0,0] for i = 1:N]
     dr_list = DList(rep_list)
     return PTRun(dr_list, accepts, histograms, β_list, rep_map, E_list, N_mc, 0, N)
+end
+
+function E(pt::PTRun)
+    return pt.E_list[pt.rep_map]
 end
 
 @everywhere function nMCS!(R::Replica, n::Int64)

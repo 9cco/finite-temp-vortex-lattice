@@ -6,6 +6,8 @@ struct SystConstants
 #    γ::Float64    # Order parameter amplitude
     g⁻²::Float64  # 1/g² for gauge coupling g
     ν::Float64    # Anisotropy constant
+    νₘ::Float64   # MGT strength parameter
+    νₐₙ::Float64  # Anisotropy strength parameter 
     κ₅::Float64   # z-layer coupling.
     f::Float64    # Magnetic filling fraction
     β::Float64    # Simulation inverse temperature
@@ -63,6 +65,7 @@ mutable struct State
 	nb::Array{NearestNeighbors,3}
 	nnb::Array{NextNeighbors,3}
 	nnnb::Array{NNNeighbors,3}
+    PBC::Bool
 end
 mutable struct StateArray
     fn::AbstractString

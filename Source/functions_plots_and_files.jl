@@ -3,6 +3,7 @@ using Test
 using StatsBase
 using Plots
 gr()
+using LaTeXStrings
 
 
 
@@ -597,7 +598,18 @@ function initializeTwoStatesS(syst::SystConstants, sim::Controls)
     
     return (ψ₁, sim₁, ψ₂, sim₂, t₀)
 end
-
+#---------------------------------------------------------------------------------------------------
+#Plot the phase difference on each lattice site in a xy-plane for some z-value
+function plotPhaseDiff(ψ::State, z_layer::Int64, filename::AbstractString)
+    L = ψ.consts.L
+    if z_layer < 1 || z_layer > ψ.consts.L₃
+        throw(DomainError())
+    end
+    phase_diff = [mod(ψ.lattice[x,y,z_layer].θ⁺ - ψ.lattice[x,y,z_layer].θ⁻, 2π) for x=1:L, y=1:L]
+    plt = heatmap(phase_diff, xlabel=L"x", ylabel=L"y", zlim=[-2π,2π])
+    savefig(plt, filename)
+end
+    
 #---------------------------------------------------------------------------------------------------
 #Check if a directory exist, and make it if it does not
 function makeDirRec(dir_name::AbstractString)
@@ -613,4 +625,21 @@ function makeDirRec(dir_name::AbstractString)
             mkdir(temp_dir)
         end
     end
+end
+
+function plotThermEnergies(E_ref::Array{Float64,1}, E_w::Array{Float64,2}, n_workers::Int64, PBC::Bool)
+    if PBC
+        plot(E_ref, xlabel = "MCS", ylabel = "E", label = "E ref")
+        for i=1:n_workers
+            plot!(E_w[i,:], label = "Worker $(i)")
+        end
+        savefig("Thermalization_energies_PBC.pdf")
+    else
+        plot(E_ref, xlabel = "MCS", ylabel = "E", label = "E ref APBC")
+        for i=1:n_workers
+            plot!(E_w[i,:], label = "Worker $(i) APBC")
+        end
+        savefig("Thermalization_energies_APBC.pdf")
+        end
+    return 1
 end

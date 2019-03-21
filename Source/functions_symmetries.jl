@@ -86,7 +86,7 @@ function gaugeStiffness(k::Array{T,1}, ψ::State) where T<:Real
         gs_zz += (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])*exp(im*dot(k,r))
     end
 
-    norm = two_pi^2*L^3
+    norm = (2*π)^2*L^3
     return abs2(gs_xx)/norm, abs2(gs_yy)/norm, abs2(gs_zz)/norm
 end
 
@@ -461,4 +461,125 @@ function josephsonResponse(ψ_list::Array{State,1})
         j_response_list[i] = sum/ψ.consts.L^3
     end
     return j_response_list
+end
+
+function josephsonResponse(ψ::State)
+    L = ψ.consts.L
+    sum = 0.0
+    for h_pos=1:L, v_pos=1:L, z_pos=1:L
+         ϕ = ψ.lattice[h_pos, v_pos, z_pos]
+         sum += cos(2*(ϕ.θ⁺-ϕ.θ⁻))
+    end
+    j_response = sum/ψ.consts.L^3
+    return j_response
+end
+
+function measurementSeriesE!(ψ::State, M::Int64, Δt::Int64, sim::Controls)
+    L = ψ.consts.L
+    E_array=Array{Float64, 1}(undef, M)
+    θ_array = Array{Float64, 1}(undef, M)
+    ρˣˣₖ₂ = Array{Float64, 1}(undef, M)
+    ρˣˣₖ₃ = Array{Float64, 1}(undef, M)
+    ρʸʸₖ₁ = Array{Float64, 1}(undef, M)
+    ρʸʸₖ₃ = Array{Float64, 1}(undef, M)
+    ρᶻᶻₖ₁ = Array{Float64, 1}(undef, M)
+    ρᶻᶻₖ₂ = Array{Float64, 1}(undef, M)
+    k₁ = [2π/L, 0.0, 0.0]
+    k₂ = [0.0, 2π/L, 0.0]
+    k₃ = [0.0, 0.0, 2π/L]
+    
+    if ψ.PBC
+        E_array[1] = E(ψ)
+        θ_array[1] = josephsonResponse(ψ)
+         ρˣˣₖ₂[1], _, ρᶻᶻₖ₂[1] = gaugeStiffness(k₂, ψ)
+        ρˣˣₖ₃[1], ρʸʸₖ₃[1], _ = gaugeStiffness(k₃, ψ)
+        _, ρʸʸₖ₁[1], ρᶻᶻₖ₁[1] = gaugeStiffness(k₁, ψ)
+    else
+        E_array[1] = E_APBC(ψ)
+        θ_array[1] = josephsonResponse(ψ)
+        ρˣˣₖ₂[1], _, ρᶻᶻₖ₂[1] = gaugeStiffness(k₂, ψ)
+        ρˣˣₖ₃[1], ρʸʸₖ₃[1], _ = gaugeStiffness(k₃, ψ)
+        _, ρʸʸₖ₁[1], ρᶻᶻₖ₁[1] = gaugeStiffness(k₁, ψ)
+    end
+                
+    for i=2:M
+        for j=1:Δt
+            mcSweep!(ψ, sim)
+        end
+        if ψ.PBC
+            E_array[i] = E(ψ)
+            θ_array[i] = josephsonResponse(ψ)
+            ρˣˣₖ₂[i], _, ρᶻᶻₖ₂[i] = gaugeStiffness(k₂, ψ)
+            ρˣˣₖ₃[i], ρʸʸₖ₃[i], _ = gaugeStiffness(k₃, ψ)
+            _, ρʸʸₖ₁[i], ρᶻᶻₖ₁[i] = gaugeStiffness(k₁, ψ)
+        else    
+            E_array[i] = E_APBC(ψ)
+            θ_array[i] = josephsonResponse(ψ)
+            ρˣˣₖ₂[i], _, ρᶻᶻₖ₂[i] = gaugeStiffness(k₂, ψ)
+            ρˣˣₖ₃[i], ρʸʸₖ₃[i], _ = gaugeStiffness(k₃, ψ)
+            _, ρʸʸₖ₁[i], ρᶻᶻₖ₁[i] = gaugeStiffness(k₁, ψ)
+        end
+    end
+    return E_array, θ_array, ρˣˣₖ₂, ρˣˣₖ₃, ρʸʸₖ₁, ρʸʸₖ₃, ρᶻᶻₖ₁, ρᶻᶻₖ₂
+end
+
+function measurementSeriesEParalell!(ψ_list::Array{State,1}, M::Int64, Δt::Int64, sim::Controls)
+    N_states = length(ψ_list)
+    m = Int64(floor(M/N_states))
+    E_matrix = Array{Float64, 2}(undef, N_states-1, m)
+    θ_matrix = Array{Float64, 2}(undef, N_states-1, m)
+    ρˣˣₖ₂ = Array{Float64, 2}(undef, N_states-1, m)
+    ρˣˣₖ₃ = Array{Float64, 2}(undef, N_states-1, m)
+    ρʸʸₖ₁ = Array{Float64, 2}(undef, N_states-1, m)
+    ρʸʸₖ₃ = Array{Float64, 2}(undef, N_states-1, m)
+    ρᶻᶻₖ₁ = Array{Float64, 2}(undef, N_states-1, m)
+    ρᶻᶻₖ₂ = Array{Float64, 2}(undef, N_states-1, m)
+
+    E_future_list = [Future() for i=1:N_states-1]
+    for i=1:N_states-1
+        E_future_list[i] = @spawn measurementSeriesE!(ψ_list[i], m, Δt, sim)
+    end
+    (E_last, θ_last, ρˣˣₖ₂_last, ρˣˣₖ₃_last, ρʸʸₖ₁_last, ρʸʸₖ₃_last, 
+        ρᶻᶻₖ₁_last, ρᶻᶻₖ₂_last) = measurementSeriesE!(ψ_list[N_states], m, Δt, sim)
+    for i=1:N_states-1
+        (E_matrix[i,:], θ_matrix[i,:], ρˣˣₖ₂[i,:], ρˣˣₖ₃[i,:], ρʸʸₖ₁[i,:], ρʸʸₖ₃[i,:], 
+            ρᶻᶻₖ₁[i,:], ρᶻᶻₖ₂[i,:]) = fetch(E_future_list[i])
+    end
+    for i=1:N_states-1
+        E_last = vcat(E_last, E_matrix[i,:])
+        θ_last = vcat(θ_last, θ_matrix[i,:])
+        ρˣˣₖ₂_last = vcat(ρˣˣₖ₂_last, ρˣˣₖ₂[i,:])
+        ρˣˣₖ₃_last = vcat(ρˣˣₖ₃_last, ρˣˣₖ₃[i,:])
+        ρʸʸₖ₁_last = vcat(ρʸʸₖ₁_last, ρʸʸₖ₁[i,:])
+        ρʸʸₖ₃_last = vcat(ρʸʸₖ₃_last, ρʸʸₖ₃[i,:]) 
+        ρᶻᶻₖ₁_last = vcat(ρᶻᶻₖ₁_last, ρᶻᶻₖ₁[i,:]) 
+        ρᶻᶻₖ₂_last = vcat(ρᶻᶻₖ₂_last, ρᶻᶻₖ₂[i,:])
+
+    end
+    return E_last, θ_last, ρˣˣₖ₂_last, ρˣˣₖ₃_last, ρʸʸₖ₁_last, ρʸʸₖ₃_last, ρᶻᶻₖ₁_last, ρᶻᶻₖ₂_last 
+end
+function lineTensionFromHighT(Eₛ::Array{Float64,1}, β_array::Array{Float64,1}, N::Int64, Δβ::Float64, L::Int64)
+    lineTension = Array{Float64, 1}(undef, N)
+    lineTension[1] = 0.0
+    for i=2:N
+        lineTension[i] = lineTension[i-1] + Δβ*(Eₛ[i]+Eₛ[i-1])/2.0
+    end
+    
+    for i=1:N
+        lineTension[i] = lineTension[i]/(β_array[i]*L^2)
+    end
+    return lineTension
+end
+
+function lineTensionFromHighT_Norm(Eₛ::Array{Float64,1}, β_array::Array{Float64,1}, N::Int64, Δβ::Float64, L::Int64)
+    lineTension = Array{Float64, 1}(undef, N)
+    lineTension[1] = 0.0
+    for i=2:N
+        lineTension[i] = lineTension[i-1] + Δβ*(Eₛ[i]+Eₛ[i-1])/2.0
+    end
+    
+    for i=1:N
+        lineTension[i] = lineTension[i]/L^2
+    end
+    return lineTension
 end
