@@ -33,45 +33,38 @@ using JLD
 # Enter data directory for structure function
 fixRC()
 # We run a simulation with the parameters
-g = 1.0    # Gauge coupling
+g = √(1/10)    # Gauge coupling
 ν = 0.3    # Anisotropy
 
 # Other parameters
-M_th = 2^14  # Number of PT-steps to do for thermalization.
+M_th = 2^16  # Number of PT-steps to do for thermalization.
 M = 2^13    # Number of measurements
 Δt = 19    # Number of PT-steps between each measurement
-N_mc = 4   # Number of MCS between each PT-step
+N_mc = 2   # Number of MCS between each PT-step
 # L is assumed to be even.
 L = 32     # System length
 L₃ = 32
 N = L^2*L₃
 # Make geometric progression of temperatures between T₁ and Tₘ
-T₁ = 1.8
+T₁ = 0.9
 Tₘ = 2.0
-N_temp = 3*2^1
-R = (Tₘ/T₁)^(1/(N_temp-1))
-temps = [T₁*R^(k-1) for k = 1:N_temp]
-temps = reverse(temps)
+N_T = 3*2^0
+N_steps = 2^10   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_th) must be >= 2
+T_start = 2*1.66+0.1   # Start temperature of states when thermalizing. Must be higher than maximum(temps)
+R = (Tₘ/T₁)^(1/(N_T-1))
+temps = 2*[0.35, 0.4, 1.66]#[T₁*R^(k-1) for k = 1:N_T]#
 println("Temps.: $(temps)")
 κ₅ = 1.0
-mkcd("one_comp_london_T=$(round(T₁; digits=2))-$(round(Tₘ; digits=2))_L=$(L)")
+mkcd("two_comp_london_T=$(round(temps[1]; digits=2))-$(round(temps[end]; digits=2))_L=$(L)_g=$(round(g; digits=3))_gradual_thermalization")
 
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
 f = 1.0/L
 println("f set to $(f)")
 sim = Controls(π-8π/12, 1.0, 0.07)
 
-# Construct k-matrix where the horizontal axis contains kx ∈ [-π, π), while
-# the vertical axis contain ky ∈ [-π, π) at the second component
-k_matrix = [[2π/L*(x-1-L/2), 2π/L*(L/2-y)] for y=1:L, x=1:L]
-
-# Setup measurement storage
-N_T = length(temps)
-ρˣ₂_avg_by_T = Array{Float64}(undef, N_T); ρˣ₂_err_by_T = Array{Float64}(undef, N_T);
-
 # Make ab inito un-correlated phases state
-init_syst_list = [SystConstants(L, L₃, 1/g^2, ν, κ₅, f, 1/T) for T in temps]
-init_ψs = [State(1, syst; u⁺=1.0, u⁻=0.0) for syst in init_syst_list]
+init_syst_list = [SystConstants(L, L₃, 1/g^2, ν, κ₅, f, 1/T_start) for T in temps]
+init_ψs = [State(6, syst; u⁺=√(0.2), u⁻=√(2)) for syst in init_syst_list]
 init_sim_list = [copy(sim) for syst in init_syst_list];
 #ψ_ref = State(2, init_syst_list[1]; u⁺=1.0, u⁻=0.0)
 
@@ -82,7 +75,7 @@ pt = PTRun(init_ψs, init_sim_list, N_mc);
 # Time-estimation
 ################################################################################################
 
-M_est = 2^6
+M_est = 2^5
 # Do M_est parallel tempering steps
 t_meas = @elapsed for i = 1:M_est
     for j = 1:Δt
@@ -109,8 +102,8 @@ println("We did $(M_est) measurement steps using average $(round(t_meas; digits=
 This yields $(round(t_MCS*1000; digits=1)) ms on average for each MCS.")
 
 # Estimating ETC
-println("Measurements and thermalization will do $((Δt*M + M_th)*pt.N_mc) MCS pr temperature which has an 
-ETC of $(round((Δt*M + M_th)*N_T*pt.N_mc*t_MCS/3600; digits=2)) h")
+println("Measurements and thermalization will do $((Δt*M + M_th)*pt.N_mc) MCS for each of the $(pt.N_temp)
+temperatures, which has an ETC of $(round((Δt*M + M_th)*N_T*pt.N_mc*t_MCS/3600; digits=2)) h")
 print("Continue with thermalization and measurements? (y/n): ")
 flush(stdout)
 
@@ -123,13 +116,28 @@ end
 
 # Thermalization
 ################################################################################################
-println("Started thermalization at: $(Dates.format(now(), "HH:MM"))")
+println("\nStarted thermalization at: $(Dates.format(now(), "HH:MM"))")
 
+# Do M_th parallel tempering steps in N_steps steps
+M_pr_step = ceil(Int64, M_th/N_steps)
+M_th = M_pr_step*N_steps
+# Each step is associated with a different set of temperatures given by each row in the matrix
+temp_mt = genGeometricTemperatureSteps(T_start, temps, N_steps)
 E_matrix = Array{Float64}(undef, M_th, N_T);
-# Do M_th parallel tempering steps
-t_th = @elapsed for i = 1:M_th
-    PTStep!(pt)
-    E_matrix[i, :] = E(pt)
+
+println("Thermalizing from T=$(T_start) using $(N_steps) steps with $(M_pr_step) MCS pr. step.")
+flush(stdout)
+
+t_th = @elapsed for step = 1:N_steps
+    # First set the temperatures associated with this step to each of the replicas in pt
+    β_step = [1/T for T in temp_mt[step, :]]
+    distributeTemperatures!(pt, β_step)
+
+    # Do the parallel tempering steps associated with this step
+    for i = 1:M_pr_step
+        PTStep!(pt)
+        E_matrix[(step-1)*M_pr_step+i, :] = E(pt)
+    end
 end
 E_matrix = E_matrix./N;
 
@@ -137,12 +145,13 @@ E_matrix = E_matrix./N;
 t_PT = t_th/M_th
 t_MCS = t_PT/(pt.N_temp*pt.N_mc)
 
-int = floor(Int64, M_th/2):M_th
+int = 1:M_th#floor(Int64, M_th/2)
 therm_plt = plot(collect(int).+M_est, [E_matrix[int, i] for i = 1:N_T]; 
-                 label=reshape(reverse(["T = $(round(T; digits=2))" for T in temps]), (1, N_T)),
+                 label=reshape(["T = $(round(T; digits=2))" for T in temps], (1, N_T)),
                  xaxis="PTS", yaxis="Energy pr. site")
 savefig(therm_plt, "thermalization energies.pdf")
-println("Thermalization used $(round(t_th/60; digits=1)) m. Energy plots saved to file.")
+JLD.save("therm_energies.jld", "e_mt", E_matrix)
+println("Thermalization used $(round(t_th/60; digits=1)) m. Energies saved to file.")
 
 
 
@@ -162,8 +171,8 @@ pt = PTRun(ψs, sim_list, N_mc);
 
 # Doing measurements
 ################################################################################################
-println("We will now do $(Δt*M*pt.N_temp*pt.N_mc) MCS in $(Δt*M) PT steps which has an 
-ETC of $(round(Δt*M*t_PT/3600; digits=2)) h")
+println("We will now do $(Δt*M*pt.N_mc) MCS pr temperature in $(Δt*M) PT steps which gives
+$(M) measurements and has an ETC of $(round(Δt*M*t_PT/3600; digits=2)) h")
 println("Started measurements at: $(Dates.format(now(), "HH:MM"))")
 flush(stdout)
 
@@ -187,10 +196,10 @@ S⁻_by_T = [Array{Array{Float64, 2},1}(undef, M) for k = 1:N_T]
     all_res = dmap(R -> gaugeStiffness([R.ψ]), pt)
     En_res = E(pt)
     # Sort results in terms of temperature and extract ρˣˣₖ₂.
-    for (i, res) = enumerate(all_res[pt.rep_map])
-        ρˣ₂_by_T[i][m] = res[1][1]; ρˣ₂_by_T[i][m] = res[1][2]
-        ρʸ₁_by_T[i][m] = res[1][3]; ρʸ₃_by_T[i][m] = res[1][4]
-        ρᶻ₁_by_T[i][m] = res[1][5]; ρᶻ₂_by_T[i][m] = res[1][6]
+    for (i, res) = enumerate(all_res)
+        ρˣ₂_by_T[i][m] = res[1][1]; ρˣ₂_by_T[i][m] = res[2][1]
+        ρʸ₁_by_T[i][m] = res[3][1]; ρʸ₃_by_T[i][m] = res[4][1]
+        ρᶻ₁_by_T[i][m] = res[5][1]; ρᶻ₂_by_T[i][m] = res[6][1]
         E_by_T[i][m] = En_res[i]
     end
 
@@ -217,7 +226,7 @@ writedlm("energies.data", E_by_T, ':')
 writedlm("temps.data", temps, ':')
 
 JLD.save("dual_stiffs.jld", "x2", ρˣ₂_by_T, "x3", ρˣ₃_by_T, "y1", ρʸ₁_by_T, "y3", ρʸ₃_by_T, "z1", ρᶻ₁_by_T, "z2", ρᶻ₂_by_T)
-JLD.save("meta.jld", "L", L, "L3", L₃, "M", M, "dt", Δt, "temps", temps, "f", f, "kappa", κ₅, "Psi", ψs)
+JLD.save("meta.jld", "L", L, "L3", L₃, "M", M, "dt", Δt, "temps", temps, "f", f, "kappa", κ₅, "g", g, "nu", ν, "Psi", ψs)
 JLD.save("vorticity.jld", "vortexes", vortices_by_T, "sp", S⁺_by_T, "sm", S⁻_by_T)
 #rev_temps = reverse(temps)
 #for k = 1:N_T

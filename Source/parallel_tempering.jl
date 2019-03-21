@@ -92,6 +92,11 @@ function distributeTemperatures!(dr_list::DList, β_list::Array{Float64, 1})
     end
     nothing
 end
+function distributeTemperatures!(pt::PTRun, β_list::Array{Float64, 1})
+    pt.β_list .= β_list
+    distributeTemperatures!(pt.dr_list, pt.β_list)
+    nothing
+end
 
 function incrementHistograms!(pt::PTRun)
     states = dmap(R -> R.state, pt.dr_list)
