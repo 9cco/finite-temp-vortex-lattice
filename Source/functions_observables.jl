@@ -7,19 +7,23 @@ using FFTW
 # Calculates the plaquette sum of the gauge field at a position pos, with the plaquette plane perpenducular
 # to the x, y and z-axis. This corresponds to the different components of the curl of the gauge field
 # in the continuum limit.
-function fluxDensity(ψ::State, pos::Tuple{Int64, Int64, Int64})
+function fluxDensity(ψ::State, pos::Tuple{Int64, Int64, Int64}; with_constant=false)
     ϕ = ψ.lattice[pos...]
     ϕᵣ₊₁ = ψ.nb[pos...].ϕᵣ₊₁
     ϕᵣ₊₂ = ψ.nb[pos...].ϕᵣ₊₂
     ϕᵣ₊₃ = ψ.nb[pos...].ϕᵣ₊₃
 
-    # Calculate constant field-contribution
-    c = ψ.consts
-    δA₂ = two_pi*c.f
 
     cur_A_x = (ϕ.A[2] + ϕᵣ₊₂.A[3] - ϕᵣ₊₃.A[2] - ϕ.A[3])
     cur_A_y = (ϕ.A[3] + ϕᵣ₊₃.A[1] - ϕᵣ₊₁.A[3] - ϕ.A[1])
-    cur_A_z = (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2] + δA₂)
+    if with_constant
+        # Calculate constant field-contribution
+        c = ψ.consts
+        δA₂ = two_pi*c.f
+        cur_A_z = (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2] + δA₂)
+    else
+        cur_A_z = (ϕ.A[1] + ϕᵣ₊₁.A[2] - ϕᵣ₊₂.A[1] - ϕ.A[2])
+    end
     return cur_A_x, cur_A_y, cur_A_z
 end
 
