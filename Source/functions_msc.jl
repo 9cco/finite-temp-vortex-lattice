@@ -6,6 +6,28 @@
 using Primes
 
 
+
+
+
+function geometricSeries(x₁::R, xₛ::R, N::Int; exponent=1) where R<:Real
+    frac = (xₛ/x₁)
+    f(i) = frac^(exponent*(i-1)/(N-1))*x₁*(1 - frac)/(1-frac^exponent) + xₛ*(1-frac^(exponent-1))/(1-frac^exponent)
+    return [f(i) for i = 1:N]
+end
+
+# --------------------------------------------------------------------------------------------------
+# Generatres an N_steps × N_T array of temperatures where N_T = length(temps) and each column k is a series
+# of temperature steps that starts with T_start and ends in temps[k] and this series is geometrically
+# distributed. Increase exponent to make the temperature steps more dense around lower temperatures.
+function genGeometricTemperatureSteps(T_start::R, temps::Array{R, 1}, N_steps::Int; exponent=1) where R<:Real
+    N_T = length(temps)
+    T_mt = Array{R, 2}(undef, N_steps, N_T)
+    for k = 1:N_T
+        T_mt[:, k] = geometricSeries(T_start, temps[k], N_steps; exponent=exponent)
+    end
+    T_mt
+end
+
 # --------------------------------------------------------------------------------------------------
 # Returns a matrix of 2D momentum vectors in the 1BZ
 function getMomMatrix(L::Int64)

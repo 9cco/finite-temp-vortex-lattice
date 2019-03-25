@@ -235,7 +235,7 @@ function State(choice::Int64, consts::SystConstants; u⁺=1.0, u⁻=1.0, θ⁺=0
     L = consts.L
     L₃ = consts.L₃
     L <= 4 && throw(DomainError())
-    Amax::Int64 = 5
+    Amax::Int64 = 2.0
     umax::Int64 = 3
     # Construct ordered state 
     if choice == 1

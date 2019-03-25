@@ -447,22 +447,6 @@ end
 
 
 #Measuring when the phase difference is affected by Josephson ⟨cos(2(θ⁺-θ⁻))⟩
-
-function josephsonResponse(ψ_list::Array{State,1})
-    M = length(ψ_list)
-    j_response_list = Array{Float64}(M)
-    for i = 1:M
-        ψ = ψ_list[i]
-        sum = 0.0
-        for h_pos=1:L, v_pos=1:L, z_pos=1:L
-            ϕ = ψ.lattice[h_pos, v_pos, z_pos]
-            sum += cos(2*(ϕ.θ⁺-ϕ.θ⁻))
-        end
-        j_response_list[i] = sum/ψ.consts.L^3
-    end
-    return j_response_list
-end
-
 function josephsonResponse(ψ::State)
     L = ψ.consts.L
     sum = 0.0
@@ -473,6 +457,16 @@ function josephsonResponse(ψ::State)
     j_response = sum/ψ.consts.L^3
     return j_response
 end
+
+function josephsonResponse(ψ_list::Array{State, 1})
+    M = length(ψ_list)
+    J_res = Array{Float64}(undef, M)
+    for m=1:M
+        J_res = josephsonResponse(ψ_list[m])
+    end
+    return J_res
+end
+    
 
 function measurementSeriesE!(ψ::State, M::Int64, Δt::Int64, sim::Controls)
     L = ψ.consts.L

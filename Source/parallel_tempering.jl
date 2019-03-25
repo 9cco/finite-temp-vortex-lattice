@@ -81,7 +81,7 @@ end
     local_list = take!(chan)
     for (i, β) = enumerate(β_list)
         s = local_list[i].ψ.consts
-        new_syst = SystConstants(s.L, s.L₃, s.g⁻², s.ν, s.κ₅, s.f, β)
+        new_syst = SystConstants(s.L, s.L₃, s.g⁻², s.ν, s.νₘ, s.νₐₙ, s.κ₅, s.f, β)
         local_list[i].ψ.consts = new_syst
     end
     put!(chan, local_list)
@@ -98,6 +98,12 @@ function distributeTemperatures!(dr_list::DList, β_list::Array{Float64, 1})
     nothing
 end
 
+function distributeTemperatures!(pt::PTRun, β_list::Array{Float64, 1})
+    pt.β_list .= β_list
+    distributeTemperatures!(pt.dr_list, pt.β_list)
+    nothing
+end
+
 function incrementHistograms!(pt::PTRun)
     states = dmap(R -> R.state, pt.dr_list)
     for i = 1:pt.N_temp
@@ -105,6 +111,10 @@ function incrementHistograms!(pt::PTRun)
         replica_state = states[pt.rep_map[i]]
         histogram[replica_state] += 1
     end
+end
+
+function dmap(f::Function, pt::PTRun)
+    return dmap(f, pt.dr_list)[pt.rep_map]
 end
 
 function ptSwap!(pt::PTRun, i::Int64, j::Int64)
