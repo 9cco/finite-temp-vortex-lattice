@@ -1,6 +1,8 @@
 # Current intention:
 # Run a simulation with only the 3-4 temperatures and parameters as in [28], but this time with larger system
-# size L=64 and also thermalize gradually from a high temperature, but perhaps not as long as last time.
+# size L=64 and also thermalize gradually from a high temperature. Since last time we failed to gain good results
+# with a short thermalization time, now we will use a longer thermalization time comparable to the successful
+# one at L=32 (again we cooldown from a high temperature).
 
 
 using Distributed
@@ -42,8 +44,9 @@ g = √(1/10)    # Gauge coupling
 ν = 0.3    # Anisotropy
 
 # Other parameters
-M_th = 2^15  # Number of PT-steps to do for thermalization.
-M = 2^11    # Number of measurements
+M_col = 2^17 # Number of PT-steps to use for cooling down the systems
+M_th = 2^13  # Number of PT-steps to do for thermalization.
+M = 2^13    # Number of measurements
 Δt = 19    # Number of PT-steps between each measurement
 N_mc = 2   # Number of MCS between each PT-step
 # L is assumed to be even.
@@ -54,7 +57,7 @@ N = L^2*L₃
 T₁ = 0.7
 Tₘ = 4.0
 N_T = 3*2^0
-N_steps = 2^10   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_th) must be >= 2
+N_steps = 2^14   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
 T_start = 2*4.0+0.1   # Start temperature of states when thermalizing. Must be higher than maximum(temps)
 R = (Tₘ/T₁)^(1/(N_T-1))
 temps = 2*[0.35, 0.4, 1.66]#[T₁*R^(k-1) for k = 1:N_T]#
@@ -65,7 +68,7 @@ println("Temps.: $(temps)")
 f = 2.0/L
 println("f set to $(f)")
 sim = Controls(π-8π/12, 1.0, 0.1)
-mkcd("test_two_comp_london_T=$(round(temps[1]; digits=2))-$(round(temps[end]; digits=2))_L=$(L)_g=$(round(g; digits=3))_fL=$(round(f*L; digits=1))_gradual_high_T_quench")
+mkcd("two_comp_london_L=$(L)_T=$(round(temps[1]; digits=2))-$(round(temps[end]; digits=2))_g=$(round(g; digits=3))_fL=$(round(f*L; digits=1))_large_L_long_therm")
 
 # Make ab inito un-correlated phases state
 init_syst_list = [SystConstants(L, L₃, 1/g^2, ν, κ₅, f, 1/T_start) for T in temps]
@@ -80,7 +83,7 @@ pt = PTRun(init_ψs, init_sim_list, N_mc);
 # Time-estimation
 ################################################################################################
 
-M_est = 2^4
+M_est = 2^5
 # Do M_est parallel tempering steps
 t_meas = @elapsed for i = 1:M_est
     for j = 1:Δt
@@ -107,28 +110,29 @@ println("We did $(M_est) measurement steps using average $(round(t_meas; digits=
 This yields $(round(t_MCS*1000; digits=1)) ms on average for each MCS.")
 
 # Estimating ETC
-println("Measurements and thermalization will do $((Δt*M + M_th)*pt.N_mc) MCS for each of the $(pt.N_temp)
-temperatures, which has an ETC of $(round((Δt*M + M_th)*N_T*pt.N_mc*t_MCS/3600; digits=2)) h")
+println("Measurements and thermalization will do $((Δt*M + M_th + M_col)*pt.N_mc) MCS for each of the $(pt.N_temp)
+temperatures, which has an ETC of $(round((Δt*M + M_th + M_col)*N_T*pt.N_mc*t_MCS/3600; digits=2)) h")
 print("Continue with thermalization and measurements? (y/n): ")
 flush(stdout)
 
-user_input = readline(stdin)
-if user_input == "n"
-    exit()
-end
+#user_input = readline(stdin)
+#if user_input == "n"
+#    exit()
+#end
 
 
 
-# Thermalization
+# Cooldown
 ################################################################################################
-println("\nStarted thermalization at: $(Dates.format(now(), "HH:MM"))")
+println("\nStarted cooldown at: $(Dates.format(now(), "HH:MM"))")
 
 # Do M_th parallel tempering steps in N_steps steps
-M_pr_step = ceil(Int64, M_th/(2*N_steps))
+M_pr_step = ceil(Int64, M_col/N_steps)
 M_col = M_pr_step*N_steps
 # Each step is associated with a different set of temperatures given by each row in the matrix
 temp_mt = genGeometricTemperatureSteps(T_start, temps, N_steps)
-E_matrix = Array{Float64}(undef, 2*M_col, N_T);
+E_matrix = Array{Float64}(undef, M_col, N_T);
+E_therm = Array{Float64, 2}(undef, M_th, N_T);
 
 println("Cooling down from T=$(T_start) using $(N_steps) steps with $(M_pr_step*pt.N_mc) MCS pr. step.")
 flush(stdout)
@@ -145,29 +149,13 @@ t_col = @elapsed for step = 1:N_steps
     end
 end
 
-println("Thermalizing at target temperatures for additional $(M_col) PT-steps")
-flush(stdout)
-
-t_th = @elapsed for i = 1:M_col
-    PTStep!(pt)
-    E_matrix[M_col+i, :] = E(pt)
-end
-t_th += t_col
-M_th = 2*M_col
-
 E_matrix = E_matrix./N;
 
-# Update time-estimation
-t_PT = t_th/M_th
-t_MCS = t_PT/(pt.N_temp*pt.N_mc)
-
-int = 1:M_th#floor(Int64, M_th/2)
+int = 1:M_col#floor(Int64, M_th/2)
 therm_plt = plot(collect(int).+M_est, [E_matrix[int, i] for i = 1:N_T]; 
                  label=reshape(["T = $(round(T; digits=2))" for T in temps], (1, N_T)),
-                 xaxis="PTS", yaxis="Energy pr. site")
-savefig(therm_plt, "thermalization energies.pdf")
-JLD.save("therm_energies.jld", "e_mt", E_matrix)
-println("Thermalization used $(round(t_th/3600; digits=1)) h. Energies saved to file.")
+                 xaxis="PTS", yaxis="Energy pr. site", title="Cooldown energy from T=$(T_start)")
+savefig(therm_plt, "cooldown energies.pdf")
 
 
 
@@ -182,6 +170,37 @@ println("Controls after adjustment, choosing number 1 for later simulations:")
 printSimControls(adjust_sims)
 sim_list = [adjust_sims[N_T] for sim in adjust_sims]
 pt = PTRun(ψs, sim_list, N_mc);
+
+
+
+# Thermalization
+################################################################################################
+println("Thermalizing at target temperatures for additional $(M_th) PT-steps")
+println("\nStarted thermalization at: $(Dates.format(now(), "HH:MM"))")
+flush(stdout)
+
+t_th = @elapsed for i = 1:M_th
+    PTStep!(pt)
+    E_therm[i, :] = E(pt)
+end
+
+E_therm = E_therm./N
+
+int = 1:M_th#floor(Int64, M_th/2)
+therm_plt = plot(collect(int).+M_est, [E_therm[int, i] for i = 1:N_T]; 
+                 label=reshape(["T = $(round(T; digits=2))" for T in temps], (1, N_T)),
+                 xaxis="PTS", yaxis="Energy pr. site", title="Extra thermalization")
+savefig(therm_plt, "thermalization energies.pdf")
+
+t_th += t_col
+M_th += M_col
+
+# Update time-estimation
+t_PT = t_th/M_th
+t_MCS = t_PT/(pt.N_temp*pt.N_mc)
+
+JLD.save("therm_energies.jld", "e_col", E_matrix, "e_thm", E_therm)
+println("Thermalization used $(round(t_th/3600; digits=1)) h. Energies saved to file.")
 
 
 
@@ -242,7 +261,8 @@ writedlm("energies.data", E_by_T, ':')
 writedlm("temps.data", temps, ':')
 
 JLD.save("dual_stiffs.jld", "x2", ρˣ₂_by_T, "x3", ρˣ₃_by_T, "y1", ρʸ₁_by_T, "y3", ρʸ₃_by_T, "z1", ρᶻ₁_by_T, "z2", ρᶻ₂_by_T)
-JLD.save("meta.jld", "L", L, "L3", L₃, "M", M, "dt", Δt, "temps", temps, "f", f, "kappa", κ₅, "g", g, "nu", ν, "Psi", ψs)
+JLD.save("meta.jld", "L", L, "L3", L₃, "M", M, "dt", Δt, "temps", temps, "f", f, "kappa", κ₅, "g", g, "nu", ν)
+JLD.save("final_states.jld", "Psi", ψs)
 JLD.save("vorticity.jld", "vortexes", vortices_by_T, "sp", S⁺_by_T, "sm", S⁻_by_T)
 #rev_temps = reverse(temps)
 #for k = 1:N_T
