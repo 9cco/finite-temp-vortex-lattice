@@ -1,6 +1,6 @@
 module CuboidModule
 
-export SystConstants, Cuboid, generateInitialLattice, genSplittingRanges, genShellGrid, genShellEdgeGrid
+export SystConstants, Cuboid, generateInitialLattice, genSplittingRanges, genShellGrid, genShellEdgeGrid, mcSweep
 
 using Distributed
 using Distributions
