@@ -158,7 +158,7 @@ function genShellEdgeGrid(lattice::Array{LatticeSite, 3}, s₁::I, s₂::I, s₃
         l₃ = length(range_grid[i₁,i₂,i₃][3])
         # Get next-neighboring sub-cuboids (give periodic BC)
         cᵣ₊₁₋₂ = lattice[range_grid[mod(i₁+1-1,s₁)+1, mod(i₂-1-1,s₂)+1, i₃]...]
-        cᵣ₋₁₊₂ = lattice[range_grid[mod(i₁-1-1,s₂)+1, mod(i₂+1-1,s₂)+1, i₃]...]
+        cᵣ₋₁₊₂ = lattice[range_grid[mod(i₁-1-1,s₁)+1, mod(i₂+1-1,s₂)+1, i₃]...]
         
         shell_edge14[i₁,i₂,i₃] = cᵣ₊₁₋₂[1,end,:]
         shell_edge23[i₁,i₂,i₃] = cᵣ₋₁₊₂[end,1,:]

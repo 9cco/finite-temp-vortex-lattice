@@ -96,7 +96,11 @@ mutable struct SubCuboid
                                       # sites on the perifery of the cuboid. These have equal values to lattice sites
                                       # at neighboring sub-cuboids. Contains 6 planes of neighbor points.
     shell_edge14::Vector{LatticeSite} # Two vectors of lattice sites for the 41 and 23 edge.
+    shell_edge16::Vector{LatticeSite}
     shell_edge23::Vector{LatticeSite}
+    shell_edge25::Vector{LatticeSite}
+    shell_edge36::Vector{LatticeSite}
+    shell_edge45::Vector{LatticeSite}
     consts::CubConstants
     syst::SystConstants
     sim::Controls
@@ -662,6 +666,17 @@ function updateShellEdge14!(chan::RemoteChannel{Channel{SubCuboid}},
     put!(chan, sc)
     nothing
 end
+function updateShellEdge16!(chan::RemoteChannel{Channel{SubCuboid}},
+                            edge_update::Vector{Tuple{I,LatticeSite}}) where I<:Int
+
+    sc = take!(chan)
+    for update in edge_update
+        y, ϕ = update
+        sc.shell_edge16[z] = ϕ
+    end
+    put!(chan, sc)
+    nothing
+end
 function updateShellEdge23!(chan::RemoteChannel{Channel{SubCuboid}}, 
         edge_update::Vector{Tuple{I,LatticeSite}}) where I<:Int
     
@@ -687,114 +702,6 @@ end
 # neighbor interaction or ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₂ interaction and are on different sub-cuboids are updated simultaneously,
 # but instead are updated one after the other.
 
-# Given that the internal points in a sub-cuboid has been updated to new values, since the border to the environment is
-# plane 1, 4 and 6, it is plane 2, 5 and 3 that has potentially updated values which should be transfered to neighboring
-# sub-cuboids.
-function internalPointsTransfer(sc_nb::RemoteNeighbors{SubCuboid}, 
-        plane2_update::Vector{Tuple{I,I,LatticeSite}}, plane3_update::Vector{Tuple{I,I,LatticeSite}}, 
-        plane5_update::Vector{Tuple{I,I,LatticeSite}}, edge23_update::Vector{Tuple{I,LatticeSite}}) where I<:Int
-    
-    # SubCuboid scᵣ₋₁ is affected by plane2 updates through its shell[1]
-    chan = sc_nb.rnᵣ₋₁
-    remotecall_wait(updateShell1!, chan.where, chan, plane2_update)
-    # SubCuboid scᵣ₊₃ is affected by plane5 updates through its shell[6]
-    chan = sc_nb.rnᵣ₊₃
-    remotecall_wait(updateShell6!, chan.where, chan, plane5_update)
-    # SubCuboid scᵣ₊₂ is affected by plane3 updates through its shell[4]
-    chan = sc_nb.rnᵣ₊₂
-    remotecall_wait(updateShell4!, chan.where, chan, plane3_update)
-    
-    # SubCuboid scᵣ₋₁₊₂ is affected by edge23 updates through its shell_edge14
-    chan = sc_nb.rnᵣ₋₁₊₂
-    remotecall_wait(updateShellEdge14!, chan.where, chan, edge23_update)
-    nothing
-end
-
-# Suppose that points on the boundary planes that are not intersection lines and does not have x=l₁-1, y=1 or x=l₁, y=2,
-# have been updated. This affects shell 1-5 as well as the first point in shell_edge14
-function intersectionPlanesTransfer(sc_nb::RemoteNeighbors{SubCuboid},
-        plane1_update::Vector{Tuple{I,I,LatticeSite}}, plane4_update::Vector{Tuple{I,I,LatticeSite}},
-        plane6_update::Vector{Tuple{I,I,LatticeSite}}, edge23_update::Vector{Tuple{I,LatticeSite}},
-        l₁::I, l₂::I) where I<:Int
-    
-    # SubCuboid scᵣ₋₂ is affected  by plane 4 updates through its shell[3]
-    chan = sc_nb.rnᵣ₋₂
-    remotecall_wait(updateShell3!, chan.where, chan, plane4_update)
-    # SubCuboid scᵣ₊₁ is affected by plane 1 updates through its shell[2]
-    chan = sc_nb.rnᵣ₊₁
-    remotecall_wait(updateShell2!, chan.where, chan, plane1_update)
-    # SubCuboid scᵣ₋₃ is affected by plane 6 updates through its shell[5]
-    chan = sc_nb.rnᵣ₋₃
-    remotecall_wait(updateShell5!, chan.where, chan, plane6_update)
-    
-    # SubCuboid scᵣ₋₁ is affected by plane 4 updates through the y=1 part of its shell[1]
-    chan = sc_nb.rnᵣ₋₁
-    update = filter(e -> e[1] == 1, plane4_update) # update now has (1,z,ϕ) where 1 is interpreted as y=1 by updateShell1!
-    remotecall_wait(updateShell1!, chan.where, chan, update)
-    
-    # SubCubnoid scᵣ₊₂ is affected by plane 1 updated where y=l₂ through the x=l₁ part of its shell[4]
-    chan = sc_nb.rnᵣ₊₂
-    update = filter(e -> e[1] == l₂, plane1_update)
-    # We need to construct the update list so that it has (l₁,z,ϕ)
-    update = [(l₁, e[2], e[3]) for e in update]
-    remotecall_wait(updateShell4!, chan.where, chan, update)
-    
-    # SubCuboid scᵣ₋₁ is affected by plane 6 updates where x=1 through the z=1 part of its shell[1]
-    chan = sc_nb.rnᵣ₋₁
-    update = filter(e -> e[1]==1, plane6_update)
-    update = [(e[2], 1, e[3]) for e in update]
-    remotecall_wait(updateShell1!, chan.where, chan, update)
-    
-    # SubCuboid scᵣ₊₂ is affected by plane 6 updates where y=l₂ through the z=1 part of its shell[4]
-    chan = sc_nb.rnᵣ₊₂
-    update = filter(e -> e[2]==l₂, plane6_update) # Filter out only y=l₂ updates
-    update = [(e[1], 1, e[3]) for e in update] # Transform to shell4 update
-    remotecall_wait(updateShell4!, chan.where, chan, update)
-    
-    # Finally SubCuboid scᵣ₋₁₊₂ is affected by plane 6 update where x=1, y=l₂ through the z=1 part of its edge14
-    chan = sc_nb.rnᵣ₋₁₊₂
-    #update = filter(e -> e[1]==1, edge23_update) Since only z=1 gives edge23 updates no filtering is neccesary.
-    remotecall_wait(updateShellEdge14!, chan.where, chan, edge23_update)
-    
-    nothing
-end
-
-# Suppose that for all layers except z=1, we have updated the three points (x=l₁, y=1), (x=l₁-1, y=1) and (x=l₁, y=2)
-# and for the layer z=1 we have updated intersection lines except for the aforementioned 3 points. This function
-# then sends any updated values to their respective sub-cube shells / shell-edges.
-function intersectionLinesTransfer(sc_nb::RemoteNeighbors{SubCuboid}, 
-        plane1_update::Vector{Tuple{I,I,LatticeSite}}, plane4_update::Vector{Tuple{I,I,LatticeSite}}, 
-        plane6_update::Vector{Tuple{I,I,LatticeSite}}, edge14_update::Vector{Tuple{I,LatticeSite}},
-        l₁::I, l₂::I) where I<:Int
-    
-    # SubCuboid scᵣ₋₂ is affected by the plane 4 updates throught its shell[3]
-    chan = sc_nb.rnᵣ₋₂
-    remotecall_wait(updateShell3!, chan.where, chan, plane4_update)
-    
-    # SubCuboid scᵣ₊₁ is affected by plane 1 updates through its shell[2]
-    chan = sc_nb.rnᵣ₊₁
-    remotecall_wait(updateShell2!, chan.where, chan, plane1_update)
-    
-    # SubCuboid scᵣ₋₃ is affected by plane 6 updates through its shell[5]
-    chan = sc_nb.rnᵣ₋₃
-    remotecall_wait(updateShell5!, chan.where, chan, plane6_update)
-    
-    # SubCuboid scᵣ₊₁₋₂ is affected by edge14 updates through its shell_edge23
-    chan = sc_nb.rnᵣ₊₁₋₂
-    remotecall_wait(updateShellEdge23!, chan.where, chan, edge14_update)
-    
-    # SubCuboid scᵣ-₁ is affected by plane 6 updates where x=1,y=1 through its shell[1]
-    chan = sc_nb.rnᵣ₋₁
-    update = filter(e -> e[1] == 1 && e[2] == 1, plane6_update)
-    remotecall_wait(updateShell1!, chan.where, chan, update)
-    
-    # SubCuboid scᵣ₊₂ is affected by plane 6 updates where x=l₁,y=l₂ through its shell[4]
-    chan = sc_nb.rnᵣ₊₂
-    update = filter(e -> e[1] == l₁ && e[2] == l₂, plane6_update)
-    update = [(l₁, 1, e[3]) for e in update]
-    remotecall_wait(updateShell4!, chan.where, chan, update)
-    nothing
-end
 
 # Suppose we have updated the 3 points (x=l₁-1, y=1), (x=l₁, y=1) and (x=l₁, y=2) in the z=1 plane. This function sends
 # information to the shells and shell-edges of neighboring sub-cuboids to reflect this.
