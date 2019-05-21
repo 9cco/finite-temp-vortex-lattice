@@ -1,7 +1,11 @@
 module CuboidModule
 
-export SystConstants, Cuboid, mcSweep!, energy
-export getShells, getShellEdges, shellSize, getLattice
+export SystConstants, Cuboid, mcSweep!, mcSweepEnUp!, energy, two_pi
+export latticeMap, latticeSiteNeighborMap, latticeSiteMap
+export shellSize, getLattice, fluxDensity, setTemp!
+
+# For testing: compile with the exports below
+export RemoteNeighbors, SubCuboid, LatticeSite
 
 using Distributed
 using Distributions
@@ -13,7 +17,8 @@ using BenchmarkTools
 #@everywhere include("/home/nicolai/Documents/Work/PhD/Numerikk/MC/finite-temp-vortex-lattice/Source/Grid/sub_cuboid_mod.jl")
 #src_path = "/home/nicolai/Documents/Work/PhD/Numerikk/MC/finite-temp-vortex-lattice/Source/Grid/"
 #@everywhere push!(LOAD_PATH, $src_path)
-using SubCuboidModule
+#using SubCuboidModule
+include("subcuboid_functions.jl")
 
 
 
@@ -33,7 +38,7 @@ end
 
 
 
-############################################################################################################################
+###########################################################################################################################
 #                               Construction Functions
 #__________________________________________________________________________________________________________________________#
 ############################################################################################################################
@@ -54,20 +59,20 @@ function generateInitialLattice(choice::Int64, syst::SystConstants; u⁺=1.0, u�
     if choice == 1
         # Mean field lattice sites for all fields.
         # Construct NxN lattice of NxN LatticeSites
-        lattice = [LatticeSite([A[1], A[2], A[3]], θ⁺, θ⁻, u⁺, u⁻, x) for x=1:L₁, y=1:L₂, z=1:L₃]
+        lattice = [LatticeSite(A[1], A[2], A[3], θ⁺, θ⁻, u⁺, u⁻, x) for x=1:L₁, y=1:L₂, z=1:L₃]
     # Construct random state
     elseif choice == 2
         lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
                         rand(Uniform(0,2π)), rand(Uniform(0,2π)), umax*rand(), umax*rand(), x) for x=1:L₁, y=1:L₂, z=1:L₃]
     elseif choice == 3
         # Uniform mean field for all fields except u⁺ which is random.
-        lattice = [LatticeSite([A[1], A[2], A[3]], θ⁺, θ⁻, umax*rand(), u⁻, x) for x=1:L₁, y=1:L₂, z=1:L₃]
+        lattice = [LatticeSite(A[1], A[2], A[3], θ⁺, θ⁻, umax*rand(), u⁻, x) for x=1:L₁, y=1:L₂, z=1:L₃]
     elseif choice == 4
         # Uniform mean field except for u⁺ and u⁻
-        lattice = [LatticeSite([A[1], A[2], A[3]], θ⁺, θ⁻, umax*rand(), umax*rand(), x) for x=1:L₁, y=1:L₂, z=1:L₃]
+        lattice = [LatticeSite(A[1], A[2], A[3], θ⁺, θ⁻, umax*rand(), umax*rand(), x) for x=1:L₁, y=1:L₂, z=1:L₃]
     elseif choice == 5
         # Vary phases, all other fields are uniform mean fields.
-        lattice = [LatticeSite([A[1], A[2], A[3]], rand(Uniform(0,2π)), rand(Uniform(0,2π)), u⁺, u⁻, x) 
+        lattice = [LatticeSite(A[1], A[2], A[3], rand(Uniform(0,2π)), rand(Uniform(0,2π)), u⁺, u⁻, x) 
             for x=1:L₁, y=1:L₂, z=1:L₃]
     elseif choice == 6
         # All fields random except for amplitudes
@@ -309,6 +314,84 @@ function mcSweep!(cub::Cuboid)
     nothing
 end
 
+# Same as above but also return the energy difference and number of successful updates
+function mcSweepEnUp!(cub::Cuboid)
+    # Create futures for all update-processes
+    futs = [Future() for i = 1:length(cub.grid)]
+    en_diff = 0.0; updates = 0
+    
+    # Preform step 1 of updating internal points
+    for (i, chan) = enumerate(cub.grid)
+        futs[i] = @spawnat chan.where updateTransferInternalPointsRetEnUp!(chan)
+    end
+    for fut in futs
+        δE, up = fetch(fut)
+        en_diff += δE; updates += up
+    end
+    
+    # Step 2: Updates intersection planes 4 and 1 in parallel
+    for (i, chan) = enumerate(cub.grid)
+        futs[i] = @spawnat chan.where updateTransferIntersectionPlanesRetEnUp!(chan)
+    end
+    for fut in futs
+        δE, up = fetch(fut)
+        en_diff += δE; updates += up
+    end
+    
+    # Step 3: Updates intersection lines 14 and neighboring two lines in parallel
+    for (i, chan) = enumerate(cub.grid)
+        futs[i] = @spawnat chan.where updateTransferIntersectionLinesRetEnUp!(chan)
+    end
+    for fut in futs
+        δE, up = fetch(fut)
+        en_diff += δE; updates += up
+    end
+    
+    # Step 4: Updates plane 6 internal points in parallel
+    for (i, chan) = enumerate(cub.grid)
+        futs[i] = @spawnat chan.where updateTransferPlane6InternalsRetEnUp!(chan)
+    end
+    for fut in futs
+        δE, up = fetch(fut)
+        en_diff += δE; updates += up
+    end
+    
+    # Step 5: Updates plane 6 intersection lines in parallel
+    for (i, chan) = enumerate(cub.grid)
+        futs[i] = @spawnat chan.where updateTransferPlane6IntersectionLinesRetEnUp!(chan)
+    end
+    for fut in futs
+        δE, up = fetch(fut)
+        en_diff += δE; updates += up
+    end
+    
+    # Step 6: Updates intersection point and two neighboring plane 6 points in parallel
+    for (i, chan) = enumerate(cub.grid)
+        futs[i] = @spawnat chan.where updateTransferPlane6IntersectionPointRetEnUp!(chan)
+    end
+    for fut in futs
+        δE, up = fetch(fut)
+        en_diff += δE; updates += up
+    end
+
+    en_diff, updates
+end
+
+# -------------------------------------------------------------------------------------------------
+# Takes a state cuboid and calculates estimates the acceptance rate using M
+# Monte Carlo sweeps of the lattice. Then return the average and standard deviation of this
+# fraction.
+function mcProposalFraction!(cub::Cuboid; M::Int64=500)
+    fracs = zeros(M)
+    N = cub.syst.L₁*cub.syst.L₂*cub.syst.L₃
+    
+    # Go through the entire lattice M times and gain the statistic of whether it gets updated or not
+    for i = 1:M
+        _, updated = mcSweepEnUp!(cub)
+        fracs[i] = updated/N
+    end
+    return mean(fracs), std(fracs)
+end
 
 ############################################################################################################################
 #                               Observables
@@ -329,6 +412,42 @@ function energy(cub::Cuboid)
     E
 end
 
+# -----------------------------------------------------------------------------------------------------------
+# Calculates the plaquette sum of the gauge field at a position pos, with the plaquette plane perpenducular
+# to the x, y and z-axis. This corresponds to the different components of the curl of the gauge field
+# in the continuum limit.
+function fluxDensity(ϕ::LatticeSite, nb::CuboidModule.NearestNeighbors)
+    ϕᵣ₊₁ = nb.ϕᵣ₊₁
+    ϕᵣ₊₂ = nb.ϕᵣ₊₂
+    ϕᵣ₊₃ = nb.ϕᵣ₊₃
+    
+    cur_A_x = (ϕ.A₂ + ϕᵣ₊₂.A₃ - ϕᵣ₊₃.A₂ - ϕ.A₃)
+    cur_A_y = (ϕ.A₃ + ϕᵣ₊₃.A₁ - ϕᵣ₊₁.A₃ - ϕ.A₁)
+    cur_A_z = (ϕ.A₁ + ϕᵣ₊₁.A₂ - ϕᵣ₊₂.A₁ - ϕ.A₂)
+    
+    cur_A_x, cur_A_y, cur_A_z
+end
+function fluxDensity(chan::RemoteChannel{Channel{SubCuboid}})
+    sc = fetch(chan)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    [fluxDensity(sc.lattice[x,y,z], sc.nb[x,y,z]) for x = 1:l₁, y = 1:l₂, z = 1:l₃]
+end
+function fluxDensity(cub::Cuboid)
+    L₁ = cub.syst.L₁; L₂ = cub.syst.L₂; L₃ = cub.syst.L₃
+    
+    ret_lattice = Array{Tuple{Float64,Float64,Float64},3}(undef, L₁, L₂, L₃)
+    futures = [Future() for i = 1:length(cub.grid)]
+    
+    for (i, chan) = enumerate(cub.grid)
+        futures[i] = @spawnat chan.where fluxDensity(chan)
+    end
+    
+    for (i, ranges) = enumerate(cub.range_grid)
+        ret_lattice[ranges...] = fetch(futures[i])
+    end
+    
+    ret_lattice
+end
 
 
 
@@ -356,7 +475,7 @@ function getShells(rn::RemoteNeighbors{SubCuboid})
 end
 
 # Warning: slow function.
-function getShellEdges(rn::SubCuboidModule.RemoteNeighbors{SubCuboid})
+function getShellEdges(rn::RemoteNeighbors{SubCuboid})
     scᵣ₊₁₋₂ = fetch(rn.rnᵣ₊₁₋₂)
     scᵣ₊₁₋₃ = fetch(rn.rnᵣ₊₁₋₃)
     scᵣ₋₁₊₂ = fetch(rn.rnᵣ₋₁₊₂)
@@ -401,5 +520,275 @@ function shellSize(cub::Cuboid)
     end
     si
 end
+
+# The function is assumed to return the specified return type. The function is here
+# assumed to take a SubCuboid object and position as arguments.
+function latticeMap(funk::Function, chan::RemoteChannel{Channel{SubCuboid}}, T::DataType)
+    sc = fetch(chan)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    
+    ret_lattice = Array{T, 3}(undef, l₁,l₂,l₃)
+    
+    for x = 1:l₁, y = 1:l₂, z = 1:l₃
+        ret_lattice[x,y,z] = T(funk(sc, (x,y,z)))
+    end
+    ret_lattice
+end
+# We assume that the function funk is defined on all processes. Call it on each sub-cuboid which in turn calls it on
+# each lattice site, and stitch the results back into a lattice of function-returns.
+function latticeMap(funk::Function, cub::Cuboid, T::DataType)
+    L₁ = cub.syst.L₁; L₂ = cub.syst.L₂; L₃ = cub.syst.L₃
+    
+    ret_lattice = Array{T,3}(undef, L₁, L₂, L₃)
+    futures = [Future() for i = 1:length(cub.grid)]
+    
+    for (i, chan) = enumerate(cub.grid)
+        futures[i] = @spawnat chan.where latticeMap(funk, chan, T)
+    end
+    
+    for (i, ranges) = enumerate(cub.range_grid)
+        ret_lattice[ranges...] = fetch(futures[i])
+    end
+    
+    ret_lattice
+end
+# The function is here assumed to take a LatticeSite and a NearestNeighbor object as its two arguments and return
+# the data-type specified by T
+function latticeSiteNeighborMap(funk::Function, chan::RemoteChannel{Channel{SubCuboid}}, T::DataType)
+    sc = fetch(chan)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    
+    ret_lattice = Array{T, 3}(undef, l₁,l₂,l₃)
+    
+    for x = 1:l₁, y = 1:l₂, z = 1:l₃
+        ret_lattice[x,y,z] = T(funk(sc.lattice[x,y,z], sc.nb[x,y,z]))
+    end
+    ret_lattice
+end
+# We assume that the function funk is defined on all processes. Call it on each sub-cuboid which in turn calls it on
+# each lattice site, and stitch the results back into a lattice of function-returns.
+function latticeSiteNeighborMap(funk::Function, cub::Cuboid, T::DataType)
+    L₁ = cub.syst.L₁; L₂ = cub.syst.L₂; L₃ = cub.syst.L₃
+    
+    ret_lattice = Array{T,3}(undef, L₁, L₂, L₃)
+    futures = [Future() for i = 1:length(cub.grid)]
+    
+    for (i, chan) = enumerate(cub.grid)
+        futures[i] = @spawnat chan.where latticeSiteNeighborMap(funk, chan, T)
+    end
+    
+    for (i, ranges) = enumerate(cub.range_grid)
+        ret_lattice[ranges...] = fetch(futures[i])
+    end
+    
+    ret_lattice
+end
+# The function is assumed only take a LatticeSite object as argument
+function latticeSiteMap(funk::Function, chan::RemoteChannel{Channel{SubCuboid}}, T::DataType)
+    sc = fetch(chan)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    
+    [T(funk(sc.lattice[x,y,z])) for x = 1:l₁, y = 1:l₂, z = 1:l₃]
+end
+# We assume that the function funk is defined on all processes. Call it on each sub-cuboid which in turn calls it on
+# each lattice site, and stitch the results back into a lattice of function-returns.
+function latticeSiteMap(funk::Function, cub::Cuboid, T::DataType)
+    L₁ = cub.syst.L₁; L₂ = cub.syst.L₂; L₃ = cub.syst.L₃
+    
+    ret_lattice = Array{T,3}(undef, L₁, L₂, L₃)
+    futures = [Future() for i = 1:length(cub.grid)]
+    
+    for (i, chan) = enumerate(cub.grid)
+        futures[i] = @spawnat chan.where latticeSiteMap(funk, chan, T)
+    end
+    
+    for (i, ranges) = enumerate(cub.range_grid)
+        ret_lattice[ranges...] = fetch(futures[i])
+    end
+    
+    ret_lattice
+end
+
+# The function funk is assumed to take a SubCuboid object as only argument.
+function mutateSystem!(funk::Function, chan::RemoteChannel{Channel{SubCuboid}})
+    sc = take!(chan)
+    funk(sc)
+    put!(chan, sc)
+    nothing
+end
+# We assume that the function funk is defined on all processes. The function should take a SubCuboid object as
+# only argument and should manipulate it in some way.
+function mutateSystem!(funk::Function, cub::Cuboid)
+    
+    futures = [Future() for i = 1:length(cub.grid)]
+    
+    for (i, chan) = enumerate(cub.grid)
+        futures[i] = @spawnat chan.where mutateSystem!(funk, chan)
+    end
+    
+    for (i, ranges) = enumerate(cub.range_grid)
+        wait(futures[i])
+    end
+    
+    nothing
+end
+
+# Sets the temperature in each subcuboid of the cuboid.
+function setTemp!(cub::Cuboid, T::R) where R<:Real
+    mutateSystem!(sc -> sc.β = 1/T, cub)
+    nothing
+end
+
+# Get the simulations constants in the system.
+function getControls(cub::Cuboid)
+    getSubCuboidProperty(sc -> sc.sim, cub.grid[1])
+end
+
+# -------------------------------------------------------------------------------------------------
+# Sets the simulation constants of each subcuboid in the cuboid, either by specifying values
+function setProposalIntervals!(cub::Cuboid; θ_max = π/3, u_max = 0.4, A_max = 3.0)
+    mutateSystem!(sc -> sc.sim = Controls(θ_max, u_max, A_max), cub)
+end
+# or by specifying a ::Controls object
+function setProposalIntervals!(cub::Cuboid, sim::Controls)
+    mutateSystem!(sc -> sc.sim = sim, cub)
+end
+
+# -----------------------------------------------------------------------------------------------------------
+# Adjusts the simulation controls such that it has an acceptance rate (AR) larger than LOWER.
+# Tries to find the simulation controls that are simultaneously the ones with the highest values.
+function tune!(cub::Cuboid; M = 40, CUTOFF_MAX = 42, LOWER = 0.3,
+        NEEDED_PROPOSALS = 5, DIVI = 1.5, TRIED_VALUES = 4)
+
+    # M = 40                # How many MCS to do for estimating success fraction.
+    # CUTOFF_MAX = 42       # How many times the while loop should run. 
+    # LOWER = 0.3           # Minimum acceptance rate (AR). Must be less than 0.5
+    # NEEDED_PROPOSALS = 5  # Number of sim with AR >= LOWER
+    # DIVI = 1.5            # The number the current value is divided by to get lower limit of search interval.
+    # TRIED_VALUES = 4      # Number of values to try in new interval
+    
+    sim = getControls(cub)
+    proposedConstants = [copy(sim) for i=1:NEEDED_PROPOSALS]
+    proposedAR = zeros(NEEDED_PROPOSALS)
+    proposals = 0
+    n = 0
+    adjustment_mcs = 0
+    
+    # First we get an estimate of the accept probability
+    (av, std) = mcProposalFraction!(cub; M=M)
+    adjustment_mcs = M
+    if av >= LOWER
+        return (av, adjustment_mcs, ψ, sim)
+    end
+    
+    s₀ = copy(sim)
+    while (proposals < NEEDED_PROPOSALS)
+        # The starting state of this loop will be that we have no proposals for sims that has acceptance rate higher
+        # than LOWER (including the initial s₀)
+        
+        # First we look at Amax
+        interval_end = s₀.Amax/DIVI
+        tries_A = [Controls(s₀.θmax, s₀.umax, 
+                s₀.Amax-x*(s₀.Amax-interval_end)/TRIED_VALUES) for x = 1:TRIED_VALUES]
+        f_A = zeros(TRIED_VALUES)
+        for i = 1:TRIED_VALUES
+            setProposalIntervals!(cub, tries_A[i])
+            (f_A[i], std) = mcProposalFraction!(cub; M=M)
+            adjustment_mcs += M
+            # If we find a value with probability >= LOWER, then this is the largest such value we have found
+            # and should be included in proposed constants
+            if f_A[i] >= LOWER
+                proposals += 1
+                proposedConstants[proposals] = tries_A[i]
+                proposedAR[proposals] = f_A[i]
+                break
+            end
+        end
+        
+        # If we have the needed number of proposals we exit the loop.
+        (proposals >= NEEDED_PROPOSALS) && break
+
+        # Then we try to vary umax
+        interval_end = s₀.umax/DIVI
+        tries_u = [Controls(s₀.θmax, s₀.umax - x*(s₀.umax-interval_end)/TRIED_VALUES,
+                s₀.Amax) for x = 1:TRIED_VALUES]
+        f_u = zeros(TRIED_VALUES)
+        for i = 1:TRIED_VALUES
+            setProposalIntervals!(cub, tries_u[i])
+            (f_u[i], std) = mcProposalFraction!(cub, M=M)
+            adjustment_mcs += M
+            if f_u[i] >= LOWER
+                proposals += 1
+                proposedConstants[proposals] = tries_u[i]
+                proposedAR[proposals] = f_u[i]
+                break
+            end
+        end
+        
+        # If we have the needed number of proposals we exit the loop.
+        (proposals >= NEEDED_PROPOSALS) && break
+
+        # Then we try to vary θmax
+        interval_end = s₀.θmax/DIVI
+        tries_θ = [Controls(s₀.θmax - x*(s₀.θmax - interval_end)/TRIED_VALUES, s₀.umax,
+                s₀.Amax) for x = 1:TRIED_VALUES]
+        f_θ = zeros(TRIED_VALUES)
+        for i = 1:TRIED_VALUES
+            setProposalIntervals!(cub, tries_θ[i])
+            (f_θ[i], std) = mcProposalFraction!(cub, M=M)
+            adjustment_mcs += M
+            if f_θ[i] >= LOWER
+                proposals += 1
+                proposedConstants[proposals] = tries_θ[i]
+                proposedAR[proposals] = f_θ[i]
+                break
+            end
+        end
+        
+        # If we have the needed number of proposals we exit the loop.
+        (proposals >= NEEDED_PROPOSALS) && break
+        
+        # At this point in the loop we have tried to get some proposals but failed to get enough of them.
+        # We need to start the loop again with a new starting state that is such that the accept ratio is
+        # as high is possible so that we can get more proposals.
+        accept_ratios = vcat(f_A, f_u, f_θ)
+        tries = vcat(tries_A, tries_u, tries_θ)
+        i_max = argmax(accept_ratios)   # Finding index of sim that gave highest accept ratio.
+        s₀ = tries[i_max]               # Setting this sim to the initial one.
+        
+        
+        n += 1
+        if n >= CUTOFF_MAX
+            println("WARNING: Could not find simulation constant such that update probability 
+                was higher than $(LOWER)")
+            sim = s₀
+            return (accept_ratios[i_max], adjustment_mcs, sim)
+        end
+    end
+    # The end situation of the loop is that we have a number of proposals >= NEEDED_PROPOSALS.
+    
+    # Finding the distance from zero of the different proposals.
+    norms = zeros(proposals)
+    for i = 1:proposals
+        norms[i] = proposedConstants[i].θmax^2 + proposedConstants[i].umax^2 + proposedConstants[i].Amax^2
+    end
+    i_max = argmax(norms)
+    setValues!(sim, proposedConstants[i_max]) # Finally we update the simulation constants to 
+    # the sim that has highest norm, and an accept ratio above LOWER.
+    setProposalIntervals!(cub, sim)
+    return (proposedAR[i_max], adjustment_mcs, sim)
+    # Return the acceptance ratio of the new sim and the number of Monte-Carlo Sweeps done during this adjustment.
+end
+
+# -------------------------------------------------------------------------------------------------
+function printControls(cubs::Array{Cuboid, 1})
+    println("State\tθmax\t\t\tumax\tAmax")
+    for i = 1:length(cubs)
+        sim = getControls(cubs[i])
+        println("$i\t$(sim.θmax)\t$(sim.umax)\t$(sim.Amax)")
+    end
+    nothing
+end
+
 
 end

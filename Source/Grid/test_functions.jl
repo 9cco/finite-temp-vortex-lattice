@@ -217,8 +217,8 @@ function scientificRounding(val::T, err::T; extra_digits::Int64 = 0) where T<:Re
     return val, round(err; sigdigits=1+extra_digits)#signif(err, 1+extra_digits)
 end
 
-function benchmarkMcSweep(cub::Cuboid; samples = 2000, max_sec = 60)
-    tr = @benchmark mcSweep!($cub) samples=samples seconds=max_sec evals=1
+function benchmarkMcSweep(cub::Cuboid; samples = 2000, max_sec = 60, evaluations=1)
+    tr = @benchmark mcSweep!($cub) samples=samples seconds=max_sec evals=evaluations
     s₁ = size(cub.grid, 1); s₂ = size(cub.grid, 2); s₃ = size(cub.grid, 3)
     L₁ = cub.syst.L₁; L₂ = cub.syst.L₂; L₃ = cub.syst.L₃
     times = tr.times*1e-9*1e6/(L₁*L₂*L₃)
@@ -226,6 +226,18 @@ function benchmarkMcSweep(cub::Cuboid; samples = 2000, max_sec = 60)
         println("Warning: Not all samples done within $(max_sec) s")
     end
     mn, er = scientificRounding(meanAndErr(times)...)
-    println("mcSweep used $(mn) ± $(er) μs pr. lattice site for $(L₁)×$(L₂)×$(L₃) lattice split ($(s₁),$(s₂),$(s₃))
+    println("Function used $(mn) ± $(er) μs pr. lattice site for $(L₁)×$(L₂)×$(L₃) lattice split ($(s₁),$(s₂),$(s₃))
+giving a $(round(shellSize(cub)/(L₁*L₂*L₃); digits=2)) shell site to lattice site ratio")
+end
+function benchmarkMcSweepEnUp(cub::Cuboid; samples = 2000, max_sec = 60, evaluations=1)
+    tr = @benchmark mcSweepEnUp!($cub) samples=samples seconds=max_sec evals=evaluations
+    s₁ = size(cub.grid, 1); s₂ = size(cub.grid, 2); s₃ = size(cub.grid, 3)
+    L₁ = cub.syst.L₁; L₂ = cub.syst.L₂; L₃ = cub.syst.L₃
+    times = tr.times*1e-9*1e6/(L₁*L₂*L₃)
+    if length(times) != samples
+        println("Warning: Not all samples done within $(max_sec) s")
+    end
+    mn, er = scientificRounding(meanAndErr(times)...)
+    println("Function used $(mn) ± $(er) μs pr. lattice site for $(L₁)×$(L₂)×$(L₃) lattice split ($(s₁),$(s₂),$(s₃))
 giving a $(round(shellSize(cub)/(L₁*L₂*L₃); digits=2)) shell site to lattice site ratio")
 end

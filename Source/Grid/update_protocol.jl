@@ -34,7 +34,7 @@ function updateInternalPoints!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(plane2_update, (y,z,ϕ))
         end
     end
@@ -44,7 +44,7 @@ function updateInternalPoints!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(plane3_update, (x,z,ϕ))
         end
     end
@@ -55,7 +55,7 @@ function updateInternalPoints!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(plane5_update, (x,y,ϕ))
         end
     end
@@ -67,7 +67,7 @@ function updateInternalPoints!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(edge23_update, (z,ϕ))
         end
     end
@@ -77,7 +77,7 @@ function updateInternalPoints!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(edge25_update, (y,ϕ))
         end
     end
@@ -87,7 +87,7 @@ function updateInternalPoints!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(edge35_update, (x,ϕ))
         end
     end
@@ -98,12 +98,138 @@ function updateInternalPoints!(sc::SubCuboid)
     ϕ = sc.lattice[x,y,z]
     nb = sc.nb[x,y,z]
     nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
         push!(corner235_update, ϕ)
     end
        
     plane2_update, plane3_update, plane5_update, edge23_update, edge25_update, edge35_update, corner235_update
 end
+# Same as above but returns δE and number of lattice site changes
+function updateInternalPointsRetEnUp!(sc::SubCuboid)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    
+    plane2_update = Array{Tuple{Int64,Int64, LatticeSite}, 1}(undef, 0)
+    plane3_update = Array{Tuple{Int64,Int64, LatticeSite}, 1}(undef, 0)
+    plane5_update = Array{Tuple{Int64,Int64, LatticeSite}, 1}(undef, 0)
+    edge23_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    edge25_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    edge35_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    corner235_update = Array{LatticeSite, 1}(undef, 0)
+
+    updates = 0
+    en_diff = 0.0
+    
+    # First we update the part of internal points that has no influence on neighboring sub cuboids.
+    for z = 2:l₃-1, y=2:l₂-1, x = 2:l₁-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+        end
+    end
+   
+    # Planes:
+    # Then we update internal points in plane 2 that are not in other planes
+    x = 1
+    for z = 2:l₃-1, y = 2:l₂-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(plane2_update, (y,z,ϕ))
+        end
+    end
+    # Same for Plane 3
+    y = l₂
+    for x = 2:l₁-1, z = 2:l₃-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(plane3_update, (x,z,ϕ))
+        end
+    end
+    # Same for Plane 5
+    # # Plane 5 internal points, not in plane 2 or 3 (z=l₃, x≢1, y≢l₂)
+    z = l₃
+    for x = 2:l₁-1, y = 2:l₂-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(plane5_update, (x,y,ϕ))
+        end
+    end
+
+    # Lines:
+    # Intersection line between plane 2 and 3 except intersection point
+    x = 1; y = l₂
+    for z = 2:l₃-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge23_update, (z,ϕ))
+        end
+    end
+    # Intersection line between plane 2 and 5 except intersection point
+    z = l₃; x = 1
+    for y = 2:l₂-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge25_update, (y,ϕ))
+        end
+    end
+    # Intersection line between plane 3 and 5 except intersection point
+    z = l₃; y = l₂
+    for x = 2:l₁-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge35_update, (x,ϕ))
+        end
+    end
+
+    # Point:
+    # Intersection point between plane 2, 3 and 5
+    x = 1; y = l₂; z = l₃
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(corner235_update, ϕ)
+    end
+       
+    plane2_update, plane3_update, plane5_update, edge23_update, edge25_update, edge35_update, corner235_update, en_diff, updates
+end
+
 
 
 # Given that the internal points in a sub-cuboid has been updated to new values, since the border to the environment is
@@ -148,6 +274,18 @@ function updateTransferInternalPoints!(chan::RemoteChannel{Channel{SubCuboid}})
    
     nothing
 end
+function updateTransferInternalPointsRetEnUp!(chan::RemoteChannel{Channel{SubCuboid}})
+    sc = take!(chan)
+    sc_nb = copy(sc.sc_nb)
+    
+    # 1. step: Update and transfer internal points
+    (plane2_update, plane3_update, plane5_update, edge23_update, edge25_update, edge35_update, corner235_update,
+     en_diff, updates) = updateInternalPointsRetEnUp!(sc)
+    put!(chan, sc)
+    internalPointsTransfer(sc_nb, plane2_update, plane3_update, plane5_update, edge23_update, edge25_update, edge35_update, corner235_update)
+   
+    en_diff, updates
+end
 
 
 # Protocol Step 2
@@ -176,7 +314,7 @@ function updateIntersectionPlanes!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(plane4_update, (x,z,ϕ))
         end
     end
@@ -186,7 +324,7 @@ function updateIntersectionPlanes!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(edge24_update, (z,ϕ))
         end
     end
@@ -196,7 +334,7 @@ function updateIntersectionPlanes!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(edge45_update, (x,ϕ))
         end
     end
@@ -206,7 +344,7 @@ function updateIntersectionPlanes!(sc::SubCuboid)
     ϕ = sc.lattice[x,y,z]
     nb = sc.nb[x,y,z]
     nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
         push!(corner245_update, ϕ)
     end
 
@@ -216,7 +354,7 @@ function updateIntersectionPlanes!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(plane1_update, (y,z,ϕ))
         end
     end
@@ -226,7 +364,7 @@ function updateIntersectionPlanes!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(edge13_update, (z,ϕ))
         end
     end
@@ -236,7 +374,7 @@ function updateIntersectionPlanes!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(edge15_update, (y,ϕ))
         end
     end
@@ -246,12 +384,135 @@ function updateIntersectionPlanes!(sc::SubCuboid)
     ϕ = sc.lattice[x,y,z]
     nb = sc.nb[x,y,z]
     nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
         push!(corner135_update, ϕ)
     end
 
     plane1_update, plane4_update, edge13_update, edge15_update, edge24_update, edge45_update, corner135_update, corner245_update
 end
+# Same as above, but returns energy difference and the number of updates
+function updateIntersectionPlanesRetEnUp!(sc::SubCuboid)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    
+    plane1_update = Array{Tuple{Int64,Int64, LatticeSite}, 1}(undef, 0)
+    plane4_update = Array{Tuple{Int64,Int64, LatticeSite}, 1}(undef, 0)
+    edge24_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    edge13_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    edge45_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    edge15_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    corner245_update = Array{LatticeSite, 1}(undef, 0)
+    corner135_update = Array{LatticeSite, 1}(undef, 0)
+
+    en_diff = 0.0
+    updates = 0
+    
+    # First we update the points in plane 4 (not x = 1 || z = l₃)
+    y = 1
+    for x = 2:l₁-2, z = 2:l₃-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(plane4_update, (x,z,ϕ))
+        end
+    end
+    # Update the 24 edge except corner 245
+    y = 1; x = 1
+    for z = 2:l₃-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge24_update, (z,ϕ))
+        end
+    end
+    # Update the 45 edge except corner
+    z = l₃; y = 1
+    for x = 2:l₁-2
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge45_update, (x,ϕ))
+        end
+    end
+    # To complete the update of plane 4 except intersection lines and z = 1,
+    # we need to update corner 245
+    x = 1; y = 1; z = l₃
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(corner245_update, ϕ)
+    end
+
+    # Update points in plane 1 (not y = l₂ || z = l₃)
+    x = l₁
+    for y = 3:l₂-1, z = 2:l₃-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(plane1_update, (y,z,ϕ))
+        end
+    end
+    # Update the 13 edge except corner
+    x = l₁; y = l₂
+    for z = 2:l₃-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge13_update, (z,ϕ))
+        end
+    end
+    # Update the 15 edge except corner
+    x = l₁; z = l₃
+    for y = 3:l₂-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge15_update, (y,ϕ))
+        end
+    end
+    # To complete the update of plane 1 except intersection lines and z = 1,
+    # we need to update corner 135
+    x = l₁; y = l₂; z = l₃
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(corner135_update, ϕ)
+    end
+
+    plane1_update, plane4_update, edge13_update, edge15_update, edge24_update, edge45_update, corner135_update, corner245_update, en_diff, updates
+end
+
 
 # Suppose that points on the boundary planes that are not intersection lines and does not have x=l₁-1, y=1 or x=l₁, y=2,
 # have been updated. This affects shell 1-4,6.
@@ -305,6 +566,20 @@ function updateTransferIntersectionPlanes!(chan::RemoteChannel{Channel{SubCuboid
     
     nothing
 end
+function updateTransferIntersectionPlanesRetEnUp!(chan::RemoteChannel{Channel{SubCuboid}})
+    sc = take!(chan)
+    sc_nb = copy(sc.sc_nb)
+   
+    # 2. step: Update and transfer intersection planes except intersection lines and points with (x=l₁-1, y=1)
+    # and (x=l₁, y=2). For z = 1 the completely internal as well as 3 specific points are updated and transferred.
+    (plane1_update, plane4_update, edge13_update, edge15_update,
+     edge24_update, edge45_update, corner135_update, corner245_update, en_diff, updates) = updateIntersectionPlanesRetEnUp!(sc)
+    put!(chan, sc)
+    intersectionPlanesTransfer(sc_nb, plane1_update, plane4_update, edge13_update, edge15_update,
+                               edge24_update, edge45_update, corner135_update, corner245_update)
+    
+    en_diff, updates
+end
 
 
 # Protocol Step 3
@@ -328,7 +603,7 @@ function updateIntersectionLines!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(plane4_edge_update, (z,ϕ))
         end
         
@@ -336,7 +611,7 @@ function updateIntersectionLines!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(edge14_update, (z,ϕ))
         end
         
@@ -344,7 +619,7 @@ function updateIntersectionLines!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(plane1_edge_update, (z,ϕ))
         end
     end
@@ -356,7 +631,7 @@ function updateIntersectionLines!(sc::SubCuboid)
     ϕ = sc.lattice[x,y,z]
     nb = sc.nb[x,y,z]
     nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
         push!(edge45_point_update, ϕ)
     end
 
@@ -364,7 +639,7 @@ function updateIntersectionLines!(sc::SubCuboid)
     ϕ = sc.lattice[x,y,z]
     nb = sc.nb[x,y,z]
     nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
         push!(corner145_update, ϕ)
     end
 
@@ -372,12 +647,101 @@ function updateIntersectionLines!(sc::SubCuboid)
     ϕ = sc.lattice[x,y,z]
     nb = sc.nb[x,y,z]
     nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
         push!(edge15_point_update, ϕ)
     end
 
     plane1_edge_update, plane4_edge_update, edge14_update, edge15_point_update, edge45_point_update, corner145_update
 end
+# Same as above, but also return energy difference and number of updates
+function updateIntersectionLinesRetEnUp!(sc::SubCuboid)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+   
+    plane1_edge_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    plane4_edge_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    edge14_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    edge45_point_update = Array{LatticeSite, 1}(undef, 0)
+    edge15_point_update = Array{LatticeSite, 1}(undef, 0)
+    corner145_update = Array{LatticeSite, 1}(undef, 0)
+
+    en_diff = 0.0
+    updates = 0
+    
+    # Updating the 3 corner lines for 1 < z < l₃
+    for z = 2:l₃-1
+        x = l₁-1; y = 1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(plane4_edge_update, (z,ϕ))
+        end
+        
+        x = l₁; y = 1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge14_update, (z,ϕ))
+        end
+        
+        x = l₁; y = 2
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(plane1_edge_update, (z,ϕ))
+        end
+    end
+
+    # For z = l₃ we put updated points in special arrays
+    z = l₃
+
+    x = l₁-1; y = 1
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(edge45_point_update, ϕ)
+    end
+
+    x = l₁; y = 1
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(corner145_update, ϕ)
+    end
+
+    x = l₁; y = 2
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(edge15_point_update, ϕ)
+    end
+
+    plane1_edge_update, plane4_edge_update, edge14_update, edge15_point_update, edge45_point_update, corner145_update, en_diff, updates
+end
+
 
 # Suppose that for all layers except z=1, we have updated the three points (x=l₁, y=1), (x=l₁-1, y=1) and (x=l₁, y=2).
 # This function then sends any updated values to their respective sub-cube shells / shell-edges.
@@ -419,6 +783,19 @@ function updateTransferIntersectionLines!(chan::RemoteChannel{Channel{SubCuboid}
     
     nothing
 end
+# Same as above, but returns energy difference and number of updates.
+function updateTransferIntersectionLinesRetEnUp!(chan::RemoteChannel{Channel{SubCuboid}})
+    sc = take!(chan)
+    sc_nb = copy(sc.sc_nb)
+   
+    # 3. step: Update and transfer intersection lines in addition to lines (x=l₁-1, y=1, z>1), (x=l₁, y=2, z>1).
+    (plane1_edge_update, plane4_edge_update, edge14_update, edge15_point_update, edge45_point_update, corner145_update,
+     en_diff, updates) = updateIntersectionLinesRetEnUp!(sc)
+    put!(chan, sc)
+    intersectionLinesTransfer(sc_nb, plane1_edge_update, plane4_edge_update, edge14_update, edge15_point_update, edge45_point_update, corner145_update)
+    
+    en_diff, updates
+end
 
 
 # Protocol Step 4
@@ -439,7 +816,7 @@ function updatePlane6Internals!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(plane6_update, (x,y,ϕ))
         end
     end
@@ -450,7 +827,7 @@ function updatePlane6Internals!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(edge26_update, (y,ϕ))
         end
     end
@@ -461,7 +838,7 @@ function updatePlane6Internals!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(edge36_update, (x,ϕ))
         end
     end
@@ -471,13 +848,83 @@ function updatePlane6Internals!(sc::SubCuboid)
     ϕ = sc.lattice[x,y,z]
     nb = sc.nb[x,y,z]
     nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
         push!(corner236_update, ϕ)
     end
 
 
     plane6_update, edge26_update, edge36_update, corner236_update
 end
+# Same as above, but also return energy difference and number of successful updates.
+function updatePlane6InternalsRetEnUp!(sc::SubCuboid)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    
+    plane6_update = Array{Tuple{Int64,Int64, LatticeSite}, 1}(undef, 0)
+    edge36_update = Array{Tuple{Int64,LatticeSite}, 1}(undef, 0)
+    edge26_update = Array{Tuple{Int64,LatticeSite}, 1}(undef, 0)
+    corner236_update = Array{LatticeSite, 1}(undef, 0)
+
+    en_diff = 0.0
+    updates = 0
+
+    # Points in plane 6 that are not edges
+    z = 1
+    for x = 2:l₁-1, y = 2:l₂-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(plane6_update, (x,y,ϕ))
+        end
+    end
+
+    # Edge 26 without corner
+    x = 1
+    for y = 2:l₂-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge26_update, (y,ϕ))
+        end
+    end
+
+    # Edge 36 without corner
+    y = l₂
+    for x = 2:l₁-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge36_update, (x,ϕ))
+        end
+    end
+
+    # Updating corner 236
+    x = 1; y = l₂
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(corner236_update, ϕ)
+    end
+
+
+    plane6_update, edge26_update, edge36_update, corner236_update, en_diff, updates
+end
+
 
 # Suppose we have updated all points in plane 6 that are not on the edges 46 or 16.
 # This function sends information to the shells and shell-edges of neighboring sub-cuboids to reflect this.
@@ -520,6 +967,19 @@ function updateTransferPlane6Internals!(chan::RemoteChannel{Channel{SubCuboid}})
     
     nothing
 end
+# Same as above, but return also energy difference and number of successful updates.
+function updateTransferPlane6InternalsRetEnUp!(chan::RemoteChannel{Channel{SubCuboid}})
+    sc = take!(chan)
+    sc_nb = copy(sc.sc_nb)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂
+   
+    # 4. step: Update and transfer points z=1, x ∈ [1:l₁-1], y ∈ [2:l₂] internal to plane6
+    plane6_update, edge26_update, edge36_update, corner236_update, en_diff, updates = updatePlane6InternalsRetEnUp!(sc)
+    put!(chan, sc)
+    plane6InternalsTransfer(sc_nb, plane6_update, edge26_update, edge36_update, corner236_update)
+    
+    en_diff, updates
+end
 
 # Protocol Step 5
 # This is a pure z = 1 protocol step updating plane6 intersection lines except for x = l₁-1, y = 2
@@ -541,7 +1001,7 @@ function updatePlane6IntersectionLines!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(edge46_update, (x,ϕ))
         end
     end
@@ -551,7 +1011,7 @@ function updatePlane6IntersectionLines!(sc::SubCuboid)
     ϕ = sc.lattice[x,y,z]
     nb = sc.nb[x,y,z]
     nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
         push!(corner246_update, ϕ)
     end
 
@@ -561,7 +1021,7 @@ function updatePlane6IntersectionLines!(sc::SubCuboid)
         ϕ = sc.lattice[x,y,z]
         nb = sc.nb[x,y,z]
         nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
             push!(edge16_update, (y,ϕ))
         end
     end
@@ -571,12 +1031,80 @@ function updatePlane6IntersectionLines!(sc::SubCuboid)
     ϕ = sc.lattice[x,y,z]
     nb = sc.nb[x,y,z]
     nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
         push!(corner136_update, ϕ)
     end
 
     edge16_update, edge46_update, corner246_update, corner136_update
 end
+# Same as above, but also return the number of successful updates
+function updatePlane6IntersectionLinesRetEnUp!(sc::SubCuboid)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    z = 1
+    
+    edge46_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    edge16_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    corner246_update = Array{LatticeSite, 1}(undef, 0)
+    corner136_update = Array{LatticeSite, 1}(undef, 0)
+
+    en_diff = 0.0
+    updates = 0
+
+    # Updating edge 46 except corner
+    y = 1; z = 1
+    for x = 2:l₁-2
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge46_update, (x,ϕ))
+        end
+    end
+
+    # Updating corner 246
+    x = 1
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(corner246_update, ϕ)
+    end
+
+    # Updating edge 16 except corner
+    x = l₁; z = 1
+    for y = 3:l₂-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge16_update, (y,ϕ))
+        end
+    end
+
+    # Updating corner 136
+    y = l₂
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(corner136_update, ϕ)
+    end
+
+    edge16_update, edge46_update, corner246_update, corner136_update, en_diff, updates
+end
+
 
 # Suppose we have updated all points in edge 46 and 16 except the 3 points (x=l₁-1, y=1), (x=l₁, y=1) and (x=l₁, y=2). 
 # This function sends information to the shells and shell-edges of neighboring sub-cuboids to reflect this.
@@ -626,6 +1154,19 @@ function updateTransferPlane6IntersectionLines!(chan::RemoteChannel{Channel{SubC
     
     nothing
 end
+# Same as above, but also return the number of successful updates
+function updateTransferPlane6IntersectionLinesRetEnUp!(chan::RemoteChannel{Channel{SubCuboid}})
+    sc = take!(chan)
+    sc_nb = copy(sc.sc_nb)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂
+   
+    # 5. step: Update and transfer intersection lines in plane 6 excepting intersection point and its two neighbors.
+    edge16_update, edge46_update, corner246_update, corner136_update, en_diff, updates = updatePlane6IntersectionLinesRetEnUp!(sc)
+    put!(chan, sc)
+    plane6IntersectionLinesTransfer(sc_nb, edge16_update, edge46_update, corner246_update, corner136_update)
+    
+    en_diff, updates
+end
 
 
 # Protocol Step 6
@@ -645,7 +1186,7 @@ function updatePlane6IntersectionPoint!(sc::SubCuboid)
     ϕ = sc.lattice[x,y,z]
     nb = sc.nb[x,y,z]
     nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
         push!(edge46_update, ϕ)
     end
 
@@ -653,7 +1194,7 @@ function updatePlane6IntersectionPoint!(sc::SubCuboid)
     ϕ = sc.lattice[x,y,z]
     nb = sc.nb[x,y,z]
     nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
         push!(corner_update, ϕ)
     end
     
@@ -661,12 +1202,60 @@ function updatePlane6IntersectionPoint!(sc::SubCuboid)
     ϕ = sc.lattice[x,y,z]
     nb = sc.nb[x,y,z]
     nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)[1]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
         push!(edge16_update, ϕ)
     end
 
     edge16_update, edge46_update, corner_update
 end
+# Same as above, but also return the number of successful updates
+function updatePlane6IntersectionPointRetEnUp!(sc::SubCuboid)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    z = 1
+
+    corner_update = Array{LatticeSite}(undef, 0)
+    edge46_update = Array{LatticeSite}(undef, 0)
+    edge16_update = Array{LatticeSite}(undef, 0)
+
+    en_diff = 0.0
+    updates = 0
+
+    x = l₁-1; y = 1
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(edge46_update, ϕ)
+    end
+
+    x = l₁; y = 1
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(corner_update, ϕ)
+    end
+    
+    x = l₁; y = 2
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(edge16_update, ϕ)
+    end
+
+    edge16_update, edge46_update, corner_update, en_diff, updates
+end
+
 
 # Suppose we have updated the three points (x=l₁-1, y=1), (x=l₁, y=1) and (x=l₁, y=2) in plane 6.
 # This function sends information to the shells and shell-edges of neighboring sub-cuboids to reflect this.
@@ -707,4 +1296,16 @@ function updateTransferPlane6IntersectionPoint!(chan::RemoteChannel{Channel{SubC
     plane6IntersectionPointTransfer(sc_nb, edge16_update, edge46_update, corner_update)
     
     nothing
+end
+function updateTransferPlane6IntersectionPointRetEnUp!(chan::RemoteChannel{Channel{SubCuboid}})
+    sc = take!(chan)
+    sc_nb = copy(sc.sc_nb)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂
+   
+    # 5. step: Update and transfer intersection lines in plane 6 excepting intersection point and its two neighbors.
+    edge16_update, edge46_update, corner_update, en_diff, updates = updatePlane6IntersectionPointRetEnUp!(sc)
+    put!(chan, sc)
+    plane6IntersectionPointTransfer(sc_nb, edge16_update, edge46_update, corner_update)
+    
+    en_diff, updates
 end
