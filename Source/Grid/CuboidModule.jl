@@ -2,7 +2,8 @@ module CuboidModule
 
 export SystConstants, Cuboid, mcSweep!, mcSweepEnUp!, energy, two_pi
 export latticeMap, latticeSiteNeighborMap, latticeSiteMap
-export shellSize, getLattice, fluxDensity, setTemp!
+export shellSize, getLattice, fluxDensity, setTemp!, tuneUpdates!, printControls, estimateAR!
+export specificHeat, xyVortexSnapshot, vortexSnapshot, getSyst, getControls
 
 # For testing: compile with the exports below
 export RemoteNeighbors, SubCuboid, LatticeSite
@@ -381,7 +382,7 @@ end
 # Takes a state cuboid and calculates estimates the acceptance rate using M
 # Monte Carlo sweeps of the lattice. Then return the average and standard deviation of this
 # fraction.
-function mcProposalFraction!(cub::Cuboid; M::Int64=500)
+function estimateAR!(cub::Cuboid; M::Int64=500)
     fracs = zeros(M)
     N = cub.syst.L₁*cub.syst.L₂*cub.syst.L₃
     
@@ -448,6 +449,109 @@ function fluxDensity(cub::Cuboid)
     
     ret_lattice
 end
+
+
+# Planar vorticity
+# -----------------------------------------------------------------------------------------------------------
+# New version of nᵣ based on suggestion by Troels. We are drawing the gauge-invariant phase
+# difference back to [-π, π) instead of [0, 2π) and also adding 2πf so that we are measuring
+# n instead of (n-f) which we would do by just doing the gauge-invariant phase difference.
+function drawback(x::T) where T<:Real
+    return mod2pi(x+π)-π
+end
+function nᵣ(c::SystConstants, ϕᵣ₋₁::LatticeSite, ϕᵣ::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₋₁₊₂::LatticeSite, h_pos::Int64)
+    vort_θ⁺ = (drawback(ϕᵣ.θ⁺ - ϕᵣ₋₁.θ⁺ - ϕᵣ₋₁.A₁) + drawback(ϕᵣ₊₂.θ⁺ - ϕᵣ.θ⁺ - (ϕᵣ.A₂ + two_pi*c.f*(h_pos-1)))
+        - drawback(ϕᵣ₊₂.θ⁺ - ϕᵣ₋₁₊₂.θ⁺  - ϕᵣ₋₁₊₂.A₁)
+        - drawback(ϕᵣ₋₁₊₂.θ⁺ - ϕᵣ₋₁.θ⁺  - (ϕᵣ₋₁.A₂ + two_pi*c.f*(h_pos-2)))+two_pi*c.f)
+    vort_θ⁻ = (drawback(ϕᵣ.θ⁻ - ϕᵣ₋₁.θ⁻ - ϕᵣ₋₁.A₁) + drawback(ϕᵣ₊₂.θ⁻ - ϕᵣ.θ⁻ - (ϕᵣ.A₂ + two_pi*c.f*(h_pos-1)))
+        - drawback(ϕᵣ₊₂.θ⁻ - ϕᵣ₋₁₊₂.θ⁻  - ϕᵣ₋₁₊₂.A₁)
+        - drawback(ϕᵣ₋₁₊₂.θ⁻ - ϕᵣ₋₁.θ⁻  - (ϕᵣ₋₁.A₂ + two_pi*c.f*(h_pos-2)))+two_pi*c.f)
+    return vort_θ⁺, vort_θ⁻
+end
+
+# -----------------------------------------------------------------------------------------------------------
+# Given a lattice of lattice sites we find the corresponding vortex lattice assuming periodic BC.
+# Warning: slow function. Should not be used to measure things for averages.
+function vortexSnapshot(lattice::Array{LatticeSite, 3}, syst::SystConstants;
+                        l₁ = size(lattice, 1), l₂ = size(lattice, 2), l₃ = size(lattice, 3), T = Float64)
+
+    V⁺ = Array{T, 3}(undef, l₁,l₂,l₃); V⁻ = Array{T, 3}(undef, l₁,l₂,l₃)
+
+    for x = 1:l₁, y = 1:l₂, z = 1:l₃
+        ϕᵣ = lattice[x,y,z]
+        ϕᵣ₋₁ = lattice[mod(x-1-1,l₁)+1,y,z]
+        ϕᵣ₊₂ = lattice[x,mod(y+1-1,l₂)+1,z]
+        ϕᵣ₋₁₊₂ = lattice[mod(x-1-1,l₁)+1,mod(y+1-1,l₂)+1,z]
+        V⁺[x,y,z], V⁻[x,y,z] = nᵣ(syst, ϕᵣ₋₁, ϕᵣ, ϕᵣ₊₂, ϕᵣ₋₁₊₂, ϕᵣ.x)
+    end
+    V⁺, V⁻
+end
+
+# --------------------------------------------------------------------------------------------------
+# Projects 3D real space down on 2D through an averaging over the 3. dimension.
+function avgZ(V::Array{T,3}) where T<:Real
+    L₁ = size(V,1); L₂ = size(V, 2); L₃ = size(V,3)
+    avg_V = zeros(T, L₁,L₂)
+    for x = 1:L₁, y = 1:L₂
+        for z = 1:L₃
+            avg_V[x,y] += V[x,y,z]
+        end
+        avg_V[x,y] /= L₃
+    end
+    return avg_V
+end
+
+# -----------------------------------------------------------------------------------------------------------
+# Assuming we have a state ψ, we want to find the lattice of vortices averaged over the z-direction.
+# First we find the lattice of vorticies on a single SubCuboid then we return the average.
+function xyVortexSnapshot(chan::RemoteChannel{Channel{SubCuboid}}; T=Float64)
+    sc = fetch(chan)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    
+    V⁺ = Array{T, 3}(undef, l₁,l₂,l₃); V⁻ = Array{T, 3}(undef, l₁,l₂,l₃)
+
+    for x = 1:l₁, y = 1:l₂, z = 1:l₃
+        ϕᵣ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        ϕᵣ₋₁ = nb.ϕᵣ₋₁
+        ϕᵣ₊₂ = nb.ϕᵣ₊₂
+        ϕᵣ₋₁₊₂ = sc.nnb[x,y,z].ϕᵣ₋₁₊₂
+        V⁺[x,y,z], V⁻[x,y,z] = nᵣ(sc.syst, ϕᵣ₋₁, ϕᵣ, ϕᵣ₊₂, ϕᵣ₋₁₊₂, ϕᵣ.x)
+    end
+
+    avgZ(V⁺), avgZ(V⁻)
+end
+
+# Calculates a snapshot of the vortex lattice averaged over the z-direction. The vorticity is found in each
+# lattice site with nᵣ∼ ∇×A, on each sub-cuboid, this lattice is averaged over the z-direction, returned
+# to the main-process which then averages these averages again.
+function xyVortexSnapshot(cub::Cuboid; T = Float64)
+    L₁ = cub.syst.L₁; L₂ = cub.syst.L₂; L₃ = cub.syst.L₃
+    s₁ = size(cub.grid, 1); s₂ = size(cub.grid, 2); s₃ = size(cub.grid, 3)
+    
+    V⁺ = Array{T, 3}(undef, L₁,L₂,s₃)
+    V⁻ = Array{T, 3}(undef, L₁,L₂,s₃)
+
+    # First we calculate the z-averaged vortex lattice on each sub-cuboid.
+    futures = [Future() for i₁ = 1:s₁, i₂ = 1:s₂, i₃ = 1:s₃]
+    for i₁ = 1:s₁, i₂ = 1:s₂, i₃ = 1:s₃
+        chan = cub.grid[i₁,i₂,i₃]
+        futures[i₁,i₂,i₃] = @spawnat chan.where xyVortexSnapshot(chan)
+    end
+    
+    # Each call to xyVortexSnapshot(::SubCuboid) returns an l₁×l₂ array whose position in the original lattice
+    # is given by the range_grid
+    for i₁ = 1:s₁, i₂ = 1:s₂, i₃ = 1:s₃
+        fut = futures[i₁,i₂,i₃]
+        x_int, y_int, _ = cub.range_grid[i₁,i₂,i₃]
+
+        V⁺[x_int,y_int,i₃], V⁻[x_int,y_int,i₃] = fetch(fut)
+    end
+
+    # Finally we calculate the average over the s₃ layers of averaged vorticity
+    avgZ(V⁺), avgZ(V⁻)
+end
+
 
 
 
@@ -644,6 +748,11 @@ function getControls(cub::Cuboid)
     getSubCuboidProperty(sc -> sc.sim, cub.grid[1])
 end
 
+# Get the system constants in the system
+function getSyst(cub::Cuboid)
+    getSubCuboidProperty(sc -> sc.syst, cub.grid[1])
+end
+
 # -------------------------------------------------------------------------------------------------
 # Sets the simulation constants of each subcuboid in the cuboid, either by specifying values
 function setProposalIntervals!(cub::Cuboid; θ_max = π/3, u_max = 0.4, A_max = 3.0)
@@ -657,7 +766,7 @@ end
 # -----------------------------------------------------------------------------------------------------------
 # Adjusts the simulation controls such that it has an acceptance rate (AR) larger than LOWER.
 # Tries to find the simulation controls that are simultaneously the ones with the highest values.
-function tune!(cub::Cuboid; M = 40, CUTOFF_MAX = 42, LOWER = 0.3,
+function tuneUpdates!(cub::Cuboid; M = 40, CUTOFF_MAX = 42, LOWER = 0.3,
         NEEDED_PROPOSALS = 5, DIVI = 1.5, TRIED_VALUES = 4)
 
     # M = 40                # How many MCS to do for estimating success fraction.
@@ -675,7 +784,7 @@ function tune!(cub::Cuboid; M = 40, CUTOFF_MAX = 42, LOWER = 0.3,
     adjustment_mcs = 0
     
     # First we get an estimate of the accept probability
-    (av, std) = mcProposalFraction!(cub; M=M)
+    (av, std) = estimateAR!(cub; M=M)
     adjustment_mcs = M
     if av >= LOWER
         return (av, adjustment_mcs, ψ, sim)
@@ -693,7 +802,7 @@ function tune!(cub::Cuboid; M = 40, CUTOFF_MAX = 42, LOWER = 0.3,
         f_A = zeros(TRIED_VALUES)
         for i = 1:TRIED_VALUES
             setProposalIntervals!(cub, tries_A[i])
-            (f_A[i], std) = mcProposalFraction!(cub; M=M)
+            (f_A[i], std) = estimateAR!(cub; M=M)
             adjustment_mcs += M
             # If we find a value with probability >= LOWER, then this is the largest such value we have found
             # and should be included in proposed constants
@@ -715,7 +824,7 @@ function tune!(cub::Cuboid; M = 40, CUTOFF_MAX = 42, LOWER = 0.3,
         f_u = zeros(TRIED_VALUES)
         for i = 1:TRIED_VALUES
             setProposalIntervals!(cub, tries_u[i])
-            (f_u[i], std) = mcProposalFraction!(cub, M=M)
+            (f_u[i], std) = estimateAR!(cub, M=M)
             adjustment_mcs += M
             if f_u[i] >= LOWER
                 proposals += 1
@@ -735,7 +844,7 @@ function tune!(cub::Cuboid; M = 40, CUTOFF_MAX = 42, LOWER = 0.3,
         f_θ = zeros(TRIED_VALUES)
         for i = 1:TRIED_VALUES
             setProposalIntervals!(cub, tries_θ[i])
-            (f_θ[i], std) = mcProposalFraction!(cub, M=M)
+            (f_θ[i], std) = estimateAR!(cub, M=M)
             adjustment_mcs += M
             if f_θ[i] >= LOWER
                 proposals += 1

@@ -2,7 +2,9 @@
 #                               Functions for observables
 #__________________________________________________________________________________________________________________________#
 ############################################################################################################################
+# Needs translate2DMat from utilities.jl for structureFunction
 using LinearAlgebra # For dot(x,y)
+using FFTW # For fast Fourier transform in structureFunction
 
 # -------------------------------------------------------------------------------------------------
 # Calculate gauge stiffness more effectively as a triplet
@@ -33,3 +35,23 @@ function dualStiffnesses(cub::Cuboid)
     
     ρˣˣₖ₂, ρˣˣₖ₃, ρʸʸₖ₁, ρʸʸₖ₃, ρᶻᶻₖ₁, ρᶻᶻₖ₂
 end
+
+# -------------------------------------------------------------------------------------------------
+# Calculates the specific heat using the temperature and a series of energies measured at this temp.
+function specificHeat(energies::Array{T, 1}, β::T) where T<:Real
+    return var(energies)*β^2
+end
+
+# -------------------------------------------------------------------------------------------------
+# Calculates the Fourier Transform of 2D vortex lattices V⁺ and V⁻
+# Uses fast fourier transform algorithm in the FFTW package and then translates the matrices
+# so that we get 1st Brillouin zone. Assumes square matrices of equal size. Returns the same
+# as calculating structureFunction (above) for all k = [k_x, k_y] where
+# k_x, k_y ∈ 2π/L×[-L/2, L/2-1] and putting all the results in a matrix.
+function structureFunction(V⁺::Array{R,2}, V⁻::Array{R,2}) where R<:Real
+    L = size(V⁺, 1)
+    S⁺_new = abs2.(bfft(V⁺)); S⁻_new = abs2.(bfft(V⁻))
+    S⁺_new = translate2DMat(S⁺_new, Int(L/2)-1, Int(L/2)); S⁻_new = translate2DMat(S⁻_new, Int(L/2)-1, Int(L/2))
+    S⁺_new, S⁻_new
+end
+

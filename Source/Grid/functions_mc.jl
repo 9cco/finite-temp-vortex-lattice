@@ -6,8 +6,8 @@
 
 function proposeLocalUpdate(ϕ::LatticeSite, sim::Controls)
     UMAX::Int64 = 4
-    u⁺ = √(0.2)#1.0#mod(ϕ.u⁺ + rand(Uniform(-sim.umax,sim.umax)), UMAX) # This does not allow u⁺ = UMAX, is this a problem?
-    u⁻ = √(2)#0.0#mod(ϕ.u⁻ + rand(Uniform(-sim.umax,sim.umax)), UMAX)
+    u⁺ = 1.0#√(0.2)#1.0#mod(ϕ.u⁺ + rand(Uniform(-sim.umax,sim.umax)), UMAX) # This does not allow u⁺ = UMAX, is this a problem?
+    u⁻ = 0.0#√(2)#0.0#mod(ϕ.u⁻ + rand(Uniform(-sim.umax,sim.umax)), UMAX)
     # Construct new configuration at lattice site.
     #return LatticeSite([ϕ.A₁+rand(Uniform(-sim.Amax,sim.Amax)), ϕ.A₂+rand(Uniform(-sim.Amax,sim.Amax)),
     #                    ϕ.A₃+rand(Uniform(-sim.Amax,sim.Amax))],
@@ -15,7 +15,7 @@ function proposeLocalUpdate(ϕ::LatticeSite, sim::Controls)
     #    u⁺, u⁻)
     return LatticeSite(ϕ.A₁+rand(sim.A_rng), ϕ.A₂+rand(sim.A_rng),
                         ϕ.A₃+rand(sim.A_rng),
-        mod(ϕ.θ⁺ + rand(sim.θ_rng), 2π), mod(ϕ.θ⁻ + rand(sim.θ_rng), 2π), 
+        mod(ϕ.θ⁺ + rand(sim.θ_rng), 2π), 0.0,#mod(ϕ.θ⁻ + rand(sim.θ_rng), 2π), 
         u⁺, u⁻, ϕ.x)
     #return LatticeSite([0, 0, 0],
     #    mod(ϕ.θ⁺ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), mod(ϕ.θ⁻ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), 

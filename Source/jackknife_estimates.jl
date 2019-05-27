@@ -171,6 +171,7 @@ end
 
 # Returns Jₜ = {1,...,N} \ Bₜ = {1, ..., (t-1)*Nb} ∪ {t*Nb+1, ..., N}
 function jackSeries(O_list::Array{T,1}, B::BlockInd, t::Int64) where T<:Real
+    if B.Nb == B.N; return O_list; end
     O_aux = Array{T}(undef, B.N-B.Nb)
     i = 0
     for i = low(B,t)
@@ -312,7 +313,7 @@ autocorrelation effects of independent blocks for O_list"))
     J = BlockInd(N, Int(N/n))
     
     # Then we calculate the jackknife variables
-    J_vars = Array{Real}(undef, n)
+    J_vars = Array{T, 1}(undef, n)
     for t = 1:n
         J_vars[t] = θ(jackSeries(O_list, J, t))
     end
