@@ -31,7 +31,7 @@ Pkg.update()
 Pkg.build()
 
 # Checking package status
-println(Pkg.status())
+display(Pkg.status())
 
 using Plots
 pyplot()
