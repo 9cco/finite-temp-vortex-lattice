@@ -24,8 +24,6 @@ out_path = "/cluster/home/fredrkro/mc/Data/"
 @everywhere include(src_path*"observables.jl")
 @everywhere include(src_path*"utilities.jl")
 
-#using Plots
-#pyplot()
 using JLD
 
 # Enter data directory for structure function
@@ -37,10 +35,10 @@ g = 0.1# √(1/10)    # Gauge coupling
 # TODO: We should probably benchmark vortexSnapshot and see that it is faster than mcSweeps
 # Other parameters
 M_est = 2^5 # Number of MC-steps to do at T_start before cooldown.
-M_col = 2^13 # Number of MC-steps to use for cooling down the systems
-M_th = 2^12#2^13  # Number of MC-steps to do for thermalization.
-M = 2^12#2^13    # Number of measurements
-Δt = 2^2#14    # Number of MC-steps between each measurement
+M_col = 2^8 # Number of MC-steps to use for cooling down the systems
+M_th = 2^6#2^13  # Number of MC-steps to do for thermalization.
+M = 2^5    # Number of measurements
+Δt = 2^2    # Number of MC-steps between each measurement
 # L is assumed to be even.
 L = 32     # System length
 L₁ = L
@@ -52,7 +50,7 @@ N = L₁*L₂*L₃
 T₁ = 1.7
 Tₘ = 2.0
 N_T = 1#3*2^0
-N_steps = 2^6   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
+N_steps = 2^4   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
 T_start = 2*4.0+0.1   # Start temperature of states when thermalizing. Must be higher than maximum(temps)
 R = (Tₘ/T₁)^(1/(N_T-1))
 temps = [0.8]#2*[0.35, 0.4, 1.66]#[T₁*R^(k-1) for k = 1:N_T]#

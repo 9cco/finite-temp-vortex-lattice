@@ -38,7 +38,7 @@ set -o nounset # Treat unset variables as errors
 SOURCE_PATH="/cluster/projects/nn2819k/finite-temp-vortex-lattice/Source/"
 SCRIPTS_PATH="/cluster/projects/nn2819k/finite-temp-vortex-lattice/Scripts/"
 JULIA_PATH="/cluster/home/fredrkro/Programs/julia-1.0.4/bin/julia"
-OUTPUT="output_small"
+#OUTPUT="output_small"
 
 # Needs to be edited when changing scripts
 JULIA_SCRIPT="fram_hex_lattice_small.jl"
@@ -67,7 +67,7 @@ cp $JULIA_SCRIPT $SCRATCH/
 
 # Make sure output is copied back after job finishes
 #savefile outputfile1 outputfile2
-savefile $OUTPUT
+#savefile $OUTPUT
 
 ########################################################
 # Run the application, and we typically time it:
@@ -75,7 +75,7 @@ savefile $OUTPUT
 
 echo "Handling control to julia script."
 cd $SCRATCH
-$JULIA_PATH -p $CPUS $JULIA_SCRIPT > $OUTPUT
+$JULIA_PATH -p $CPUS $JULIA_SCRIPT # > $OUTPUT
 echo "Job script finished without issue."
 
 #########################################################
