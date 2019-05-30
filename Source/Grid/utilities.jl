@@ -237,4 +237,17 @@ function meanAndErr(A::Vector{R}) where R<:Real
     (mn, er)
 end
 
-
+# Removing mid-point of L×L matrix
+function removeMiddle(A::Array{T, 2}) where {T}
+    L = size(A, 1)
+    L_mid = floor(Int64, L/2)+1
+    val = A[1,1]
+    A′ = copy(A)
+    A′[L_mid-1, L_mid] = val
+    A′[L_mid-1, L_mid-1] = val
+    A′[L_mid-1, L_mid+1] = val
+    A′[L_mid-2, L_mid] = val
+    A′[L_mid, L_mid] = val
+    #A′[L_mid, L_mid+1] = val
+    A′
+end

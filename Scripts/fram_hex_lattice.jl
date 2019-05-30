@@ -198,7 +198,7 @@ M_th += M_col
 t_MCS = t_th/(M_th*N_T)
 
 therm_lattices = [getLattice(cub) for cub in cubs]
-JLD.save("thermalization.jld", "e_thm", E_therm, "syst", init_syst, "lattices", therm_lattices, "M_th", M_th, "M_est", M_est)
+JLD.save("thermalization.jld", "e_thm", E_therm, "syst", init_syst, "lattices", therm_lattices, "M_th", M_th, "M_est", M_est, "M_col", M_col)
 println("Cooldown and thermalization used $(round(t_th/3600; digits=1)) h. Energies and states saved to file.")
 println("After thermalization the estimated AR are:")
 for est in AR_est; println("AR:\t$(round(est; digits=2))"); end

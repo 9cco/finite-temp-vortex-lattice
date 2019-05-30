@@ -77,7 +77,7 @@ function generateInitialLattice(choice::Int64, syst::SystConstants; u⁺=1.0, u�
             for x=1:L₁, y=1:L₂, z=1:L₃]
     elseif choice == 6
         # All fields random except for amplitudes
-        lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
+        lattice = [LatticeSite(rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),
                                rand(Uniform(0,2π)), rand(Uniform(0,2π)), u⁺, u⁻, x) for x=1:L₁, y=1:L₂, z=1:L₃]
     # We only have choices 1 - 6 so far so other values for choice will give an error.
     else

@@ -1,10 +1,14 @@
 # Current intention:
-# See what effect it has to increase fL to 3.0
+# See if we can replicate the only good results of a lattice that we have been able to get, which
+# was of a two-component system, using M_col = 2^17 and N_steps = 2^10 for T=[0.7, 0.8], L=32
+# quenched to T = 8.1, and then cooled down. Initial condition 6 was used where all fields except
+# u⁺ and u⁻ were random. g = √(1/10)
+
 
 using Distributed
 @everywhere using Distributions
 using Test
-using BenchmarkTools
+#using BenchmarkTools
 using Dates
 
 @everywhere struct Hack end
@@ -15,42 +19,41 @@ function fixRC()
 end
 fixRC()
 
-src_path = "/home/nicolai/Documents/Work/PhD/Numerikk/MC/finite-temp-vortex-lattice/Source/Grid/"
+@everywhere src_path = "/home/nicolai/Documents/Work/PhD/Numerikk/MC/finite-temp-vortex-lattice/Source/Grid/"
+#@everywhere src_path = "/cluster/home/fredrkro/mc/Source/Grid/"
 @everywhere push!(LOAD_PATH, $src_path)
 @everywhere using CuboidModule
 
-@everywhere src_path = "../Source/Grid/"
 @everywhere include(src_path*"observables.jl")
 @everywhere include(src_path*"utilities.jl")
 
-using Plots
-pyplot()
 using JLD
 
 # Enter data directory for structure function
 fixRC()
 # We run a simulation with the parameters
-g = 0.1# √(1/10)    # Gauge coupling
+g = √(1/10)    # Gauge coupling
 ν = 0.3    # Anisotropy
 
 # TODO: We should probably benchmark vortexSnapshot and see that it is faster than mcSweeps
 # Other parameters
-M_est = 2^5 # Number of MC-steps to do at T_start before cooldown.
-M_col = 2^17 # Number of MC-steps to use for cooling down the systems
-M_th = 2^15#2^13  # Number of MC-steps to do for thermalization.
-M = 2^12#2^13    # Number of measurements
+M_est = 2^6 # Number of MC-steps to do at T_start before cooldown.
+M_col = 2^20 # Number of MC-steps to use for cooling down the systems
+M_th = 2^16  # Number of MC-steps to do for thermalization.
+M = 2^12    # Number of measurements
 Δt = 14    # Number of MC-steps between each measurement
 # L is assumed to be even.
-L = 64     # System length
+L = 32     # System length
 L₁ = L
 L₂ = L
 L₃ = L
+split = (1,1,3)
 N = L₁*L₂*L₃
 # Make geometric progression of temperatures between T₁ and Tₘ
 T₁ = 1.7
 Tₘ = 2.0
 N_T = 1#3*2^0
-N_steps = 2^8   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
+N_steps = 2^10   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
 T_start = 2*4.0+0.1   # Start temperature of states when thermalizing. Must be higher than maximum(temps)
 R = (Tₘ/T₁)^(1/(N_T-1))
 temps = [0.8]#2*[0.35, 0.4, 1.66]#[T₁*R^(k-1) for k = 1:N_T]#
@@ -58,18 +61,18 @@ println("Temps.: $(temps)")
 κ₅ = 1.0
 
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
-f = 3.0/L
+f = 1.0/L
 println("f = $(f)")
 println("L = $(L)")
 println("g = $(g)")
 println("ν = $(ν)")
 println("κ₅ = $(κ₅)")
 flush(stdout)
-mkcd("one_comp_london_L=$(L)_T=$(round(temps[1]; digits=2))-$(round(temps[end]; digits=2))_g=$(round(g; digits=3))_fL=$(round(f*L; digits=1))_large_syst")
+mkcd("one_comp_london_L=$(L)_T=$(round(temps[1]; digits=2))-$(round(temps[end]; digits=2))_g=$(round(g; digits=3))_fL=$(round(f*L; digits=1))_same_as_success")
 
 # Make ab inito un-correlated phases state
 init_syst = SystConstants(L₁,L₂,L₃,1/g^2,ν,κ₅,f)
-cubs = [Cuboid(1, init_syst, (1,1,3), 1/T_start; u⁺=0.0) for T in temps]
+cubs = [Cuboid(1, init_syst, split, 1/T_start; u⁺=0.0) for T in temps]
 
 
 
@@ -99,10 +102,10 @@ temperatures, which has an ETC of $(round((Δt*M + M_th + M_col)*N_T*t_MCS/3600;
 print("Continue with thermalization and measurements? (y/n): ")
 flush(stdout)
 
-#user_input = readline(stdin)
-#if user_input == "n"
-#    exit()
-#end
+user_input = readline(stdin)
+if user_input == "n"
+    exit()
+end
 
 
 
@@ -126,7 +129,7 @@ M_col = M_pr_step*N_steps
 # Each step is associated with a different set of temperatures given by each row in the matrix
 temp_mt = genGeometricTemperatureSteps(T_start, temps, N_steps)
 # Energy storage
-E_matrix = Array{Float64}(undef, M_col+1, N_T);
+E_matrix = Array{Float64, 2}(undef, M_col+1, N_T);
 for (i, cub) = enumerate(cubs); E_matrix[1,i] = energy(cub); end
 E_therm = Array{Float64, 2}(undef, M_th, N_T);
 # Vorticity storage
@@ -161,12 +164,7 @@ end
 
 E_matrix = E_matrix./N;
 
-int = 1:M_col+1#floor(Int64, M_th/2)
-therm_plt = plot(collect(int).+M_est, [E_matrix[int, i] for i = 1:N_T]; 
-                 label=reshape(["T = $(round(T; digits=2))" for T in temps], (1, N_T)),
-                 xaxis="MCS", yaxis="Energy pr. site", title="Cooldown energy from T=$(T_start)")
-savefig(therm_plt, "cooldown energies.pdf")
-JLD.save("cooldown.jld", "sp", S⁺_col_by_T, "E_matrix", E_matrix, "temp_matrix", temp_mt, "N_steps", N_steps, "M_pr_step", M_pr_step)
+JLD.save("cooldown.jld", "sp", S⁺_col_by_T, "E_matrix", E_matrix, "temp_matrix", temp_mt, "N_steps", N_steps, "M_pr_step", M_pr_step, "M_est", M_est)
 
 
 
@@ -195,12 +193,6 @@ AR_est = [estimateAR!(cub)[1] for cub in cubs]
 
 E_therm = E_therm./N
 
-int = 1:M_th#floor(Int64, M_th/2)
-therm_plt = plot(collect(int).+M_est, [E_therm[int, i] for i = 1:N_T]; 
-                 label=reshape(["T = $(round(T; digits=2))" for T in temps], (1, N_T)),
-                 xaxis="MCS", yaxis="Energy pr. site", title="Extra thermalization")
-savefig(therm_plt, "thermalization energies.pdf")
-
 t_th += t_col
 M_th += M_col
 
@@ -208,7 +200,7 @@ M_th += M_col
 t_MCS = t_th/(M_th*N_T)
 
 therm_lattices = [getLattice(cub) for cub in cubs]
-JLD.save("thermalization.jld", "e_col", E_matrix, "e_thm", E_therm, "syst", init_syst, "lattices", therm_lattices)
+JLD.save("thermalization.jld", "e_thm", E_therm, "syst", init_syst, "lattices", therm_lattices, "M_th", M_th, "M_est", M_est, "M_col", M_col)
 println("Cooldown and thermalization used $(round(t_th/3600; digits=1)) h. Energies and states saved to file.")
 println("After thermalization the estimated AR are:")
 for est in AR_est; println("AR:\t$(round(est; digits=2))"); end
