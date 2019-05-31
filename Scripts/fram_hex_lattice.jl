@@ -58,7 +58,7 @@ println("Temps.: $(temps)")
 κ₅ = 1.0
 
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
-f = 3.0/L
+f = 2.0/L
 println("f = $(f)")
 println("L = $(L)")
 println("g = $(g)")
@@ -66,7 +66,7 @@ println("ν = $(ν)")
 println("κ₅ = $(κ₅)")
 flush(stdout)
 cd(out_path)
-mkcd("one_comp_london_L=$(L)_T=$(round(temps[1]; digits=2))-$(round(temps[end]; digits=2))_g=$(round(g; digits=3))_fL=$(round(f*L; digits=1))_large_cool")
+mkcd("two_comp_london_L=$(L)_T=$(round(temps[1]; digits=2))-$(round(temps[end]; digits=2))_g=$(round(g; digits=3))_fL=$(round(f*L; digits=1))_large_cool")
 
 # Make ab inito un-correlated phases state
 init_syst = SystConstants(L₁,L₂,L₃,1/g^2,ν,κ₅,f)

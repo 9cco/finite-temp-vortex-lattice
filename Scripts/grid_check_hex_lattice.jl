@@ -68,7 +68,7 @@ println("g = $(g)")
 println("ν = $(ν)")
 println("κ₅ = $(κ₅)")
 flush(stdout)
-mkcd("one_comp_london_L=$(L)_T=$(round(temps[1]; digits=2))-$(round(temps[end]; digits=2))_g=$(round(g; digits=3))_fL=$(round(f*L; digits=1))_same_as_success")
+mkcd("two_comp_london_L=$(L)_T=$(round(temps[1]; digits=2))-$(round(temps[end]; digits=2))_g=$(round(g; digits=3))_fL=$(round(f*L; digits=1))_same_as_success")
 
 # Make ab inito un-correlated phases state
 init_syst = SystConstants(L₁,L₂,L₃,1/g^2,ν,κ₅,f)

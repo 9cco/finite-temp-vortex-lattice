@@ -39,7 +39,7 @@ function fᵣ(ϕ::LatticeSite,nb::NearestNeighbors,c::SystConstants)
         - ϕ.u⁺*ϕᵣ₊₂.u⁻*sin(ϕᵣ₊₂.θ⁻-ϕ.θ⁺ - A₂)    # Here too
         + ϕ.u⁻*ϕᵣ₊₁.u⁺*sin(ϕᵣ₊₁.θ⁺ - ϕ.θ⁻ - ϕ.A₁) 
         - ϕ.u⁺*ϕᵣ₊₁.u⁻*sin(ϕᵣ₊₁.θ⁻ - ϕ.θ⁺ - ϕ.A₁))
-    energy = Fₖt # + Fᵥ + Fₐₙ + Fₘ
+    energy = Fₖ#t # + Fᵥ + Fₐₙ + Fₘ
 end
 
 # --------------------------------------------------------------------------------------------------
@@ -153,7 +153,7 @@ function ΔE(ϕ′::LatticeSite, ϕ::LatticeSite, nb::NearestNeighbors, nnb::Nex
     # Then we also have to include the position r-z
     δFₐ += maxwell(ϕᵣ₋₃, ϕᵣ₊₁₋₃, ϕᵣ₊₂₋₃, ϕ′, s.g⁻²) - maxwell(ϕᵣ₋₃, ϕᵣ₊₁₋₃, ϕᵣ₊₂₋₃, ϕ, s.g⁻²)
 
-    δE = Float64(δFₐ + δFₖt)# + δFᵥ + δFₐₙ + δFₘ )
+    δE = Float64(δFₐ + δFₖ)#t)# + δFᵥ + δFₐₙ + δFₘ )
 end
 
 
