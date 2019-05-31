@@ -289,7 +289,7 @@ autocorrelation effects of independent blocks for all sets in { O_list[k] }"))
     
     # Then we calculate the jackknife variables
     j_var = θ(jackSet(O_set, J_set, 1))
-    J_vars = Array{typeof(j_vars), 1}(undef, num_blocks)
+    J_vars = Array{typeof(j_var), 1}(undef, num_blocks)
     J_vars[1] = j_var
     for t = 2:num_blocks
         J_vars[t] = θ(jackSet(O_set, J_set, t))

@@ -165,7 +165,7 @@ function setStates(dr_list::DList, up_index::Int64, down_index::Int64)
     nothing
 end
 
-function PTStep!(pt::PTRun)
+function PTStep!(pt::PTRun; PT_swap::Bool = true)
     # First we preform N_mc MC sweeps for all of the replicas
     N_mc = pt.N_mc
     dmutate(R -> nMCS!(R, N_mc), pt.dr_list)
@@ -175,15 +175,16 @@ function PTStep!(pt::PTRun)
     # Before a squence of swap moves we increment the histograms
     incrementHistograms!(pt)
     
-    # Then we go through the temperatures and make a swap with probability
-    # p = min{1, e^(-Δβ*ΔE)} between neighboring temperatures.
-    for i = 1:pt.N_temp-1
-        if attemptSwap(pt, i, i+1)
-            # Updates acceptance rates if successful
-            pt.accepts[i] += 1
+    if PT_swap #TODO: test running without the PT_steps, get different results for CV when the states are close enough in temp to swap
+        # Then we go through the temperatures and make a swap with probability
+        # p = min{1, e^(-Δβ*ΔE)} between neighboring temperatures.
+        for i = 1:pt.N_temp-1
+            if attemptSwap(pt, i, i+1)
+                # Updates acceptance rates if successful
+                pt.accepts[i] += 1
+            end
         end
     end
-    
     # Distribute the new temperatures to worker processes
     distributeTemperatures!(pt.dr_list, pt.β_list[pt.rep_map[pt.rep_map]])
     

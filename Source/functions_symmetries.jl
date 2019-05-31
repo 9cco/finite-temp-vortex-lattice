@@ -393,9 +393,9 @@ end
 function helModFrozen2comp(ψ_list::Array{State,1})
     #Calculate the two average quantities needed to calculate the helicity modulus
     M = length(ψ_list)
-    Υx_list = Array{Float64}(M)
-    Υy_list = Array{Float64}(M)
-    Υz_list = Array{Float64}(M)
+    Υx_list = Array{Float64}(undef, M)
+    Υy_list = Array{Float64}(undef, M)
+    Υz_list = Array{Float64}(undef, M)
     for i=1:M
         Υx_list[i], Υy_list[i], Υz_list[i] = helModF2compContributions(ψ_list[i])
     end
@@ -458,11 +458,11 @@ function josephsonResponse(ψ::State)
     return j_response
 end
 
-function josephsonResponse(ψ_list::Array{State, 1})
+function josephsonResponse_arr(ψ_list::Array{State, 1})
     M = length(ψ_list)
     J_res = Array{Float64}(undef, M)
     for m=1:M
-        J_res = josephsonResponse(ψ_list[m])
+        J_res[m] = josephsonResponse(ψ_list[m])
     end
     return J_res
 end
@@ -565,6 +565,25 @@ function lineTensionFromHighT(Eₛ::Array{Float64,1}, β_array::Array{Float64,1}
     return lineTension
 end
 
+function lineTensionFromHighT(Eₛ::Array{Float64,1}, β_array::Array{Float64,1}, L::Int64)
+    if  length(β_array) != length(Eₛ)
+        println("ERROR in function lineTensionFromHighT: length of arrays not the same")
+    end
+    N = length(β_array)
+    lineTension = Array{Float64, 1}(undef, length(β_array))
+    lineTension[1] = 0.0
+    for i=2:N
+        lineTension[i] = lineTension[i-1] + (β_array[i]-β_array[i-1])*(Eₛ[i]+Eₛ[i-1])/2.0
+    end
+    
+    for i=1:N
+        lineTension[i] = lineTension[i]/(β_array[i]*L^2)
+    end
+    return lineTension
+end
+
+
+
 function lineTensionFromHighT_Norm(Eₛ::Array{Float64,1}, β_array::Array{Float64,1}, N::Int64, Δβ::Float64, L::Int64)
     lineTension = Array{Float64, 1}(undef, N)
     lineTension[1] = 0.0
@@ -577,3 +596,27 @@ function lineTensionFromHighT_Norm(Eₛ::Array{Float64,1}, β_array::Array{Float
     end
     return lineTension
 end
+
+function Z2magnetization(ψ::State)
+    L = ψ.consts.L
+    sum = 0.0
+    for h_pos=1:L, v_pos=1:L, z_pos=1:L
+        ϕ = ψ.lattice[h_pos,v_pos,z_pos]
+            if mod(ϕ.θ⁺ - ϕ.θ⁻, 2π) < π
+                sum += 1.0
+            else
+                sum -= 1.0
+            end
+    end
+    return abs(sum/L^3)
+end
+
+function Z2magnetization_arr(ψ_list::Array{State, 1})
+    M = length(ψ_list)
+    Z2_mag = Array{Float64}(undef, M)
+    for m=1:M
+        Z2_mag[m] = Z2magnetization(ψ_list[m])
+    end
+    return Z2_mag
+end
+ 
