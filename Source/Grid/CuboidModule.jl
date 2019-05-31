@@ -787,7 +787,7 @@ function tuneUpdates!(cub::Cuboid; M = 40, CUTOFF_MAX = 42, LOWER = 0.3,
     (av, std) = estimateAR!(cub; M=M)
     adjustment_mcs = M
     if av >= LOWER
-        return (av, adjustment_mcs, ψ, sim)
+        return (av, adjustment_mcs, sim)
     end
     
     s₀ = copy(sim)
