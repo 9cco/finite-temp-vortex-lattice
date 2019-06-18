@@ -1,5 +1,6 @@
 # Current intention:
-# Running simulation on Fram. Try a small version of large system to check that everything is a-ok.
+# Run the same simulation as the L=32 one-component T=0.8 where we had hexagonal lattice, but now with smaller number of cooldown
+# steps and instead have a larger extra thermalization period.
 
 using Distributed
 @everywhere using Distributions
@@ -29,16 +30,16 @@ using JLD
 # Enter data directory for structure function
 fixRC()
 # We run a simulation with the parameters
-g = 0.1# √(1/10)    # Gauge coupling
+g = √(1/10)    # Gauge coupling
 ν = 0.3    # Anisotropy
 
 # TODO: We should probably benchmark vortexSnapshot and see that it is faster than mcSweeps
 # Other parameters
 M_est = 2^5 # Number of MC-steps to do at T_start before cooldown.
-M_col = 2^8 # Number of MC-steps to use for cooling down the systems
-M_th = 2^6#2^13  # Number of MC-steps to do for thermalization.
-M = 2^5    # Number of measurements
-Δt = 2^2    # Number of MC-steps between each measurement
+M_col = 2^18 # Number of MC-steps to use for cooling down the systems
+M_th = 2^18*3+2^15  # Number of MC-steps to do for thermalization.
+M = 2^13    # Number of measurements
+Δt = 14    # Number of MC-steps between each measurement
 # L is assumed to be even.
 L = 32     # System length
 L₁ = L
@@ -50,7 +51,7 @@ N = L₁*L₂*L₃
 T₁ = 1.7
 Tₘ = 2.0
 N_T = 1#3*2^0
-N_steps = 2^4   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
+N_steps = 2^10   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
 T_start = 2*4.0+0.1   # Start temperature of states when thermalizing. Must be higher than maximum(temps)
 R = (Tₘ/T₁)^(1/(N_T-1))
 temps = [0.8]#2*[0.35, 0.4, 1.66]#[T₁*R^(k-1) for k = 1:N_T]#
@@ -58,7 +59,7 @@ println("Temps.: $(temps)")
 κ₅ = 1.0
 
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
-f = 3.0/L
+f = 1.0/L
 println("f = $(f)")
 println("L = $(L)")
 println("g = $(g)")
@@ -66,7 +67,9 @@ println("ν = $(ν)")
 println("κ₅ = $(κ₅)")
 flush(stdout)
 cd(out_path)
-mkcd("one_comp_london_L=$(L)_T=$(round(temps[1]; digits=2))-$(round(temps[end]; digits=2))_g=$(round(g; digits=3))_fL=$(round(f*L; digits=1))_test")
+out_folder = "one_comp_london_L=$(L)_T=$(round(temps[1]; digits=2))-$(round(temps[end]; digits=2))_g=$(round(g; digits=3))_fL=$(round(f*L; digits=1))_smol_col_large_therm"
+mkcd(out_folder)
+println("Making folder $(out_folder)")
 
 # Make ab inito un-correlated phases state
 init_syst = SystConstants(L₁,L₂,L₃,1/g^2,ν,κ₅,f)
@@ -132,7 +135,9 @@ for (i, cub) = enumerate(cubs); E_matrix[1,i] = energy(cub); end
 E_therm = Array{Float64, 2}(undef, M_th, N_T);
 # Vorticity storage
 S⁺_col_by_T_aux = [Array{Array{Float64, 2}, 1}(undef, M_pr_step) for i = 1:N_T]
+S⁻_col_by_T_aux = [Array{Array{Float64, 2}, 1}(undef, M_pr_step) for i = 1:N_T]
 S⁺_col_by_T = [Array{Array{Float64, 2}, 1}(undef, N_steps) for i = 1:N_T]
+S⁻_col_by_T = [Array{Array{Float64, 2}, 1}(undef, N_steps) for i = 1:N_T]
 
 println("Cooling down from T=$(T_start) using $(N_steps) steps with $(M_pr_step) MCS pr. step.")
 flush(stdout)
@@ -148,7 +153,7 @@ t_col = @elapsed for step = 1:N_steps
             δE, _ = mcSweepEnUp!(cub)
             E_matrix[(step-1)*M_pr_step+i+1, k] = E_matrix[(step-1)*M_pr_step+i, k] + δE
             proj_V⁺, proj_V⁻ = xyVortexSnapshot(cub)
-            S⁺_col_by_T_aux[k][i], _ = structureFunction(proj_V⁺, proj_V⁻)
+            S⁺_col_by_T_aux[k][i], S⁻_col_by_T_aux[k][i] = structureFunction(proj_V⁺, proj_V⁻)
         end
     end
 
@@ -156,13 +161,13 @@ t_col = @elapsed for step = 1:N_steps
     for (j, cub) = enumerate(cubs); E_matrix[step*M_pr_step+1, j] = energy(cub); end
 
     # Then we also calculate the average structure function at this step.
-    for k = 1:N_T;  S⁺_col_by_T[k][step] = mean(S⁺_col_by_T_aux[k]); end
+    for k = 1:N_T;  S⁺_col_by_T[k][step] = mean(S⁺_col_by_T_aux[k]); S⁻_col_by_T[k][step] = mean(S⁻_col_by_T_aux[k]); end
 
 end
 
 E_matrix = E_matrix./N;
 
-JLD.save("cooldown.jld", "sp", S⁺_col_by_T, "E_matrix", E_matrix, "temp_matrix", temp_mt, "N_steps", N_steps, "M_pr_step", M_pr_step, "M_est", M_est)
+JLD.save("cooldown.jld", "sp", S⁺_col_by_T, "sm", S⁻_col_by_T, "E_matrix", E_matrix, "temp_matrix", temp_mt, "N_steps", N_steps, "M_pr_step", M_pr_step, "M_est", M_est)
 
 
 

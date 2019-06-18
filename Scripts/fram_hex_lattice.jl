@@ -30,35 +30,33 @@ using JLD
 fixRC()
 # We run a simulation with the parameters
 g = √(1/10)    # Gauge coupling
-ν = 0.3    # Anisotropy
+ν = 0.3    # Fermi Surface anisotropy
+κ₅ = 1.0       # Anisotropy in the z-direction
 
 # TODO: We should probably benchmark vortexSnapshot and see that it is faster than mcSweeps
 # Other parameters
 M_est = 2^5 # Number of MC-steps to do at T_start before cooldown.
-M_col = 2^19 # Number of MC-steps to use for cooling down the systems
+M_col = 2^20 # Number of MC-steps to use for cooling down the systems
+N_steps = 2^10   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
 M_th = 2^15  # Number of MC-steps to do for thermalization.
 M = 2^13    # Number of measurements
 Δt = 14    # Number of MC-steps between each measurement
 # L is assumed to be even.
-L = 64     # System length
+L = 32     # System length
 L₁ = L
 L₂ = L
 L₃ = L
-split = (3,3,3)
+split = (2,2,3)
 N = L₁*L₂*L₃
 # Make geometric progression of temperatures between T₁ and Tₘ
-T₁ = 1.7
-Tₘ = 2.0
-N_T = 1#3*2^0
-N_steps = 2^10   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
-T_start = 2*4.0+0.1   # Start temperature of states when thermalizing. Must be higher than maximum(temps)
-R = (Tₘ/T₁)^(1/(N_T-1))
-temps = [0.8]#2*[0.35, 0.4, 1.66]#[T₁*R^(k-1) for k = 1:N_T]#
-println("Temps.: $(temps)")
-κ₅ = 1.0
-
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
-f = 2.0/L
+f = 1.0/L₁
+temps = [0.8]#2*[0.35, 0.4, 1.66]#
+T_start = 2*4.0+0.1   # Start temperature of states when thermalizing. Must be higher than maximum(temps)
+N_T = length(temps)
+
+# Print parameters
+println("Target temps.: $(temps)")
 println("f = $(f)")
 println("L = $(L)")
 println("g = $(g)")
@@ -66,11 +64,69 @@ println("ν = $(ν)")
 println("κ₅ = $(κ₅)")
 flush(stdout)
 cd(out_path)
-mkcd("two_comp_london_L=$(L)_T=$(round(temps[1]; digits=2))-$(round(temps[end]; digits=2))_g=$(round(g; digits=3))_fL=$(round(f*L; digits=1))_large_cool")
+out_folder = "full_model_L=$(L)_T=$(round(temps[1]; digits=2))-$(round(temps[end]; digits=2))_g=$(round(g; digits=3))_fL=$(round(f*L; digits=1))_large_cool"
+mkcd(out_folder)
+println("Making folder $(out_folder) in path $(out_path)")
 
-# Make ab inito un-correlated phases state
-init_syst = SystConstants(L₁,L₂,L₃,1/g^2,ν,κ₅,f)
-cubs = [Cuboid(1, init_syst, split, 1/T_start; u⁺=0.0) for T in temps]
+
+
+# Initiating states
+################################################################################################
+#
+# We check if the folder containing the script includes an initial state
+init_file = "init_state_g=$(round(g; digits=3))_ν=$(round(ν; digits=3))_L=$(L).jl"
+if isfile(init_file)
+    # Reading the initial file.
+    init_file_di = JLD.load(init_file)
+    init_lattices = init_file_di["lattices"]
+    init_temps = init_file_di["temps"]
+    init_f = init_file_di["f"]
+    init_κ₅ = init_file_di["kappa"]
+    init_g = init_file_di["g"]
+    init_ν = init_file_di["nu"]
+    init_controls = init_file_di["controls"]
+    init_lattice = init_lattices[1]
+
+    N_T_init = length(init_temps)
+    if N_T_init != N_T || init_f != f || init_g != g || init_ν != ν || init_κ₅ != κ₅
+        println("ERROR: Parameters in initial-states file does not match target parameters in script.")
+        exit(-1)
+    end
+
+    # Construct initial states
+    cubs = Array{Cuboid, 1}(undef, N_T)
+    for i = 1:N_T
+        lattice = init_lattices[i]
+        L₁ = size(lattice, 1); L₂ = size(lattice, 2); L₃ = size(lattice, 3)
+        syst = SystConstants(L₁,L₂,L₃,1/init_g^2,init_ν,init_κ₅,init_f)
+        cubs[i] = Cuboid(lattice, syst, init_controls[i], split, 1/init_temps[i])
+    end
+    
+    println("$(N_T) state(s) created from initiation file with temperature(s):")
+    for i = 1:N_T
+        println(init_temps[i])
+    end
+
+else # If no initial file is found, then we contruct initial states at temperature T_start and thermalize them
+    # Make ab inito un-correlated phases state if no initial_state is given.
+    syst = SystConstants(L₁,L₂,L₃,1/g^2,ν,κ₅,f)
+    cubs = [Cuboid(6, syst, split, 1/T_start; u⁺=0.0) for T in temps]
+    init_temps = [T_start for T in temps]
+
+    # Tune and thermalize start-temperature
+    for i = 1:ceil(Int64, M_th/4)
+        for cub in cubs; mcSweep!(cub); end
+    end
+
+    println("Adjusting simulation constants in initial states.")
+    @time for cub in cubs; tuneUpdates!(cub); end
+    println("Controls after adjustment:")
+    printControls(cubs)
+
+    for i = 1:ceil(Int64, 3*M_th/4)
+        for cub in cubs; mcSweep!(cub); end
+    end
+end
 
 
 
@@ -87,6 +143,13 @@ t_meas = @elapsed for i = 1:M_est
 
     all_res = [dualStiffnesses(cub) for cub in cubs]
     En_res = [energy(cub) for cub in cubs]
+    
+    # Measure vortices and structure function
+    for k = 1:N_T
+        proj_V⁺, proj_V⁻ = xyVortexSnapshot(cubs[k])
+        # Find the Fourier transform of the projected vortices ∀ k ∈ k_matrix
+        structureFunction(proj_V⁺, proj_V⁻)
+    end
 end
 t_meas = t_meas/M_est
 t_MCS = t_meas/(Δt*N_T)
@@ -125,16 +188,18 @@ println("\nStarted cooldown at: $(Dates.format(now(), "HH:MM"))")
 M_pr_step = ceil(Int64, M_col/N_steps)
 M_col = M_pr_step*N_steps
 # Each step is associated with a different set of temperatures given by each row in the matrix
-temp_mt = genGeometricTemperatureSteps(T_start, temps, N_steps)
+temp_mt = genGeometricTemperatureSteps(init_temps, temps, N_steps)
 # Energy storage
 E_matrix = Array{Float64, 2}(undef, M_col+1, N_T);
 for (i, cub) = enumerate(cubs); E_matrix[1,i] = energy(cub); end
 E_therm = Array{Float64, 2}(undef, M_th, N_T);
 # Vorticity storage
 S⁺_col_by_T_aux = [Array{Array{Float64, 2}, 1}(undef, M_pr_step) for i = 1:N_T]
+S⁻_col_by_T_aux = [Array{Array{Float64, 2}, 1}(undef, M_pr_step) for i = 1:N_T]
 S⁺_col_by_T = [Array{Array{Float64, 2}, 1}(undef, N_steps) for i = 1:N_T]
+S⁻_col_by_T = [Array{Array{Float64, 2}, 1}(undef, N_steps) for i = 1:N_T]
 
-println("Cooling down from T=$(T_start) using $(N_steps) steps with $(M_pr_step) MCS pr. step.")
+println("Cooling down from T=$(init_temps) using $(N_steps) steps with $(M_pr_step) MCS pr. step.")
 flush(stdout)
 
 t_col = @elapsed for step = 1:N_steps
@@ -148,7 +213,7 @@ t_col = @elapsed for step = 1:N_steps
             δE, _ = mcSweepEnUp!(cub)
             E_matrix[(step-1)*M_pr_step+i+1, k] = E_matrix[(step-1)*M_pr_step+i, k] + δE
             proj_V⁺, proj_V⁻ = xyVortexSnapshot(cub)
-            S⁺_col_by_T_aux[k][i], _ = structureFunction(proj_V⁺, proj_V⁻)
+            S⁺_col_by_T_aux[k][i], S⁻_col_by_T_aux[k][i] = structureFunction(proj_V⁺, proj_V⁻)
         end
     end
 
@@ -156,13 +221,13 @@ t_col = @elapsed for step = 1:N_steps
     for (j, cub) = enumerate(cubs); E_matrix[step*M_pr_step+1, j] = energy(cub); end
 
     # Then we also calculate the average structure function at this step.
-    for k = 1:N_T;  S⁺_col_by_T[k][step] = mean(S⁺_col_by_T_aux[k]); end
+    for k = 1:N_T;  S⁺_col_by_T[k][step] = mean(S⁺_col_by_T_aux[k]); S⁻_col_by_T[k][step] = mean(S⁻_col_by_T_aux[k]); end
 
 end
 
 E_matrix = E_matrix./N;
 
-JLD.save("cooldown.jld", "sp", S⁺_col_by_T, "E_matrix", E_matrix, "temp_matrix", temp_mt, "N_steps", N_steps, "M_pr_step", M_pr_step, "M_est", M_est)
+JLD.save("cooldown.jld", "sp", S⁺_col_by_T, "sm", S⁻_col_by_T, "E_matrix", E_matrix, "temp_matrix", temp_mt, "N_steps", N_steps, "M_pr_step", M_pr_step, "M_est", M_est)
 
 
 
@@ -261,7 +326,7 @@ JLD.save("energies.jld", "E_by_T", E_by_T)
 
 JLD.save("dual_stiffs.jld", "x2", ρˣ₂_by_T, "x3", ρˣ₃_by_T, "y1", ρʸ₁_by_T, "y3", ρʸ₃_by_T, "z1", ρᶻ₁_by_T, "z2", ρᶻ₂_by_T)
 JLD.save("meta.jld", "L1", L₁, "L2", L₂, "L3", L₃, "M", M, "dt", Δt, "temps", temps, "f", f, "kappa", κ₅, "g", g, "nu", ν)
-JLD.save("final_states.jld", "lattices", final_lattices)
+JLD.save("final_state_g=$(round(g; digits=3))_ν=$(round(ν; digits=3))_L=$(L).jld", "lattices", final_lattices, "temps", temps, "f", f, "kappa", κ₅, "g", g, "nu", ν, "controls", [getControls(cub) for cub in cubs])
 JLD.save("vorticity.jld", "vortexes", vortices_by_T, "sp", S⁺_by_T, "sm", S⁻_by_T)
 
 
