@@ -136,6 +136,16 @@ include("neighbors.jl")
 #__________________________________________________________________________________________________________________________#
 ############################################################################################################################
 
+# -------------------------------------------------------------------------------------------------
+# LatticeSite outer constructor
+# Initializes a lattice site that has radom values at a horizontal position.
+function LatticeSite(h_pos::Int64)
+    A_max = 3.0
+    u⁺ = rand()
+    LatticeSite(rand(Uniform(-A_max, A_max)), rand(Uniform(-A_max, A_max)), rand(Uniform(-A_max,A_max)),
+                two_pi*rand(), two_pi*rand(), u⁺, √(1-u⁺^2), h_pos)
+end
+
 import Base.copy
 function copy(re_nb::RemoteNeighbors{T}) where T
     rnᵣ₊₁ = re_nb.rnᵣ₊₁
@@ -267,7 +277,8 @@ end
 #__________________________________________________________________________________________________________________________#
 ############################################################################################################################
 
-include("energy.jl")
+#include("energy.jl")
+include("xy_energy.jl")
 include("functions_mc.jl")
 
 

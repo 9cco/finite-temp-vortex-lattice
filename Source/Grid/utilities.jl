@@ -23,6 +23,15 @@ function genGeometricTemperatureSteps(T_start::R, temps::Array{R, 1}, N_steps::I
     end
     T_mt
 end
+function genGeometricTemperatureSteps(init_temps::Array{R, 1}, temps::Array{R, 1}, N_steps::Int; exponent=1) where R<:Real
+    N_T = length(temps)
+    T_mt = Array{R, 2}(undef, N_steps, N_T)
+    for k = 1:N_T
+        T_mt[:, k] = geometricSeries(init_temps[k], temps[k], N_steps; exponent=exponent)
+    end
+    T_mt
+end
+
 
 # --------------------------------------------------------------------------------------------------
 # Returns a matrix of 2D momentum vectors in the 1BZ

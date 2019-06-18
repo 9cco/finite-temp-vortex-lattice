@@ -2,6 +2,9 @@
 #                               Energy functions // SubCuboidModule
 #__________________________________________________________________________________________________________________________#
 ############################################################################################################################
+# The functions used to calculate energy and energy differences for doing local Markov-Chain Monte-Carlo updates. This 
+# defines the energy of our model. In this case we have written the Γ₅ᵤ representation in the xy-basis such that 
+# η⁺ → ηˣ and η⁻ → ηʸ.
 
 # ---------------------------------------------------------------------------------------------------
 # Calculate energy contribution from a single term in the energy sum of the Higgs terms. 

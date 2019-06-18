@@ -3,6 +3,7 @@ module CuboidModule
 export SystConstants, Cuboid, mcSweep!, mcSweepEnUp!, energy, two_pi
 export latticeMap, latticeSiteNeighborMap, latticeSiteMap
 export shellSize, getLattice, fluxDensity, setTemp!, tuneUpdates!, printControls, estimateAR!
+export getBeta, copy
 export specificHeat, xyVortexSnapshot, vortexSnapshot, getSyst, getControls
 
 # For testing: compile with the exports below
@@ -63,8 +64,8 @@ function generateInitialLattice(choice::Int64, syst::SystConstants; u⁺=1.0, u�
         lattice = [LatticeSite(A[1], A[2], A[3], θ⁺, θ⁻, u⁺, u⁻, x) for x=1:L₁, y=1:L₂, z=1:L₃]
     # Construct random state
     elseif choice == 2
-        lattice = [LatticeSite([rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax))],
-                        rand(Uniform(0,2π)), rand(Uniform(0,2π)), umax*rand(), umax*rand(), x) for x=1:L₁, y=1:L₂, z=1:L₃]
+        lattice = [LatticeSite(rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),
+                        rand(Uniform(0,2π))-π, rand(Uniform(0,2π))-π, umax*rand(), umax*rand(), x) for x=1:L₁, y=1:L₂, z=1:L₃]
     elseif choice == 3
         # Uniform mean field for all fields except u⁺ which is random.
         lattice = [LatticeSite(A[1], A[2], A[3], θ⁺, θ⁻, umax*rand(), u⁻, x) for x=1:L₁, y=1:L₂, z=1:L₃]
@@ -73,12 +74,12 @@ function generateInitialLattice(choice::Int64, syst::SystConstants; u⁺=1.0, u�
         lattice = [LatticeSite(A[1], A[2], A[3], θ⁺, θ⁻, umax*rand(), umax*rand(), x) for x=1:L₁, y=1:L₂, z=1:L₃]
     elseif choice == 5
         # Vary phases, all other fields are uniform mean fields.
-        lattice = [LatticeSite(A[1], A[2], A[3], rand(Uniform(0,2π)), rand(Uniform(0,2π)), u⁺, u⁻, x) 
+        lattice = [LatticeSite(A[1], A[2], A[3], rand(Uniform(0,2π))-π, rand(Uniform(0,2π))-π, u⁺, u⁻, x) 
             for x=1:L₁, y=1:L₂, z=1:L₃]
     elseif choice == 6
         # All fields random except for amplitudes
         lattice = [LatticeSite(rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),
-                               rand(Uniform(0,2π)), rand(Uniform(0,2π)), u⁺, u⁻, x) for x=1:L₁, y=1:L₂, z=1:L₃]
+                               rand(Uniform(0,2π))-π, rand(Uniform(0,2π))-π, u⁺, u⁻, x) for x=1:L₁, y=1:L₂, z=1:L₃]
     # We only have choices 1 - 6 so far so other values for choice will give an error.
     else
         throw(DomainError())
@@ -743,6 +744,11 @@ function setTemp!(cub::Cuboid, T::R) where R<:Real
     nothing
 end
 
+# Get the inverse temperature of the system
+function getBeta(ψ::Cuboid)
+    getSubCuboidProperty(sc -> sc.β, ψ.grid[1])
+end
+
 # Get the simulations constants in the system.
 function getControls(cub::Cuboid)
     getSubCuboidProperty(sc -> sc.sim, cub.grid[1])
@@ -899,5 +905,15 @@ function printControls(cubs::Array{Cuboid, 1})
     nothing
 end
 
+import Base.copy
+function copy(ψ::Cuboid)
+    s₁ = size(ψ.grid, 1); s₂ = size(ψ.grid, 2); s₃ = size(ψ.grid, 3)
+    split = (s₁, s₂, s₃)
+    lattice = getLattice(ψ)
+    sim = getControls(ψ)
+    syst = getSyst(ψ)
+    β = getBeta(ψ)
+    Cuboid(lattice, syst, sim, split, β)
+end
 
 end
