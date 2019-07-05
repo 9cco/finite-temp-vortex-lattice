@@ -3,8 +3,9 @@ module CuboidModule
 export SystConstants, Cuboid, mcSweep!, mcSweepEnUp!, energy, two_pi
 export latticeMap, latticeSiteNeighborMap, latticeSiteMap
 export shellSize, getLattice, fluxDensity, setTemp!, tuneUpdates!, printControls, estimateAR!
-export getBeta, copy
-export specificHeat, xyVortexSnapshot, vortexSnapshot, getSyst, getControls
+export getBeta, copy, avgZ
+export specificHeat, xyVortexSnapshot, vortexSnapshot, getSyst, getControls, chiralAmplitudeSnapshot
+export retuneUpdates!
 
 # For testing: compile with the exports below
 export RemoteNeighbors, SubCuboid, LatticeSite
@@ -400,6 +401,8 @@ end
 #__________________________________________________________________________________________________________________________#
 ############################################################################################################################
 
+include("XY_to_Chiral_transformation.jl")
+
 # Calculates the energy for the whole cuboid in parallel
 function energy(cub::Cuboid)
     E = 0.0
@@ -460,14 +463,26 @@ end
 function drawback(x::T) where T<:Real
     return mod2pi(x+π)-π
 end
+function nᵣ(c::SystConstants, θᵣ₋₁::Float64, θᵣ::Float64, θᵣ₊₂::Float64, θᵣ₋₁₊₂::Float64, 
+            A¹ᵣ₋₁::Float64, A²ᵣ::Float64, A¹ᵣ₋₁₊₂::Float64, A²ᵣ₋₁::Float64, h_pos::Int64)
+    (drawback(θᵣ - θᵣ₋₁ - A¹ᵣ₋₁) + drawback(θᵣ₊₂ - θᵣ - (A²ᵣ + two_pi*c.f*(h_pos-1)))
+        - drawback(θᵣ₊₂ - θᵣ₋₁₊₂ - A¹ᵣ₋₁₊₂)
+        - drawback(θᵣ₋₁₊₂ - θᵣ₋₁  - (A²ᵣ₋₁ + two_pi*c.f*(h_pos-2)))+two_pi*c.f)
+end
+#function nᵣ(c::SystConstants, ϕᵣ₋₁::LatticeSite, ϕᵣ::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₋₁₊₂::LatticeSite, h_pos::Int64)
+#    vort_θ⁺ = (drawback(ϕᵣ.θ⁺ - ϕᵣ₋₁.θ⁺ - ϕᵣ₋₁.A₁) + drawback(ϕᵣ₊₂.θ⁺ - ϕᵣ.θ⁺ - (ϕᵣ.A₂ + two_pi*c.f*(h_pos-1)))
+#        - drawback(ϕᵣ₊₂.θ⁺ - ϕᵣ₋₁₊₂.θ⁺  - ϕᵣ₋₁₊₂.A₁)
+#        - drawback(ϕᵣ₋₁₊₂.θ⁺ - ϕᵣ₋₁.θ⁺  - (ϕᵣ₋₁.A₂ + two_pi*c.f*(h_pos-2)))+two_pi*c.f)
+#    vort_θ⁻ = (drawback(ϕᵣ.θ⁻ - ϕᵣ₋₁.θ⁻ - ϕᵣ₋₁.A₁) + drawback(ϕᵣ₊₂.θ⁻ - ϕᵣ.θ⁻ - (ϕᵣ.A₂ + two_pi*c.f*(h_pos-1)))
+#        - drawback(ϕᵣ₊₂.θ⁻ - ϕᵣ₋₁₊₂.θ⁻  - ϕᵣ₋₁₊₂.A₁)
+#        - drawback(ϕᵣ₋₁₊₂.θ⁻ - ϕᵣ₋₁.θ⁻  - (ϕᵣ₋₁.A₂ + two_pi*c.f*(h_pos-2)))+two_pi*c.f)
+#    return vort_θ⁺, vort_θ⁻
+#end
+# Version of the above function which should be used when the energy used is in the xy-basis
 function nᵣ(c::SystConstants, ϕᵣ₋₁::LatticeSite, ϕᵣ::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₋₁₊₂::LatticeSite, h_pos::Int64)
-    vort_θ⁺ = (drawback(ϕᵣ.θ⁺ - ϕᵣ₋₁.θ⁺ - ϕᵣ₋₁.A₁) + drawback(ϕᵣ₊₂.θ⁺ - ϕᵣ.θ⁺ - (ϕᵣ.A₂ + two_pi*c.f*(h_pos-1)))
-        - drawback(ϕᵣ₊₂.θ⁺ - ϕᵣ₋₁₊₂.θ⁺  - ϕᵣ₋₁₊₂.A₁)
-        - drawback(ϕᵣ₋₁₊₂.θ⁺ - ϕᵣ₋₁.θ⁺  - (ϕᵣ₋₁.A₂ + two_pi*c.f*(h_pos-2)))+two_pi*c.f)
-    vort_θ⁻ = (drawback(ϕᵣ.θ⁻ - ϕᵣ₋₁.θ⁻ - ϕᵣ₋₁.A₁) + drawback(ϕᵣ₊₂.θ⁻ - ϕᵣ.θ⁻ - (ϕᵣ.A₂ + two_pi*c.f*(h_pos-1)))
-        - drawback(ϕᵣ₊₂.θ⁻ - ϕᵣ₋₁₊₂.θ⁻  - ϕᵣ₋₁₊₂.A₁)
-        - drawback(ϕᵣ₋₁₊₂.θ⁻ - ϕᵣ₋₁.θ⁻  - (ϕᵣ₋₁.A₂ + two_pi*c.f*(h_pos-2)))+two_pi*c.f)
-    return vort_θ⁺, vort_θ⁻
+    vort_θ⁺ = nᵣ(c, findθ⁺(ϕᵣ₋₁), findθ⁺(ϕᵣ), findθ⁺(ϕᵣ₊₂), findθ⁺(ϕᵣ₋₁₊₂), ϕᵣ₋₁.A₁, ϕᵣ.A₂, ϕᵣ₋₁₊₂.A₁, ϕᵣ₋₁.A₂, h_pos)
+    vort_θ⁻ = nᵣ(c, findθ⁻(ϕᵣ₋₁), findθ⁻(ϕᵣ), findθ⁻(ϕᵣ₊₂), findθ⁻(ϕᵣ₋₁₊₂), ϕᵣ₋₁.A₁, ϕᵣ.A₂, ϕᵣ₋₁₊₂.A₁, ϕᵣ₋₁.A₂, h_pos)
+    vort_θ⁺, vort_θ⁻
 end
 
 # -----------------------------------------------------------------------------------------------------------
@@ -553,7 +568,16 @@ function xyVortexSnapshot(cub::Cuboid; T = Float64)
     avgZ(V⁺), avgZ(V⁻)
 end
 
+# Amplitude measurements
+# -----------------------------------------------------------------------------------------------------------
 
+# Returns the chiral amplitudes of the system for each lattice site.
+function chiralAmplitudeSnapshot(cub::Cuboid; T = Float64)
+    u⁺_lattice = latticeSiteMap(findu⁺, cub, T)
+    u⁻_lattice = latticeSiteMap(findu⁻, cub, T)
+
+    u⁺_lattice, u⁻_lattice
+end
 
 
 ############################################################################################################################
@@ -893,6 +917,14 @@ function tuneUpdates!(cub::Cuboid; M = 40, CUTOFF_MAX = 42, LOWER = 0.3,
     setProposalIntervals!(cub, sim)
     return (proposedAR[i_max], adjustment_mcs, sim)
     # Return the acceptance ratio of the new sim and the number of Monte-Carlo Sweeps done during this adjustment.
+end
+
+# -----------------------------------------------------------------------------------------------------------
+# Tunes updates given manual starting parameters.
+function retuneUpdates!(cub::Cuboid; θ_max = π/3, u_max = 0.4, A_max = 3.0)
+    setProposalIntervals!(cub; θ_max = θ_max, u_max = u_max, A_max = A_max)
+    tuneUpdates!(cub)
+    nothing
 end
 
 # -------------------------------------------------------------------------------------------------
