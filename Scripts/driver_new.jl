@@ -2,7 +2,7 @@
 # Start thermalizing L=32 systems for later measurement of lattice
 
 # Change list: erland <-> fram
-# out_path, src_path, split, readline comment
+# out_path, src_path, split, readline comment, target temp
 
 using Distributed
 @everywhere using Distributions
@@ -46,12 +46,12 @@ g = parse(Float64, ARGS[1])         # Gauge coupling
 # TODO: We should probably benchmark vortexSnapshot and see that it is faster than mcSweeps
 # Other parameters
 M_est = 2^7  # Number of MC-steps to do at T_start before cooldown.
-M_col = 2^19 # Number of MC-steps to use for cooling down the systems
-N_steps = 2^10   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
-M_th = 2^19  # Number of MC-steps to do for thermalization.
-M = 2^14     # Number of measurements
-M_amp = 10   # Number of these measurements that will be amplitude measurements, i.e. we need M >= M_amp
-Δt = 14      # Number of MC-steps between each measurement
+M_col = 2^18 # Number of MC-steps to use for cooling down the systems
+N_steps = 2^9   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
+M_th = 2^18  # Number of MC-steps to do for thermalization.
+M = 2^12     # Number of measurements
+M_amp = 30   # Number of these measurements that will be amplitude measurements, i.e. we need M >= M_amp
+Δt = 2^6      # Number of MC-steps between each measurement
 # L is assumed to be even.
 L = 32     # System length
 L₁ = L
@@ -61,7 +61,7 @@ split = (1,1,3)
 N = L₁*L₂*L₃
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
 f = 1.0/L₁
-temps = [1.6]
+temps = [4.0]
 T_start = 2*4.0+0.1   # Start-temperature of states when thermalizing. 
 N_T = length(temps)
 
@@ -76,7 +76,7 @@ println("ν = $(ν)")
 println("κ₅ = $(κ₅)")
 flush(stdout)
 cd(out_path)
-out_folder = "full_model_L=$(L)_T=$(round(temps[1]; digits=2))_g=$(round(g; digits=3))_fL=$(round(f*L; digits=1))_stepwise_cool"
+out_folder = "full_model_L=$(L)_T=$(round(temps[1]; digits=2))_g=$(round(g; digits=3))_nu=$(round(ν; digits=3))_fL=$(round(f*L; digits=1))_fixed_controls"
 
 
 
@@ -117,12 +117,19 @@ if isfile(init_file)
     for i = 1:N_T
         println(init_temps[i])
     end
+    println("Controls of read state:")
+    printControls(cubs)
     
     # Tuning initial controls
     println("Adjusting simulation constants in initial states.")
-    @time for k = 1:N_T; retuneUpdates!(cubs[k]; θ_max = π/12, u_max = 1.0/√(2), A_max = 0.002); end
+    flush(stdout)
+    for k = 1:N_T; setUpdates!(cubs[k]; θ_max = 3.13, u_max = 1.0/√(2), A_max = 1e-1); end
+    #@time for k = 1:N_T; retuneUpdates!(cubs[k]; θ_max = 0.2, u_max = 1.0/√(2), A_max = 9e-3); end
     println("Controls after adjustment:")
     printControls(cubs)
+    AR_est = [estimateAR!(cub)[1] for cub in cubs]
+    println("AR with adjusted controls:")
+    for est in AR_est; println("AR: ≈ $(round(est*100; digits=2))%"); end
 
 else # If no initial file is found, then we contruct initial states at temperature T_start and thermalize them
     # Make ab inito un-correlated phases state if no initial_state is given.
@@ -131,13 +138,15 @@ else # If no initial file is found, then we contruct initial states at temperatu
     init_temps = [T_start for T in temps]
 
     println("No initialization file found. Thermalizing ab-inito states.")
+    flush(stdout)
     # Tune and thermalize start-temperature
     t_init_th = @elapsed for i = 1:ceil(Int64, M_th/4)
         for cub in cubs; mcSweep!(cub); end
     end
 
     println("Adjusting simulation constants in initial states.")
-    @time for cub in cubs; tuneUpdates!(cub); end
+    #@time for cub in cubs; tuneUpdates!(cub); end
+    for k = 1:N_T; setUpdates!(cubs[k]; θ_max = 3.13, u_max = 1.0/√(2), A_max = 1e-1); end # If we set updates manually
     println("Controls after adjustment:")
     printControls(cubs)
     flush(stdout)
@@ -245,10 +254,10 @@ JLD.save("cooldown.jld", "sp", S⁺_col_by_T, "sm", S⁻_col_by_T, "E_matrix", E
 # Adjusting simulation constants
 ################################################################################################
 
-println("Adjusting simulation constants.")
-@time for cub in cubs; tuneUpdates!(cub); end
-println("Controls after adjustment:")
-printControls(cubs)
+#println("Adjusting simulation constants.")
+#@time for cub in cubs; tuneUpdates!(cub); end
+#println("Controls after adjustment:")
+#printControls(cubs)
 
 
 
@@ -277,7 +286,7 @@ therm_lattices = [getLattice(cub) for cub in cubs]
 JLD.save("thermalization.jld", "e_thm", E_therm, "syst", syst, "lattices", therm_lattices, "M_th", M_th, "M_est", M_est, "M_col", M_col)
 println("Cooldown and thermalization used $(round(t_th/3600; digits=1)) h. Energies and states saved to file.")
 println("After thermalization the estimated AR are:")
-for est in AR_est; println("AR:\t$(round(est; digits=2))"); end
+for est in AR_est; println("AR: ≈ $(round(est*100; digits=2))%"); end
 
 
 

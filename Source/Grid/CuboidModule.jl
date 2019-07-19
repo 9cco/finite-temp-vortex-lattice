@@ -5,7 +5,7 @@ export latticeMap, latticeSiteNeighborMap, latticeSiteMap
 export shellSize, getLattice, fluxDensity, setTemp!, tuneUpdates!, printControls, estimateAR!
 export getBeta, copy, avgZ
 export specificHeat, xyVortexSnapshot, vortexSnapshot, getSyst, getControls, chiralAmplitudeSnapshot
-export retuneUpdates!
+export retuneUpdates!, setUpdates!
 
 # For testing: compile with the exports below
 export RemoteNeighbors, SubCuboid, LatticeSite
@@ -927,6 +927,13 @@ function retuneUpdates!(cub::Cuboid; θ_max = π/3, u_max = 0.4, A_max = 3.0)
     nothing
 end
 
+# -----------------------------------------------------------------------------------------------------------
+# Encapsulation for setProposalIntervals!
+function setUpdates!(cub::Cuboid; θ_max = π/3, u_max = 0.4, A_max = 3.0)
+    setProposalIntervals!(cub; θ_max = θ_max, u_max = u_max, A_max = A_max)
+    nothing
+end
+
 # -------------------------------------------------------------------------------------------------
 function printControls(cubs::Array{Cuboid, 1})
     println("State\tθmax\t\t\tumax\tAmax")
@@ -936,6 +943,12 @@ function printControls(cubs::Array{Cuboid, 1})
     end
     nothing
 end
+function printControls(sim::Controls)
+    println("State\tθmax\t\t\tumax\tAmax")
+    println("$i\t$(sim.θmax)\t$(sim.umax)\t$(sim.Amax)")
+    nothing
+end
+
 
 import Base.copy
 function copy(ψ::Cuboid)
