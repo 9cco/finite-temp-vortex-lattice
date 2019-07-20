@@ -2,7 +2,7 @@
 # Start thermalizing L=32 systems for later measurement of lattice
 
 # Change list: erland <-> fram
-# out_path, src_path, split, readline comment, target temp
+# out_path, src_path, split, readline comment, target temp, staging_path
 
 using Distributed
 @everywhere using Distributions
@@ -22,6 +22,8 @@ fixRC()
 #@everywhere src_path = "/cluster/home/fredrkro/mc/Source/Grid/"
 out_path = "/home/nicolai/mc/Scripts/"
 #out_path = "/cluster/home/fredrkro/mc/Data/"
+staging_path = ""
+#staging_path = "/cluster/home/fredrkro/Staging/"
 @everywhere push!(LOAD_PATH, $src_path)
 @everywhere using CuboidModule
 
@@ -84,8 +86,8 @@ out_folder = "full_model_L=$(L)_T=$(round(temps[1]; digits=2))_g=$(round(g; digi
 ################################################################################################
 println("\nINITIATING STATES\n#############################################################")
 #
-# We check if the folder containing the script includes an initial state
-init_file = "init_state_g=$(round(g; digits=3))_ν=$(round(ν; digits=3))_L=$(L).jld"
+# We check if the staging folder (could be current folder) includes an initial state
+init_file = staging_path*"init_state_g=$(round(g; digits=3))_ν=$(round(ν; digits=3))_L=$(L).jld"
 if isfile(init_file)
     # Reading the initial file.
     init_file_di = JLD.load(init_file)
