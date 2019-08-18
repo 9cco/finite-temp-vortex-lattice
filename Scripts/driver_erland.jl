@@ -1,5 +1,6 @@
 # Current intention:
-# Start thermalizing L=32 systems for later measurement of lattice
+# See if we can get the same striped pattern as for L = 32 for L = 64 and using
+# less thermalizing MCS.
 
 # Change list: erland <-> fram
 # out_path, staging_path, src_path, split, readline comment, target temp
@@ -46,22 +47,22 @@ g = parse(Float64, ARGS[1])         # Gauge coupling
 # TODO: We should probably benchmark vortexSnapshot and see that it is faster than mcSweeps
 # Other parameters
 M_est = 2^7  # Number of MC-steps to do at T_start before cooldown.
-M_col = 2^19 # Number of MC-steps to use for cooling down the systems
+M_col = 2^18 # Number of MC-steps to use for cooling down the systems
 N_steps = 2^10   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
 M_th = 2^18  # Number of MC-steps to do for thermalization.
 M = 2^13     # Number of measurements
 M_amp = 30   # Number of these measurements that will be amplitude measurements, i.e. we need M >= M_amp
 Δt = 2^6      # Number of MC-steps between each measurement
 # L is assumed to be even.
-L = 32     # System length
+L = 64     # System length
 L₁ = L
 L₂ = L
 L₃ = L
 split = (1,1,3)
 N = L₁*L₂*L₃
 # Calculate periodic boundary conditioned f s.t. fL ∈ N
-f = 1.0/L₁
-temps = [0.6]
+f = 2.0/L₁
+temps = [2.5]
 T_start = 2*4.0+0.1   # Start-temperature of states when thermalizing. 
 N_T = length(temps)
 
@@ -315,20 +316,6 @@ u⁺_lattices_by_T = [Array{Array{Float64, 3},1}(undef, M_amp) for k = 1:N_T]
 u⁻_lattices_by_T = [Array{Array{Float64, 3},1}(undef, M_amp) for k = 1:N_T]
 u⁺_xy_lattices_by_T = [zeros(Float64, L₁, L₂) for k = 1:N_T]
 u⁻_xy_lattices_by_T = [zeros(Float64, L₁, L₂) for k = 1:N_T]
-# Storage for helicity modulus derivatives
-dH_01_x = [Array{Float64, 1}(undef, M) for k = 1:N_T]
-dH_01_y = [Array{Float64, 1}(undef, M) for k = 1:N_T]
-dH_10_x = [Array{Float64, 1}(undef, M) for k = 1:N_T]
-dH_10_y = [Array{Float64, 1}(undef, M) for k = 1:N_T]
-dH_11_x = [Array{Float64, 1}(undef, M) for k = 1:N_T]
-dH_11_y = [Array{Float64, 1}(undef, M) for k = 1:N_T]
-d²H_01_x = [Array{Float64, 1}(undef, M) for k = 1:N_T]
-d²H_01_y = [Array{Float64, 1}(undef, M) for k = 1:N_T]
-d²H_10_x = [Array{Float64, 1}(undef, M) for k = 1:N_T]
-d²H_10_y = [Array{Float64, 1}(undef, M) for k = 1:N_T]
-d²H_11_x = [Array{Float64, 1}(undef, M) for k = 1:N_T]
-d²H_11_y = [Array{Float64, 1}(undef, M) for k = 1:N_T]
-
 
 # We preform M measurements
 @time for m = 1:M
@@ -366,17 +353,6 @@ d²H_11_y = [Array{Float64, 1}(undef, M) for k = 1:N_T]
         end
     end
 
-    # Measure phase twist derivatives
-    for k = 1:N_T
-        dH_01_x[k][m], dH_01_y[k][m] = firstDerivativeTwist(cubs[k], 0, 1)
-        dH_10_x[k][m], dH_10_y[k][m] = firstDerivativeTwist(cubs[k], 1, 0)
-        dH_11_x[k][m], dH_11_y[k][m] = firstDerivativeTwist(cubs[k], 1, 1)
-
-        d²H_01_x[k][m], d²H_01_y[k][m] = secondDerivativeTwist(cubs[k], 0, 1)
-        d²H_10_x[k][m], d²H_10_y[k][m] = secondDerivativeTwist(cubs[k], 1, 0)
-        d²H_11_x[k][m], d²H_11_y[k][m] = secondDerivativeTwist(cubs[k], 1, 1)
-    end
-
 end
 final_lattices = [getLattice(cub) for cub in cubs]
 vortices_by_T = [vortexSnapshot(lattice, getSyst(cubs[1])) for lattice in final_lattices]
@@ -393,5 +369,4 @@ JLD.save("meta.jld", "L1", L₁, "L2", L₂, "L3", L₃, "M", M, "M_amp", M_amp,
 JLD.save("final_state_g=$(round(g; digits=3))_ν=$(round(ν; digits=3))_L=$(L).jld", "lattices", final_lattices, "temps", temps, "f", f, "kappa", κ₅, "g", g, "nu", ν, "controls", [getControls(cub) for cub in cubs])
 JLD.save("vorticity.jld", "vortexes", vortices_by_T, "sp", S⁺_by_T, "sm", S⁻_by_T)
 JLD.save("amplitudes.jld", "up_lattices", u⁺_lattices_by_T, "um_lattices", u⁻_lattices_by_T, "up_xy", u⁺_xy_lattices_by_T, "um_xy", u⁻_xy_lattices_by_T)
-JLD.save("twists.jld", "dH_01_x", dH_01_x, "dH_01_y", dH_01_y, "dH_10_x", dH_10_x, "dH_10_y", dH_10_y, "dH_11_x", dH_11_x, "dH_11_y", dH_11_y,
-         "d2H_01_x", d²H_01_x, "d2H_01_y", d²H_01_y, "d2H_10_x", d²H_10_x, "d2H_10_y", d²H_10_y, "d2H_11_x", d²H_11_x, "d2H_11_y", d²H_11_y)
+

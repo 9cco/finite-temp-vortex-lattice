@@ -401,7 +401,7 @@ end
 #__________________________________________________________________________________________________________________________#
 ############################################################################################################################
 
-include("helicity_modulus.jl")
+#include("helicity_modulus.jl")
 include("XY_to_Chiral_transformation.jl")
 
 # Calculates the energy for the whole cuboid in parallel
@@ -771,17 +771,17 @@ function latticeSiteNeighborSum(funk::Function, chan::RemoteChannel{Channel{SubC
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
     r₀₁ = ranges[1][1]-1; r₀₂ = ranges[2][1]-1; r₀₃ = ranges[3][1]-1
 
-    s = [T(0), T(0)]
+    s = T(0)
     
     for x = 1:l₁, y = 1:l₂, z = 1:l₃
-        s .+= broadcast(T, funk(sc.lattice[x,y,z], sc.nb[x,y,z], r₀₁+x, r₀₂+y, r₀₃+z))
+        s += broadcast(T, funk(sc.lattice[x,y,z], sc.nb[x,y,z], r₀₁+x, r₀₂+y, r₀₃+z))
     end
     s
 end
 # We assume that the function funk is defined on all processes. Call it on each sub-cuboid which in turn calls it on
 # each lattice site, then add the results of the function calls
 function latticeSiteNeighborSum(funk::Function, cub::Cuboid, T::DataType)
-    s = [T(0), T(0)]
+    s = T(0)
     futures = [Future() for i = 1:length(cub.grid)]
     
     for (i, chan) = enumerate(cub.grid)
@@ -789,7 +789,7 @@ function latticeSiteNeighborSum(funk::Function, cub::Cuboid, T::DataType)
     end
     
     for (i, ranges) = enumerate(cub.range_grid)
-        s .+= fetch(futures[i])
+        s += fetch(futures[i])
     end
     
     s
