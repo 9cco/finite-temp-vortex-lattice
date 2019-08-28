@@ -21,7 +21,18 @@ struct SystConstants
     g⁻²::Float64  # 1/g² for gauge coupling g
     ν::Float64    # Anisotropy constant
     κ₅::Float64   # z-layer coupling.
-    f::Float64    # Magnetic filling fraction
+    n::Int64     # Extended Landau Gauge s.t. n | L₁ and m | L₂
+    m::Int64     # and determine the magnetic filling fraction
+    A₁_frac::Float64    # Coefficient for calculating constant gauge field
+    A₂_frac::Float64
+    f::Float64   # Filling fraction
+    function SystConstants(L₁, L₂, L₃, g⁻², ν, κ₅, n, m, A₁_frac, A₂_frac, f)
+        if ((n == 0 || L₁%n == 0) && (m == 0 || L₂%m == 0))
+            new(Int64(L₁), Int64(L₂), Int64(L₃), Float64(g⁻²), Float64(ν), Float64(κ₅), Int64(n), Int64(m), Float64(A₁_frac), Float64(A₂_frac), Float64(f))
+        else
+            error("$(n) and $(m) do not divide $(L₁) and $(L₂) respectively.")
+        end
+    end
 end
 mutable struct LatticeSite
     A₁::Float64  # Integrated fluctuating vector potential x-direction
@@ -32,6 +43,7 @@ mutable struct LatticeSite
     u⁺::Float64 # Amplitude of + component
     u⁻::Float64 # Amplitude of - component (should always be √u⁺)
     x::Int64   # Position in x-direction
+    y::Int64   # Position in y-direction
 end
 mutable struct Controls
     θmax::Float64
@@ -139,12 +151,49 @@ include("neighbors.jl")
 # -------------------------------------------------------------------------------------------------
 # LatticeSite outer constructor
 # Initializes a lattice site that has radom values at a horizontal position.
-function LatticeSite(h_pos::Int64)
+function LatticeSite(h_pos::Int64, y_pos::Int64)
     A_max = 3.0
     u⁺ = rand()
+    u⁻ = rand()
     LatticeSite(rand(Uniform(-A_max, A_max)), rand(Uniform(-A_max, A_max)), rand(Uniform(-A_max,A_max)),
-                two_pi*rand(), two_pi*rand(), u⁺, √(1-u⁺^2), h_pos)
+                two_pi*rand()-π, two_pi*rand()-π, u⁺, u⁻, h_pos, y_pos)
 end
+
+# -------------------------------------------------------------------------------------------------
+# Calculate gauge-field link variables using extended Landau gauge which is assumed in ::SystConstants
+function linkVariableX(ϕ::LatticeSite, syst::SystConstants)
+    ϕ.A₁ + syst.A₁_frac*(ϕ.y-1)
+end
+function linkVariableY(ϕ::LatticeSite, syst::SystConstants)
+    ϕ.A₂ + syst.A₂_frac*(ϕ.x-1)
+end
+function linkVariableZ(ϕ::LatticeSite, syst::SystConstants)
+    ϕ.A₃
+end
+function linkVariables(ϕ::LatticeSite, syst::SystConstants)
+    A₁ = linkVariableX(ϕ, syst)
+    A₂ = linkVariableY(ϕ, syst)
+    A₃ = linkVariableZ(ϕ, syst)
+    A₁, A₂, A₃
+end
+
+# Calculates the filling fraction f, i.e. the density of vortices in the xy-plane in the extended Landau gauge
+function fillingFraction(syst::SystConstants)
+    fillingFraction(syst.n, syst.m, syst.L₁, syst.L₂)
+end
+function fillingFraction(n::I, m::I, L₁::I2, L₂::I2) where {I<:Int, I2<:Int}
+    n/L₁ - m/L₂
+end
+
+# -------------------------------------------------------------------------------------------------
+# Outer constructor for SystConstants which calculates the gauge coefficients and filling fraction.
+function SystConstants(L₁::I, L₂::I, L₃::I, g⁻²::F, ν::F, κ₅::F, n::I2, m::I2) where {I<:Int, F<:Real, I2<:Int}
+    A₁_frac = two_pi*m/L₂
+    A₂_frac = two_pi*n/L₁
+    f = fillingFraction(n, m, L₁, L₂)
+    SystConstants(L₁, L₂, L₃, g⁻², ν, κ₅, n, m, A₁_frac, A₂_frac, f)
+end
+
 
 import Base.copy
 function copy(re_nb::RemoteNeighbors{T}) where T
@@ -174,6 +223,7 @@ function set!(target::LatticeSite, src::LatticeSite)
     target.u⁺ = src.u⁺
     target.u⁻ = src.u⁻
     target.x = src.x
+    target.y = src.y
     nothing
 end
 

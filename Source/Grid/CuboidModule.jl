@@ -62,25 +62,25 @@ function generateInitialLattice(choice::Int64, syst::SystConstants; u⁺=1.0, u�
     if choice == 1
         # Mean field lattice sites for all fields.
         # Construct NxN lattice of NxN LatticeSites
-        lattice = [LatticeSite(A[1], A[2], A[3], θ⁺, θ⁻, u⁺, u⁻, x) for x=1:L₁, y=1:L₂, z=1:L₃]
+        lattice = [LatticeSite(A[1], A[2], A[3], θ⁺, θ⁻, u⁺, u⁻, x, y) for x=1:L₁, y=1:L₂, z=1:L₃]
     # Construct random state
     elseif choice == 2
         lattice = [LatticeSite(rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),
-                        rand(Uniform(0,2π))-π, rand(Uniform(0,2π))-π, umax*rand(), umax*rand(), x) for x=1:L₁, y=1:L₂, z=1:L₃]
+                        rand(Uniform(0,2π))-π, rand(Uniform(0,2π))-π, umax*rand(), umax*rand(), x, y) for x=1:L₁, y=1:L₂, z=1:L₃]
     elseif choice == 3
         # Uniform mean field for all fields except u⁺ which is random.
-        lattice = [LatticeSite(A[1], A[2], A[3], θ⁺, θ⁻, umax*rand(), u⁻, x) for x=1:L₁, y=1:L₂, z=1:L₃]
+        lattice = [LatticeSite(A[1], A[2], A[3], θ⁺, θ⁻, umax*rand(), u⁻, x, y) for x=1:L₁, y=1:L₂, z=1:L₃]
     elseif choice == 4
         # Uniform mean field except for u⁺ and u⁻
-        lattice = [LatticeSite(A[1], A[2], A[3], θ⁺, θ⁻, umax*rand(), umax*rand(), x) for x=1:L₁, y=1:L₂, z=1:L₃]
+        lattice = [LatticeSite(A[1], A[2], A[3], θ⁺, θ⁻, umax*rand(), umax*rand(), x, y) for x=1:L₁, y=1:L₂, z=1:L₃]
     elseif choice == 5
         # Vary phases, all other fields are uniform mean fields.
-        lattice = [LatticeSite(A[1], A[2], A[3], rand(Uniform(0,2π))-π, rand(Uniform(0,2π))-π, u⁺, u⁻, x) 
+        lattice = [LatticeSite(A[1], A[2], A[3], rand(Uniform(0,2π))-π, rand(Uniform(0,2π))-π, u⁺, u⁻, x, y) 
             for x=1:L₁, y=1:L₂, z=1:L₃]
     elseif choice == 6
         # All fields random except for amplitudes
         lattice = [LatticeSite(rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),rand(Uniform(-Amax,Amax)),
-                               rand(Uniform(0,2π))-π, rand(Uniform(0,2π))-π, u⁺, u⁻, x) for x=1:L₁, y=1:L₂, z=1:L₃]
+                               rand(Uniform(0,2π))-π, rand(Uniform(0,2π))-π, u⁺, u⁻, x, y) for x=1:L₁, y=1:L₂, z=1:L₃]
     # We only have choices 1 - 6 so far so other values for choice will give an error.
     else
         throw(DomainError())
@@ -190,7 +190,7 @@ end
 
 # Given a full lattice with constants. Splits the lattice into sub-cuboids with corresponding nearest neighbor
 # shells that live on separate processes.
-function Cuboid(lattice::Array{LatticeSite, 3}, syst::SystConstants, sim::Controls, splits::Tuple{Int64, Int64, Int64}, β::Float64)
+function Cuboid(lattice::Array{LatticeSite, 3}, syst::SystConstants, sim::Controls, splits::Tuple{Int64, Int64, Int64}, β::Float64; pid_start=2)
     s₁, s₂, s₃ = splits
     L₁ = size(lattice, 1); L₂ = size(lattice, 2); L₃ = size(lattice, 3)
     
@@ -206,13 +206,13 @@ function Cuboid(lattice::Array{LatticeSite, 3}, syst::SystConstants, sim::Contro
     # With all the ingredients in hand, we just need to place the different sub-cuboids on the different available
     # worker processes.
     p = s₁*s₂*s₃ # The required number of processesRemoteChannel(()->Channel{Array{T,1}}(1), p)
-    p <= nprocs()-1 || throw(error("ERROR: Not enough available workers to distribute sub-cubes"))
+    pid_start-2 + p <= nprocs()-1 || throw(error("ERROR: Not enough available workers to distribute $(p) sub-cubes at pid $(pid_start) - $(pid_start + p-1)"))
     grid = Array{RemoteChannel{Channel{SubCuboid}}, 3}(undef, s₁,s₂,s₃)
     
-    # First we create remote channels in all grid points at pids starting on 2
+    # First we create remote channels in all grid points at pids starting on pid_start
     for i₃ = 1:s₃, i₂ = 1:s₂, i₁ = 1:s₁
         # First we create a remote-channel where we can put a sub-cube on a process
-        pid = i₁ + (i₂-1)*s₁ + (i₃-1)*s₁*s₂ + 1 # We start on 2 and increase the pid
+        pid = i₁ + (i₂-1)*s₁ + (i₃-1)*s₁*s₂ + (pid_start-1) # We start on pid_start and increase the pid
         grid[i₁,i₂,i₃] = RemoteChannel(()->Channel{SubCuboid}(1), pid)
     end
     
@@ -256,9 +256,9 @@ end
 # 5:    θ⁺ and θ⁻ are random, the rest are mean field.
 # 6:    All fields except u⁺ and u⁻ random.
 function Cuboid(choice::Int64, syst::SystConstants, splits::Tuple{I,I,I}, β::Float64;
-                                sim=Controls(), u⁺=1.0, u⁻=0.0, θ⁺=0.0, θ⁻=0.0, A=[0.0, 0.0, 0.0]) where I<:Int
+                                sim=Controls(), u⁺=1.0, u⁻=0.0, θ⁺=0.0, θ⁻=0.0, A=[0.0, 0.0, 0.0], pid_start=2) where I<:Int
     lattice = generateInitialLattice(choice, syst; u⁺=u⁺, u⁻=u⁻, θ⁺=θ⁺, θ⁻=θ⁻, A=[A[1], A[2], A[3]])
-    Cuboid(lattice, syst, sim, splits, β)
+    Cuboid(lattice, syst, sim, splits, β; pid_start=pid_start)
 end
 
 
@@ -316,6 +316,22 @@ function mcSweep!(cub::Cuboid)
 
     nothing
 end
+
+function nMCS!(cub::Cuboid, n::Int)
+    for i = 1:n; mcSweep!(cub); end
+    nothing
+end
+
+# Runs n MCS on each of the states in the list in parallel. 
+function nMCS!(cubs::Array{Cuboid, 1}, n::Int)
+    futures = [Future() for cub in cubs]
+    for (i, cub) = enumerate(cubs)
+        futures[i] = @spawn nMCS!(cub)
+    end
+    for fut in futures; wait(fut); end
+    nothing
+end
+
 
 # Same as above but also return the energy difference and number of successful updates
 function mcSweepEnUp!(cub::Cuboid)
@@ -380,6 +396,30 @@ function mcSweepEnUp!(cub::Cuboid)
     en_diff, updates
 end
 
+function nMCSEnUp!(cub::Cuboid, n::Int)
+    dEs = Array{Float64, 1}(undef, n)
+    updates_list = Array{Int64, 1}(undef, n)
+    for i = 1:n
+        dEs[i], updates_list[i] = mcSweepEnUp!(cub)
+    end
+    dEs, updates_list
+end
+
+# Runs n mcSweepEnUp on each of the states in the list in parallel. 
+function nMCSEnUp!(cubs::Array{Cuboid, 1}, n::Int)
+    N_c = length(cubs)
+    dE_lists = Array{Array{Float64, 1}, 1}(undef, N_c)
+    updates_lists = Array{Array{Int64, 1}, 1}(undef, N_c)
+    futures = [Future() for cub in cubs]
+    for (i, cub) = enumerate(cubs)
+        futures[i] = @spawn nMCSEnUp!(cub)
+    end
+    for (i, fut) = enumerate(futures)
+        dE_lists[i], updates_lists[i] = fetch(fut)
+    end
+    dE_lists, updates_lists
+end
+
 # -------------------------------------------------------------------------------------------------
 # Takes a state cuboid and calculates estimates the acceptance rate using M
 # Monte Carlo sweeps of the lattice. Then return the average and standard deviation of this
@@ -394,6 +434,17 @@ function estimateAR!(cub::Cuboid; M::Int64=500)
         fracs[i] = updated/N
     end
     return mean(fracs), std(fracs)
+end
+
+function estimateAR!(cubs::Array{Cuboid, 1}; M::Int64=500)
+    Ns = [cub.syst.L₁*cub.syst.L₂*cub.syst.L₃ for cub in cubs]
+
+    updated_lists = nMCSEnUp!(cubs, M)[2]
+    fracs_list = Array{Array{Float64, 1}}(undef, length(cubs))
+    for k = 1:length(cubs)
+        fracs_list[k] = updated_lists[k]./Ns[k]
+    end
+    [(mean(fracs_list[k]), std(fracs_list[k])) for k = 1:length(cubs)]
 end
 
 ############################################################################################################################
@@ -422,21 +473,29 @@ end
 # Calculates the plaquette sum of the gauge field at a position pos, with the plaquette plane perpenducular
 # to the x, y and z-axis. This corresponds to the different components of the curl of the gauge field
 # in the continuum limit.
-function fluxDensity(ϕ::LatticeSite, nb::CuboidModule.NearestNeighbors)
+function fluxDensity(ϕ::LatticeSite, nb::CuboidModule.NearestNeighbors, s::SystConstants)
     ϕᵣ₊₁ = nb.ϕᵣ₊₁
     ϕᵣ₊₂ = nb.ϕᵣ₊₂
     ϕᵣ₊₃ = nb.ϕᵣ₊₃
+
+    A₁, A₂, A₃ = linkVariables(ϕ, s)
+    Aᵣ₊₂_₁ = linkVariableX(ϕᵣ₊₂, s)
+    Aᵣ₊₂_₃ = linkVariableZ(ϕᵣ₊₂, s)
+    Aᵣ₊₁_₂ = linkVariableY(ϕᵣ₊₁, s)
+    Aᵣ₊₁_₃ = linkVariableZ(ϕᵣ₊₁, s)
+    Aᵣ₊₃_₁ = linkVariableX(ϕᵣ₊₃, s)
+    Aᵣ₊₃_₂ = linkVariableY(ϕᵣ₊₃, s)
     
-    cur_A_x = (ϕ.A₂ + ϕᵣ₊₂.A₃ - ϕᵣ₊₃.A₂ - ϕ.A₃)
-    cur_A_y = (ϕ.A₃ + ϕᵣ₊₃.A₁ - ϕᵣ₊₁.A₃ - ϕ.A₁)
-    cur_A_z = (ϕ.A₁ + ϕᵣ₊₁.A₂ - ϕᵣ₊₂.A₁ - ϕ.A₂)
+    cur_A_x = (A₂ + Aᵣ₊₂_₃ - Aᵣ₊₃_₂ - A₃)
+    cur_A_y = (A₃ + Aᵣ₊₃_₁ - Aᵣ₊₁_₃ - A₁)
+    cur_A_z = (A₁ + Aᵣ₊₁_₂ - Aᵣ₊₂_₁ - A₂)
     
     cur_A_x, cur_A_y, cur_A_z
 end
 function fluxDensity(chan::RemoteChannel{Channel{SubCuboid}})
     sc = fetch(chan)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
-    [fluxDensity(sc.lattice[x,y,z], sc.nb[x,y,z]) for x = 1:l₁, y = 1:l₂, z = 1:l₃]
+    [fluxDensity(sc.lattice[x,y,z], sc.nb[x,y,z], sc.syst) for x = 1:l₁, y = 1:l₂, z = 1:l₃]
 end
 function fluxDensity(cub::Cuboid)
     L₁ = cub.syst.L₁; L₂ = cub.syst.L₂; L₃ = cub.syst.L₃
@@ -464,11 +523,11 @@ end
 function drawback(x::T) where T<:Real
     return mod2pi(x+π)-π
 end
-function nᵣ(c::SystConstants, θᵣ₋₁::Float64, θᵣ::Float64, θᵣ₊₂::Float64, θᵣ₋₁₊₂::Float64, 
-            A¹ᵣ₋₁::Float64, A²ᵣ::Float64, A¹ᵣ₋₁₊₂::Float64, A²ᵣ₋₁::Float64, h_pos::Int64)
-    (drawback(θᵣ - θᵣ₋₁ - A¹ᵣ₋₁) + drawback(θᵣ₊₂ - θᵣ - (A²ᵣ + two_pi*c.f*(h_pos-1)))
+function nᵣ(syst::SystConstants, θᵣ₋₁::Float64, θᵣ::Float64, θᵣ₊₂::Float64, θᵣ₋₁₊₂::Float64, 
+            A¹ᵣ₋₁::Float64, A²ᵣ::Float64, A¹ᵣ₋₁₊₂::Float64, A²ᵣ₋₁::Float64)
+    (drawback(θᵣ - θᵣ₋₁ - A¹ᵣ₋₁) + drawback(θᵣ₊₂ - θᵣ - A²ᵣ)
         - drawback(θᵣ₊₂ - θᵣ₋₁₊₂ - A¹ᵣ₋₁₊₂)
-        - drawback(θᵣ₋₁₊₂ - θᵣ₋₁  - (A²ᵣ₋₁ + two_pi*c.f*(h_pos-2)))+two_pi*c.f)
+        - drawback(θᵣ₋₁₊₂ - θᵣ₋₁  - A²ᵣ₋₁)+two_pi*syst.f)
 end
 #function nᵣ(c::SystConstants, ϕᵣ₋₁::LatticeSite, ϕᵣ::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₋₁₊₂::LatticeSite, h_pos::Int64)
 #    vort_θ⁺ = (drawback(ϕᵣ.θ⁺ - ϕᵣ₋₁.θ⁺ - ϕᵣ₋₁.A₁) + drawback(ϕᵣ₊₂.θ⁺ - ϕᵣ.θ⁺ - (ϕᵣ.A₂ + two_pi*c.f*(h_pos-1)))
@@ -480,9 +539,11 @@ end
 #    return vort_θ⁺, vort_θ⁻
 #end
 # Version of the above function which should be used when the energy used is in the xy-basis
-function nᵣ(c::SystConstants, ϕᵣ₋₁::LatticeSite, ϕᵣ::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₋₁₊₂::LatticeSite, h_pos::Int64)
-    vort_θ⁺ = nᵣ(c, findθ⁺(ϕᵣ₋₁), findθ⁺(ϕᵣ), findθ⁺(ϕᵣ₊₂), findθ⁺(ϕᵣ₋₁₊₂), ϕᵣ₋₁.A₁, ϕᵣ.A₂, ϕᵣ₋₁₊₂.A₁, ϕᵣ₋₁.A₂, h_pos)
-    vort_θ⁻ = nᵣ(c, findθ⁻(ϕᵣ₋₁), findθ⁻(ϕᵣ), findθ⁻(ϕᵣ₊₂), findθ⁻(ϕᵣ₋₁₊₂), ϕᵣ₋₁.A₁, ϕᵣ.A₂, ϕᵣ₋₁₊₂.A₁, ϕᵣ₋₁.A₂, h_pos)
+function nᵣ(s::SystConstants, ϕᵣ₋₁::LatticeSite, ϕᵣ::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₋₁₊₂::LatticeSite)
+    vort_θ⁺ = nᵣ(s, findθ⁺(ϕᵣ₋₁), findθ⁺(ϕᵣ), findθ⁺(ϕᵣ₊₂), findθ⁺(ϕᵣ₋₁₊₂), linkVariableX(ϕᵣ₋₁, s), linkVariableY(ϕᵣ, s),
+                 linkVariableX(ϕᵣ₋₁₊₂, s), linkVariableY(ϕᵣ₋₁, s))
+    vort_θ⁻ = nᵣ(s, findθ⁻(ϕᵣ₋₁), findθ⁻(ϕᵣ), findθ⁻(ϕᵣ₊₂), findθ⁻(ϕᵣ₋₁₊₂), linkVariableX(ϕᵣ₋₁, s), linkVariableY(ϕᵣ, s),
+                 linkVariableX(ϕᵣ₋₁₊₂, s), linkVariableY(ϕᵣ₋₁, s))
     vort_θ⁺, vort_θ⁻
 end
 
@@ -499,7 +560,7 @@ function vortexSnapshot(lattice::Array{LatticeSite, 3}, syst::SystConstants;
         ϕᵣ₋₁ = lattice[mod(x-1-1,l₁)+1,y,z]
         ϕᵣ₊₂ = lattice[x,mod(y+1-1,l₂)+1,z]
         ϕᵣ₋₁₊₂ = lattice[mod(x-1-1,l₁)+1,mod(y+1-1,l₂)+1,z]
-        V⁺[x,y,z], V⁻[x,y,z] = nᵣ(syst, ϕᵣ₋₁, ϕᵣ, ϕᵣ₊₂, ϕᵣ₋₁₊₂, ϕᵣ.x)
+        V⁺[x,y,z], V⁻[x,y,z] = nᵣ(syst, ϕᵣ₋₁, ϕᵣ, ϕᵣ₊₂, ϕᵣ₋₁₊₂,)
     end
     V⁺, V⁻
 end
@@ -517,6 +578,10 @@ function avgZ(V::Array{T,3}) where T<:Real
     end
     return avg_V
 end
+function sumZ(V::Array{T,3}) where T<:Real
+    L₁ = size(V,1); L₂ = size(V, 2)
+    reshape(sum(V; dims=3), L₁, L₂)
+end
 
 # -----------------------------------------------------------------------------------------------------------
 # Assuming we have a state ψ, we want to find the lattice of vortices averaged over the z-direction.
@@ -533,15 +598,15 @@ function xyVortexSnapshot(chan::RemoteChannel{Channel{SubCuboid}}; T=Float64)
         ϕᵣ₋₁ = nb.ϕᵣ₋₁
         ϕᵣ₊₂ = nb.ϕᵣ₊₂
         ϕᵣ₋₁₊₂ = sc.nnb[x,y,z].ϕᵣ₋₁₊₂
-        V⁺[x,y,z], V⁻[x,y,z] = nᵣ(sc.syst, ϕᵣ₋₁, ϕᵣ, ϕᵣ₊₂, ϕᵣ₋₁₊₂, ϕᵣ.x)
+        V⁺[x,y,z], V⁻[x,y,z] = nᵣ(sc.syst, ϕᵣ₋₁, ϕᵣ, ϕᵣ₊₂, ϕᵣ₋₁₊₂)
     end
 
-    avgZ(V⁺), avgZ(V⁻)
+    sumZ(V⁺), sumZ(V⁻)
 end
 
 # Calculates a snapshot of the vortex lattice averaged over the z-direction. The vorticity is found in each
-# lattice site with nᵣ∼ ∇×A, on each sub-cuboid, this lattice is averaged over the z-direction, returned
-# to the main-process which then averages these averages again.
+# lattice site with nᵣ∼ ∇×A, on each sub-cuboid, this lattice is summed over the z-direction, returned
+# to the main-process which then averages these sums.
 function xyVortexSnapshot(cub::Cuboid; T = Float64)
     L₁ = cub.syst.L₁; L₂ = cub.syst.L₂; L₃ = cub.syst.L₃
     s₁ = size(cub.grid, 1); s₂ = size(cub.grid, 2); s₃ = size(cub.grid, 3)
@@ -549,7 +614,7 @@ function xyVortexSnapshot(cub::Cuboid; T = Float64)
     V⁺ = Array{T, 3}(undef, L₁,L₂,s₃)
     V⁻ = Array{T, 3}(undef, L₁,L₂,s₃)
 
-    # First we calculate the z-averaged vortex lattice on each sub-cuboid.
+    # First we calculate the z-summed vortex lattice on each sub-cuboid.
     futures = [Future() for i₁ = 1:s₁, i₂ = 1:s₂, i₃ = 1:s₃]
     for i₁ = 1:s₁, i₂ = 1:s₂, i₃ = 1:s₃
         chan = cub.grid[i₁,i₂,i₃]
@@ -566,7 +631,7 @@ function xyVortexSnapshot(cub::Cuboid; T = Float64)
     end
 
     # Finally we calculate the average over the s₃ layers of averaged vorticity
-    avgZ(V⁺), avgZ(V⁻)
+    sumZ(V⁺)./L₃, sumZ(V⁻)./L₃
 end
 
 # Amplitude measurements
@@ -992,7 +1057,8 @@ function copy(ψ::Cuboid)
     sim = getControls(ψ)
     syst = getSyst(ψ)
     β = getBeta(ψ)
-    Cuboid(lattice, syst, sim, split, β)
+    pid_start = ψ.grid[1,1,1].where
+    Cuboid(lattice, syst, sim, split, β; pid_start=pid_start)
 end
 
 end
