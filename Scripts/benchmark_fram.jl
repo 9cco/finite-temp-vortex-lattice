@@ -19,16 +19,16 @@ end
 fixRC()
 
 @everywhere src_path = "/cluster/projects/nn2819k/finite-temp-vortex-lattice/Source/Grid"
-#@everywhere src_path = "/home/subr00t/mc/Source/Grid"
+#@everywhere src_path = "/home/nicolai/Documents/Work/PhD/Numerikk/MC/finite-temp-vortex-lattice/Source/Grid/"
 @everywhere push!(LOAD_PATH, $src_path)
 @everywhere using CuboidModule
 
 #@everywhere include(src_path*"/observables.jl")
-include(src_path*"/utilities.jl")
+include(src_path*"/test_functions.jl")
 
 fixRC()
 # We run a simulation with the parameters
-g = 0.1# √(1/10)    # Gauge coupling
+g = 0.3# √(1/10)    # Gauge coupling
 ν = 0.3    # Anisotropy
 
 # TODO: We should probably benchmark vortexSnapshot and see that it is faster than mcSweeps
@@ -56,8 +56,8 @@ flush(stdout)
 
 # Checking increasing even splitting in all dir
 ################################################################################################
-s_list = [(2,3,3), (3,3,3), (3,4,4), (4,4,4), (4,4,5), (4,5,5), (5,5,5)]
-L₁ = L₂ = L₃ = 64
+s_list = [(1,1,1), (1,1,7), (1,1,8), (2,2,2), (1,2,4), (2,1,4), (4,2,1)]
+L₁ = L₂ = L₃ = 32
 f = 1.0/L₁
 for splits in s_list
     syst = SystConstants(L₁,L₂,L₃,1/g^2,ν,κ₅,f)
