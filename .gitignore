@@ -1,5 +1,6 @@
 # Ignoring specific files in Notebooks directory
 Notebooks/Test*
+Notebooks/SearchAndReplace*
 
 # Ignore data directory
 Data/
@@ -25,3 +26,7 @@ Notebooks/*/
 # Ignore plots and pictures
 *.png
 Notebooks/*.pdf
+
+# Ignore backup scripts
+*_bak.jl
+*_bak.sh

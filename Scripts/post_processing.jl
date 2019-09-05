@@ -187,6 +187,40 @@ for folder in folders
     savefig(plt⁺, "V+/V+_avg_T=$(T_round)_layers=$(n_layers).png")
     savefig(plt⁻, "V-/V-_avg_T=$(T_round)_layers=$(n_layers).png")
 
+    # Real vorticity long average
+    if isfile("real_vorticity.jld")
+        real_vo_di = JLD.load("real_vorticity.jld")
+        V⁺_avg  = real_vo_di["vp_avg"]; V⁻_avg = real_vo_di["vm_avg"];
+
+        # Setting color limits of average vorticity plots.
+        clims_v_max = maximum(V⁺_avg); clims_v_min = minimum(V⁺_avg)
+        plt⁺ = heatmap(V⁺_avg; aspect_ratio=1.0, clims=(clims_v_min, clims_v_max), title="V⁺_avg, z averaged, T=$(T_round), M=$(M)")
+        plt⁻ = heatmap(V⁻_avg; aspect_ratio=1.0, clims=(clims_v_min, clims_v_max), title="V⁻_avg, z averaged, T=$(T_round), M=$(M)")
+        savefig(plt⁺, "V+/V+_long_avg_T=$(T_round).png")
+        savefig(plt⁻, "V-/V-_long_avg_T=$(T_round).png")
+    end
+
+    # XY Vorticity
+
+    if isfile("XY_vorticity.jld")
+        xy_vortex_path = "XY_Vorticity"
+        mkcd(xy_vortex_path)
+        cd("../")
+
+        xy_vo_di = JLD.load("XY_vorticity.jld")
+        Vx_avg  = xy_vo_di["vx_avg"]; Vy_avg = xy_vo_di["vy_avg"];
+        Sx_avg  = xy_vo_di["sx_avg"]; Sy_avg = xy_vo_di["sy_avg"];
+        normalization = (L₁*L₂*f*two_pi)^2
+        Sx_avg /= normalization; Sy_avg /= normalization;
+        println("Normalization of XY structure functions: ($(round(maximum(Sx_avg)-1; sigdigits=4)), $(round(maximum(Sy_avg)-1; sigdigits=4)))")
+
+        # Plotting structure function
+        plt_Sx = heatmap(kx, ky, Sx_avg; aspect_ratio=1.0, title="Sx, T = $(T_round), L₁=$(L₁)", clims=(0, clim_max_meas))
+        plt_Sy = heatmap(kx, ky, Sy_avg; aspect_ratio=1.0, title="Sx, T = $(T_round), L₁=$(L₁)", clims=(0, clim_max_meas))
+        savefig(plt_Sx, xy_vortex_path*"/Sx_avg_T=$(T_round)")
+        savefig(plt_Sy, xy_vortex_path*"/Sy_avg_T=$(T_round)")
+    end
+
     
     # Amplitude measurements
 
