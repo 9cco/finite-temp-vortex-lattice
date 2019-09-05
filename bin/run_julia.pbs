@@ -1,0 +1,62 @@
+#!/bin/bash
+# Author: F.N. Krohg
+# Last-updated: 30.11.18
+# PBS job script for launching chiral superconductivity calculation on the vilje
+# supercomputer. Based on a sample job script by Jabir Ali Ouassou.
+
+##################################################################
+# Configure the PBS queue system
+##################################################################
+
+#PBS -M fredrik.n.krohg@ntnu.no
+#PBS -N 3DXYGauge
+#PBS -A nn2819k
+#PBS -q workq
+#PBS -o vortex.o
+#PBS -e vortex.e
+#PBS -l select=1:ncpus=16
+#PBS -l walltime=64:00:00
+#PBS -l pmem=8000MB
+
+##################################################################
+# Prepare the simulation
+##################################################################
+
+SOURCE_PATH="/work/fredrkro/finite-temp-vortex-lattice/bin"
+JULIA_PATH="/home/ntnu/fredrkro/bin/julia"
+JULIA_SCRIPT="thermalize_XY_gauge.jl"
+CPUS="15" # Needs to be the same as ncpus above
+OUTPUT="julia.output"
+FOLDER_FILE="last_folder.txt"
+REL_DATA_PATH="../Data"
+DRIVE_DIR="VILJE_DRIVE"
+
+error_exit()
+{
+	echo "$1" 1>&2
+	exit 1
+}
+
+# TODO: Use symbolic links for navigation references.
+
+# Making sure we are in the right directory
+[ -d $SOURCE_PATH ] || error_exit "ERROR: Could not find Source directory in $SOURCE_PATH"
+cd $SOURCE_PATH
+[ -f ./$JULIA_SCRIPT ] || error_exit "ERROR: Could not find julia script $JULIA_SCRIPT in `pwd`"
+
+# Go to data directory
+cd $REL_DATA_PATH
+if [ -d "./$DRIVE_DIR" ]
+then
+    cd $DRIVE_DIR
+else
+    mkdir $DRIVE_DIR
+    cd $DRIVE_DIR
+fi
+
+cp $SOURCE_PATH/$JULIA_SCRIPT ./$JULIA_SCRIPT
+
+echo "Handling control to julia script. Writing output to $OUTPUT"
+$JULIA_PATH -p $CPUS $JULIA_SCRIPT > $OUTPUT 2>&1
+
+echo "Job script finished without issue."

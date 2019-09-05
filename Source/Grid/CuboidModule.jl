@@ -6,6 +6,7 @@ export shellSize, getLattice, fluxDensity, setTemp!, tuneUpdates!, printControls
 export getBeta, copy, avgZ
 export specificHeat, xyVortexSnapshot, vortexSnapshot, getSyst, getControls, chiralAmplitudeSnapshot
 export retuneUpdates!, setUpdates!
+export nMCS!, nMCSEnUp!, xyVortexSnapshotXYBasis
 
 # For testing: compile with the exports below
 export RemoteNeighbors, SubCuboid, LatticeSite
@@ -325,8 +326,9 @@ end
 # Runs n MCS on each of the states in the list in parallel. 
 function nMCS!(cubs::Array{Cuboid, 1}, n::Int)
     futures = [Future() for cub in cubs]
+    start_pid = cubs[1].grid[1].where-length(cubs)
     for (i, cub) = enumerate(cubs)
-        futures[i] = @spawn nMCS!(cub)
+        futures[i] = @spawnat (mod(start_pid+i-2,nprocs())+1) nMCS!(cub, n)
     end
     for fut in futures; wait(fut); end
     nothing
@@ -411,8 +413,9 @@ function nMCSEnUp!(cubs::Array{Cuboid, 1}, n::Int)
     dE_lists = Array{Array{Float64, 1}, 1}(undef, N_c)
     updates_lists = Array{Array{Int64, 1}, 1}(undef, N_c)
     futures = [Future() for cub in cubs]
+    start_pid = cubs[1].grid[1].where-length(cubs)
     for (i, cub) = enumerate(cubs)
-        futures[i] = @spawn nMCSEnUp!(cub)
+        futures[i] = @spawnat (mod(start_pid+i-2,nprocs())+1) nMCSEnUp!(cub, n)
     end
     for (i, fut) = enumerate(futures)
         dE_lists[i], updates_lists[i] = fetch(fut)
@@ -546,6 +549,13 @@ function nᵣ(s::SystConstants, ϕᵣ₋₁::LatticeSite, ϕᵣ::LatticeSite, ϕ
                  linkVariableX(ϕᵣ₋₁₊₂, s), linkVariableY(ϕᵣ₋₁, s))
     vort_θ⁺, vort_θ⁻
 end
+function nᵣ_XY(s::SystConstants, ϕᵣ₋₁::LatticeSite, ϕᵣ::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₋₁₊₂::LatticeSite)
+    vort_θ⁺ = nᵣ(s, ϕᵣ₋₁.θ⁺, ϕᵣ.θ⁺, ϕᵣ₊₂.θ⁺, ϕᵣ₋₁₊₂.θ⁺, linkVariableX(ϕᵣ₋₁, s), linkVariableY(ϕᵣ, s),
+                 linkVariableX(ϕᵣ₋₁₊₂, s), linkVariableY(ϕᵣ₋₁, s))
+    vort_θ⁻ = nᵣ(s, ϕᵣ₋₁.θ⁻, ϕᵣ.θ⁻, ϕᵣ₊₂.θ⁻, ϕᵣ₋₁₊₂.θ⁻, linkVariableX(ϕᵣ₋₁, s), linkVariableY(ϕᵣ, s),
+                 linkVariableX(ϕᵣ₋₁₊₂, s), linkVariableY(ϕᵣ₋₁, s))
+    vort_θ⁺, vort_θ⁻
+end
 
 # -----------------------------------------------------------------------------------------------------------
 # Given a lattice of lattice sites we find the corresponding vortex lattice assuming periodic BC.
@@ -619,6 +629,51 @@ function xyVortexSnapshot(cub::Cuboid; T = Float64)
     for i₁ = 1:s₁, i₂ = 1:s₂, i₃ = 1:s₃
         chan = cub.grid[i₁,i₂,i₃]
         futures[i₁,i₂,i₃] = @spawnat chan.where xyVortexSnapshot(chan)
+    end
+    
+    # Each call to xyVortexSnapshot(::SubCuboid) returns an l₁×l₂ array whose position in the original lattice
+    # is given by the range_grid
+    for i₁ = 1:s₁, i₂ = 1:s₂, i₃ = 1:s₃
+        fut = futures[i₁,i₂,i₃]
+        x_int, y_int, _ = cub.range_grid[i₁,i₂,i₃]
+
+        V⁺[x_int,y_int,i₃], V⁻[x_int,y_int,i₃] = fetch(fut)
+    end
+
+    # Finally we calculate the average over the s₃ layers of averaged vorticity
+    sumZ(V⁺)./L₃, sumZ(V⁻)./L₃
+end
+
+# Same two as above, but now for the native XY-basis.
+function xyVortexSnapshotXYBasis(chan::RemoteChannel{Channel{SubCuboid}}; T=Float64)
+    sc = fetch(chan)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    
+    V⁺ = Array{T, 3}(undef, l₁,l₂,l₃); V⁻ = Array{T, 3}(undef, l₁,l₂,l₃)
+
+    for x = 1:l₁, y = 1:l₂, z = 1:l₃
+        ϕᵣ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        ϕᵣ₋₁ = nb.ϕᵣ₋₁
+        ϕᵣ₊₂ = nb.ϕᵣ₊₂
+        ϕᵣ₋₁₊₂ = sc.nnb[x,y,z].ϕᵣ₋₁₊₂
+        V⁺[x,y,z], V⁻[x,y,z] = nᵣ_XY(sc.syst, ϕᵣ₋₁, ϕᵣ, ϕᵣ₊₂, ϕᵣ₋₁₊₂)
+    end
+
+    sumZ(V⁺), sumZ(V⁻)
+end
+function xyVortexSnapshotXYBasis(cub::Cuboid; T = Float64)
+    L₁ = cub.syst.L₁; L₂ = cub.syst.L₂; L₃ = cub.syst.L₃
+    s₁ = size(cub.grid, 1); s₂ = size(cub.grid, 2); s₃ = size(cub.grid, 3)
+    
+    V⁺ = Array{T, 3}(undef, L₁,L₂,s₃)
+    V⁻ = Array{T, 3}(undef, L₁,L₂,s₃)
+
+    # First we calculate the z-summed vortex lattice on each sub-cuboid.
+    futures = [Future() for i₁ = 1:s₁, i₂ = 1:s₂, i₃ = 1:s₃]
+    for i₁ = 1:s₁, i₂ = 1:s₂, i₃ = 1:s₃
+        chan = cub.grid[i₁,i₂,i₃]
+        futures[i₁,i₂,i₃] = @spawnat chan.where xyVortexSnapshotXYBasis(chan)
     end
     
     # Each call to xyVortexSnapshot(::SubCuboid) returns an l₁×l₂ array whose position in the original lattice

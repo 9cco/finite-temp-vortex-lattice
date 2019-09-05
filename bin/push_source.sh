@@ -40,8 +40,8 @@ SCRIPTS_DIR="${BIN_DIR}/../Scripts"
 
 echo "Copying $SOURCE_DIR to $HOSTNAME"
 rsync -avz -e "ssh" --progress $SOURCE_DIR/ $UNAME@$HOSTNAME:$HOST_PATH_SOURCE
-echo "Copying $BIN_DIR to $HOSTNAME"
-rsync -avz -e "ssh" --progress $BIN_DIR/ $UNAME@$HOSTNAME:$HOST_PATH_BIN
+#echo "Copying $BIN_DIR to $HOSTNAME"
+#rsync -avz -e "ssh" --progress $BIN_DIR/ $UNAME@$HOSTNAME:$HOST_PATH_BIN
 echo "Copying $SCRIPTS_DIR to $HOSTNAME"
 rsync -avz -e "ssh" --progress $SCRIPTS_DIR/ $UNAME@$HOSTNAME:$HOST_PATH_SCRIPTS
 
