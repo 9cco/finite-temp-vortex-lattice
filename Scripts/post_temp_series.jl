@@ -20,16 +20,16 @@ function fixRC()
 end
 fixRC()
 
-src_path = "/home/nicolai/Documents/Work/PhD/Numerikk/MC/finite-temp-vortex-lattice/Source/Grid/"
+src_path = "/home/subr00t/mc/Source/Grid/"
 @everywhere push!(LOAD_PATH, $src_path)
 @everywhere using CuboidModule
 
-@everywhere src_path = "../Source/Grid/"
+@everywhere src_path = "/home/subr00t/mc/Source/Grid/"
 @everywhere include(src_path*"observables.jl")
 @everywhere include(src_path*"utilities.jl")
 include(src_path*"plot_functions.jl")
 
-@everywhere src_path = "../Source/"
+@everywhere src_path = "/home/subr00t/mc/Source/"
 @everywhere include(src_path*"jackknife_estimates.jl")
 
 using Plots
@@ -93,7 +93,7 @@ for (i_f, folder) = enumerate(folders)
     end
 
     if M_new != M
-        println("Warning: one of the measurements has M = $(M_new)")
+        println("Warning: one of the measurements has M = $(M_new) vs the previous M = $(M)")
     end
 
     jv = jackVars(energies -> specificHeat(energies, 1/temps[1]), E_by_T[1], num_blocks; skip_check=true)
