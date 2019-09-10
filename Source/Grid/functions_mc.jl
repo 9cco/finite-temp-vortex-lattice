@@ -41,7 +41,7 @@ function updateLatticeSite!(ϕ::LatticeSite, nb::NearestNeighbors, nnb::NextNeig
     
     # Update following a Metrolopis-Hastings selection.
     ran = 1 - rand()
-    
+
     if log(ran) <= -β*δE
         set!(ϕ, ϕ′)
         return true

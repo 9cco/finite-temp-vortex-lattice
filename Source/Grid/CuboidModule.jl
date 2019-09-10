@@ -7,6 +7,7 @@ export getBeta, copy, avgZ
 export specificHeat, xyVortexSnapshot, vortexSnapshot, getSyst, getControls, chiralAmplitudeSnapshot
 export retuneUpdates!, setUpdates!
 export nMCS!, nMCSEnUp!, xyVortexSnapshotXYBasis
+export twoCompHelMod, helMod, firstDerivativeTwist, secondDerivativeTwist
 
 # For testing: compile with the exports below
 export RemoteNeighbors, SubCuboid, LatticeSite
@@ -455,7 +456,7 @@ end
 #__________________________________________________________________________________________________________________________#
 ############################################################################################################################
 
-#include("helicity_modulus.jl")
+include("helicity_modulus.jl")
 include("XY_to_Chiral_transformation.jl")
 
 # Calculates the energy for the whole cuboid in parallel
