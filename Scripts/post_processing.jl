@@ -20,7 +20,7 @@ function fixRC()
 end
 fixRC()
 
-@everywhere src_path = "/home/subr00t/Documents/Phd/finite-temp-vortex-lattice/Source/Grid/"
+@everywhere src_path = "/home/nicolai/mc/Source/Grid/"
 @everywhere push!(LOAD_PATH, $src_path)
 @everywhere using CuboidModule
 
@@ -28,7 +28,7 @@ fixRC()
 @everywhere include(src_path*"utilities.jl")
 include(src_path*"plot_functions.jl")
 
-@everywhere src_path = "/home/subr00t/Documents/Phd/finite-temp-vortex-lattice/Source/"
+@everywhere src_path = "/home/nicolai/mc/Source/"
 @everywhere include(src_path*"jackknife_estimates.jl")
 
 using Plots
@@ -38,12 +38,15 @@ using JLD
 
 gs = [0.3]
 nus = [-0.5, 0.0, 0.5, 0.7]
+Ts = [1.7]
 clim_max_meas = 0.02
 clim_max_col = 0.02
 folders = Array{AbstractString, 1}(undef, 0)
 for ν in nus
     for g in gs
-        push!(folders, "full_model_L=64_T=2.3_g=$(g)_nu=$(ν)_n=1_m=-1_mult_g")
+        for T in Ts
+            push!(folders, "full_model_L=64_T=$(T)_g=$(g)_nu=$(ν)_n=1_m=-1_mult_g")
+        end
     end
 end
 
@@ -219,6 +222,16 @@ for folder in folders
         plt_Sy = heatmap(kx, ky, Sy_avg; aspect_ratio=1.0, title="Sx, T = $(T_round), L₁=$(L₁)", clims=(0, clim_max_meas))
         savefig(plt_Sx, xy_vortex_path*"/Sx_avg_T=$(T_round)")
         savefig(plt_Sy, xy_vortex_path*"/Sy_avg_T=$(T_round)")
+
+        # Plotting average xy vorticity
+        # Setting color limits if not already set
+        if !isfile("real_vorticity.jld")
+            clims_v_max = maximum(Vx_avg); clims_v_min = minimum(Vx_avg)
+        end
+        plt_Vx = heatmap(Vx_avg; aspect_ratio=1.0, clims=(clims_v_min, clims_v_max), title="Vx_avg, z averaged, T=$(T_round), M=$(M)")
+        plt_Vy = heatmap(Vy_avg; aspect_ratio=1.0, clims=(clims_v_min, clims_v_max), title="Vy_avg, z averaged, T=$(T_round), M=$(M)")
+        savefig(plt_Vx, xy_vortex_path*"/Vx_long_avg_T=$(T_round).png")
+        savefig(plt_Vy, xy_vortex_path*"/Vy_long_avg_T=$(T_round).png")
     end
 
     
@@ -317,17 +330,17 @@ for folder in folders
                      xaxis="MCS", yaxis="Acceptance rate %", title="Acceptance rates from T=$(temp_col[1])")
     savefig(ar_plt, "Cooldown/cooldown AR.pdf")
 
-    sp_path = "S+_progress"
-    mkcd(sp_path)
-    cd("../")
-
-    steps = length(S⁺_col)
-    for s = 1:steps
-        S⁺_step = S⁺_col[s]
-        plt = heatmap(S⁺_step; aspect_ratio=1.0, clims=(0, clim_max_col), 
-            title="S⁺, T=$(round(temp_col[s]; digits=2)), L₁=$(L₁), E=$(round(E_col[(s-1)*M_pr_step+1]; digits=2))")
-        savefig(plt, sp_path*"/step=$(lpad(s,4,'0')).png")
-    end
+#    sp_path = "S+_progress"
+#    mkcd(sp_path)
+#    cd("../")
+#
+#    steps = length(S⁺_col)
+#    for s = 1:steps
+#        S⁺_step = S⁺_col[s]
+#        plt = heatmap(S⁺_step; aspect_ratio=1.0, clims=(0, clim_max_col), 
+#            title="S⁺, T=$(round(temp_col[s]; digits=2)), L₁=$(L₁), E=$(round(E_col[(s-1)*M_pr_step+1]; digits=2))")
+#        savefig(plt, sp_path*"/step=$(lpad(s,4,'0')).png")
+#    end
 
     # Exiting back to call folder
     cd("../")

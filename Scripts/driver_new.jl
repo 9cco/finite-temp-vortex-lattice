@@ -249,7 +249,6 @@ t_col = @elapsed for step = 1:N_steps
         for (k, cub) = enumerate(cubs)
             δE = δE_lists[k][1]
             accepts = accepts_lists[k][1]
-            δE, accepts = mcSweepEnUp!(cub)
             E_matrix[(step-1)*M_pr_step+i+1, k] = E_matrix[(step-1)*M_pr_step+i, k] + δE
             accepts_matrix[(step-1)*M_pr_step+i, k] = accepts
             proj_V⁺, proj_V⁻ = xyVortexSnapshot(cub)
