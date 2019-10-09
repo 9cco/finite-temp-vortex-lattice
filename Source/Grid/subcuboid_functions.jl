@@ -21,14 +21,15 @@ struct SystConstants
     g⁻²::Float64  # 1/g² for gauge coupling g
     ν::Float64    # Anisotropy constant
     κ₅::Float64   # z-layer coupling.
+    κ::Float64    # MGT term weight.
     n::Int64     # Extended Landau Gauge s.t. n | L₁ and m | L₂
     m::Int64     # and determine the magnetic filling fraction
     A₁_frac::Float64    # Coefficient for calculating constant gauge field
     A₂_frac::Float64
     f::Float64   # Filling fraction
-    function SystConstants(L₁, L₂, L₃, g⁻², ν, κ₅, n, m, A₁_frac, A₂_frac, f)
+    function SystConstants(L₁, L₂, L₃, g⁻², ν, κ₅, κ, n, m, A₁_frac, A₂_frac, f)
         if ((n == 0 || L₁%n == 0) && (m == 0 || L₂%m == 0))
-            new(Int64(L₁), Int64(L₂), Int64(L₃), Float64(g⁻²), Float64(ν), Float64(κ₅), Int64(n), Int64(m), Float64(A₁_frac), Float64(A₂_frac), Float64(f))
+            new(Int64(L₁), Int64(L₂), Int64(L₃), Float64(g⁻²), Float64(ν), Float64(κ₅), Float64(κ), Int64(n), Int64(m), Float64(A₁_frac), Float64(A₂_frac), Float64(f))
         else
             error("$(n) and $(m) do not divide $(L₁) and $(L₂) respectively.")
         end
@@ -187,11 +188,11 @@ end
 
 # -------------------------------------------------------------------------------------------------
 # Outer constructor for SystConstants which calculates the gauge coefficients and filling fraction.
-function SystConstants(L₁::I, L₂::I, L₃::I, g⁻²::F, ν::F, κ₅::F, n::I2, m::I2) where {I<:Int, F<:Real, I2<:Int}
+function SystConstants(L₁::I, L₂::I, L₃::I, g⁻²::F, ν::F, κ₅::F, κ::F, n::I2, m::I2) where {I<:Int, F<:Real, I2<:Int}
     A₁_frac = two_pi*m/L₂
     A₂_frac = two_pi*n/L₁
     f = fillingFraction(n, m, L₁, L₂)
-    SystConstants(L₁, L₂, L₃, g⁻², ν, κ₅, n, m, A₁_frac, A₂_frac, f)
+    SystConstants(L₁, L₂, L₃, g⁻², ν, κ₅, κ, n, m, A₁_frac, A₂_frac, f)
 end
 
 
@@ -232,6 +233,14 @@ import Base.==
 function ==(ϕ₁::LatticeSite, ϕ₂::LatticeSite)
     return (ϕ₁.A₁ == ϕ₂.A₁ && ϕ₁.A₂ == ϕ₂.A₂ && ϕ₁.A₃ == ϕ₂.A₃ && ϕ₁.θ⁺ == ϕ₂.θ⁺ && 
         ϕ₁.θ⁻ == ϕ₂.θ⁻ && ϕ₁.u⁺ == ϕ₂.u⁺ && ϕ₁.u⁻ == ϕ₂.u⁻)
+end
+function ==(s1::SystConstants, s2::SystConstants)
+    return (s1.L₁ == s2.L₁ && s1.L₂ == s2.L₂ && s1.L₃ == s2.L₃ && s1.g⁻² == s2.g⁻² && s1.ν == s2.ν 
+            && s1.κ₅ == s2.κ₅ && s1.κ == s2.κ && s1.n == s2.n && s1.m == s2.m)
+end
+import Base.!=
+function !=(s1::SystConstants, s2::SystConstants)
+    return !(s1 == s2)
 end
 
 # -------------------------------------------------------------------------------------------------
