@@ -6,14 +6,17 @@
 # -----------------------------------------------------------------------------------------------------------
 # General helicity modulus for a twist θ± → θ± + δ(r⋅ω)a± in the ω direction
 function twoCompHelMod(a⁺::R1, a⁻::R1, Υ₁₀::R2, Υ₀₁::R2, Υ₁₁::R2) where {R1<:Real, R2<:Real}
-    (a⁺ - a⁻)(a⁺*Υ₁₀ - a⁻*Υ₀₁) + a⁺*a⁻*Υ₁₁
+    (a⁺ - a⁻)*(a⁺*Υ₁₀ - a⁻*Υ₀₁) + a⁺*a⁻*Υ₁₁
 end
 
 # -----------------------------------------------------------------------------------------------------------
 # Helicity modulus definition, which is dependent on already having calculated thermal averages of the
 # Hamiltonian derivatives
-function helMod(β::R1, L₁::I, L₂::I, L₃::I, d²H_avg::R2, dH²_avg::R2, dH_avg::R2) where {R1<:Real, I<:Int, R2<:Real}
-    (d²H_avg - β*(dH²_avg - dH_avg^2))/(L₁*L₂*L₃)
+function helMod(T::R1, N::I, d²H_avg::R2, dH²_avg::R2, dH_avg::R2) where {R1<:Real, I<:Int, R2<:Real}
+    (d²H_avg - (dH²_avg - dH_avg^2)/T)/N
+end
+function helMod(T::R1, s::SystConstants, d²H_avg::R2, dH²_avg::R2, dH_avg::R2) where {R1<:Real, R2<:Real}
+    helMod(T, s.L₁*s.L₂*s.L₃, d²H_avg, dH²_avg, dH_avg)
 end
 
 # -----------------------------------------------------------------------------------------------------------
@@ -21,24 +24,24 @@ end
 # Since there are two phases the function calculates for a general twist coverned by a⁺ and a⁻
 # First we have a function that converts from the xy-basis to the chiral basis values.
 function firstDerivativeDensityX(a⁺::R, a⁻::R, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, s::SystConstants,
-                                 x::I, y::I, ν::P, κ₅::P) where {P<:Real, I<:Int, R<:Real}
+                                 x::I, y::I, ν::P, κ₅::P, κ::P) where {P<:Real, I<:Int, R<:Real}
 
     A₁ = linkVariableX(ϕ, s)
     A₂ = linkVariableY(ϕ, s)
 
     firstDerivativeDensityX(a⁺, a⁻, findu⁺(ϕ), findu⁻(ϕ), findθ⁺(ϕ), findθ⁻(ϕ), findu⁺(ϕᵣ₊₁), findu⁻(ϕᵣ₊₁), findθ⁺(ϕᵣ₊₁), findθ⁻(ϕᵣ₊₁),
-                           findu⁺(ϕᵣ₊₂), findu⁻(ϕᵣ₊₂), findθ⁺(ϕᵣ₊₂), findθ⁻(ϕᵣ₊₂), A₁, A₂, x, y, ν, κ₅)
+                           findu⁺(ϕᵣ₊₂), findu⁻(ϕᵣ₊₂), findθ⁺(ϕᵣ₊₂), findθ⁻(ϕᵣ₊₂), A₁, A₂, x, y, ν, κ₅, κ)
 end
-function firstDerivativeDensityX(a⁺::R, a⁻::R, u⁺::R, u⁻::R, θ⁺::R, θ⁻::R, u⁺ᵣ₊₁::R, u⁻ᵣ₊₁::R, θ⁺ᵣ₊₁::R, θ⁻ᵣ₊₁, u⁺ᵣ₊₂::R, u⁻ᵣ₊₂::R, θ⁺ᵣ₊₂::R,
-                                 θ⁻ᵣ₊₂::R, A₁::R, A₂::R, x::I, y::I, ν::P, κ₅::P) where {P<:Real, I<:Int, R<:Real}
+function firstDerivativeDensityX(a⁺::R1, a⁻::R1, u⁺::R, u⁻::R, θ⁺::R, θ⁻::R, u⁺ᵣ₊₁::R, u⁻ᵣ₊₁::R, θ⁺ᵣ₊₁::R, θ⁻ᵣ₊₁::R, u⁺ᵣ₊₂::R, u⁻ᵣ₊₂::R, θ⁺ᵣ₊₂::R,
+                                 θ⁻ᵣ₊₂::R, A₁::R, A₂::R, x::I, y::I, ν::P, κ₅::P, κ::P) where {P<:Real, I<:Int, R<:Real, R1<:Real}
 
-    fk_x = 2*(u⁺ᵣ₊₁*u⁺*sin(θ⁺ᵣ₊₁-θ⁺-A₁)a⁺ 
-          + u⁻ᵣ₊₁*u⁻*sin(θ⁻ᵣ₊₁-θ⁻-A₁)a⁻)
+    fk_x = 2*(u⁺ᵣ₊₁*u⁺*sin(θ⁺ᵣ₊₁-θ⁺-A₁)*a⁺ 
+          + u⁻ᵣ₊₁*u⁻*sin(θ⁻ᵣ₊₁-θ⁻-A₁)*a⁻)
     fmc_x = (ν+1)*(u⁺ᵣ₊₁*u⁻*sin(θ⁺ᵣ₊₁ - θ⁻ - A₁)*(a⁺+x*(a⁺-a⁻))
                + u⁻ᵣ₊₁*u⁺*sin(θ⁻ᵣ₊₁ - θ⁺ - A₁)*(a⁻-x*(a⁺-a⁻))
                - x*(a⁺-a⁻)*u⁺ᵣ₊₂*u⁻*sin(θ⁺ᵣ₊₂ - θ⁻ - A₂)
                + x*(a⁺-a⁻)*u⁻ᵣ₊₂*u⁺*sin(θ⁻ᵣ₊₂ - θ⁺ - A₂))
-    fmg_x = (1-ν)*(u⁺ᵣ₊₁*u⁻ᵣ₊₂*cos(θ⁺ᵣ₊₁ - θ⁻ᵣ₊₂ - (A₁ - A₂))*(a⁺+x*(a⁺-a⁻)) 
+    fmg_x = κ*(1-ν)*(u⁺ᵣ₊₁*u⁻ᵣ₊₂*cos(θ⁺ᵣ₊₁ - θ⁻ᵣ₊₂ - (A₁ - A₂))*(a⁺+x*(a⁺-a⁻)) 
                  - u⁺ᵣ₊₁*u⁻*cos(θ⁺ᵣ₊₁ - θ⁻ - A₁)*(a⁺+x*(a⁺-a⁻)) 
                  + x*(a⁺-a⁻)*(-u⁺ᵣ₊₂*u⁻*cos(θ⁺ᵣ₊₂ - θ⁻ - A₂) + u⁺*u⁻*cos(θ⁺-θ⁻))
                  + u⁻ᵣ₊₁*u⁺ᵣ₊₂*cos(θ⁻ᵣ₊₁ - θ⁺ᵣ₊₂ - (A₁ - A₂))*(-a⁻+x*(a⁺-a⁻)) 
@@ -46,21 +49,21 @@ function firstDerivativeDensityX(a⁺::R, a⁻::R, u⁺::R, u⁻::R, θ⁺::R, �
                  + x*(a⁺-a⁻)*(-u⁻ᵣ₊₂*u⁺*cos(θ⁻ᵣ₊₂ - θ⁺ - A₂) + u⁻*u⁺*cos(θ⁻-θ⁺)))
     fv_x = -2*ν*(u⁺*u⁻)^2*x*(a⁺-a⁻)*sin(2(θ⁺ - θ⁻))
 
-    fk_x+fmc_x+fmg_x+fv_x
+    fk_x+fv_x+fmc_x+fmg_x
 end
 # Same but Y-direction
 function firstDerivativeDensityY(a⁺::R, a⁻::R, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, s::SystConstants,
-                                 x::I, y::I, ν::P, κ₅::P) where {P<:Real, I<:Int, R<:Real}
+                                 x::I, y::I, ν::P, κ₅::P, κ::P) where {P<:Real, I<:Int, R<:Real}
 
     A₁ = linkVariableX(ϕ, s)
     A₂ = linkVariableY(ϕ, s)
 
     firstDerivativeDensityY(a⁺, a⁻, findu⁺(ϕ), findu⁻(ϕ), findθ⁺(ϕ), findθ⁻(ϕ), findu⁺(ϕᵣ₊₁), findu⁻(ϕᵣ₊₁), findθ⁺(ϕᵣ₊₁), findθ⁻(ϕᵣ₊₁),
-                           findu⁺(ϕᵣ₊₂), findu⁻(ϕᵣ₊₂), findθ⁺(ϕᵣ₊₂), findθ⁻(ϕᵣ₊₂), A₁, A₂, x, y, ν, κ₅)
+                           findu⁺(ϕᵣ₊₂), findu⁻(ϕᵣ₊₂), findθ⁺(ϕᵣ₊₂), findθ⁻(ϕᵣ₊₂), A₁, A₂, x, y, ν, κ₅, κ)
 end
 
-function firstDerivativeDensityY(a⁺::R, a⁻::R, u⁺::R, u⁻::R, θ⁺::R, θ⁻::R, u⁺ᵣ₊₁::R, u⁻ᵣ₊₁::R, θ⁺ᵣ₊₁::R, θ⁻ᵣ₊₁, u⁺ᵣ₊₂::R, u⁻ᵣ₊₂::R, θ⁺ᵣ₊₂::R,
-                                 θ⁻ᵣ₊₂::R, A₁::R, A₂::R, x::I, y::I, ν::P, κ₅::P) where {P<:Real, I<:Int, R<:Real}
+function firstDerivativeDensityY(a⁺::R1, a⁻::R1, u⁺::R, u⁻::R, θ⁺::R, θ⁻::R, u⁺ᵣ₊₁::R, u⁻ᵣ₊₁::R, θ⁺ᵣ₊₁::R, θ⁻ᵣ₊₁, u⁺ᵣ₊₂::R, u⁻ᵣ₊₂::R, θ⁺ᵣ₊₂::R,
+                                 θ⁻ᵣ₊₂::R, A₁::R, A₂::R, x::I, y::I, ν::P, κ₅::P, κ::P) where {P<:Real, I<:Int, R<:Real, R1<:Real}
 
     fk_y = 2*(u⁺ᵣ₊₂*u⁺*sin(θ⁺ᵣ₊₂-θ⁺-A₂)*a⁺ 
               + u⁻ᵣ₊₂*u⁻*sin(θ⁻ᵣ₊₂-θ⁻-A₂)a⁻)
@@ -68,7 +71,7 @@ function firstDerivativeDensityY(a⁺::R, a⁻::R, u⁺::R, u⁻::R, θ⁺::R, �
                     + u⁻ᵣ₊₂*u⁺*sin(θ⁻ᵣ₊₂ - θ⁺ - A₂)*(a⁻-y*(a⁺-a⁻))
                - y*(a⁺-a⁻)*u⁺ᵣ₊₁*u⁻*sin(θ⁺ᵣ₊₁ - θ⁻ - A₁)
                + y*(a⁺-a⁻)*u⁻ᵣ₊₁*u⁺*sin(θ⁻ᵣ₊₁ - θ⁺ - A₁))
-    fmg_y = (1-ν)*(u⁺ᵣ₊₂*u⁻ᵣ₊₁*cos(θ⁺ᵣ₊₂ - θ⁻ᵣ₊₁ - (A₂ - A₁))*(a⁺+y*(a⁺-a⁻)) 
+    fmg_y = κ*(1-ν)*(u⁺ᵣ₊₂*u⁻ᵣ₊₁*cos(θ⁺ᵣ₊₂ - θ⁻ᵣ₊₁ - (A₂ - A₁))*(a⁺+y*(a⁺-a⁻)) 
                    - u⁺ᵣ₊₂*u⁻*cos(θ⁺ᵣ₊₂ - θ⁻ - A₂)*(a⁺+y*(a⁺-a⁻)) 
                    + y*(a⁺-a⁻)*(-u⁺ᵣ₊₁*u⁻*cos(θ⁺ᵣ₊₁ - θ⁻ - A₁) + u⁺*u⁻*cos(θ⁺-θ⁻))
                    + u⁻ᵣ₊₂*u⁺ᵣ₊₁*cos(θ⁻ᵣ₊₂ - θ⁺ᵣ₊₁ - (A₂ - A₁))*(-a⁻+y*(a⁺-a⁻)) 
@@ -76,22 +79,22 @@ function firstDerivativeDensityY(a⁺::R, a⁻::R, u⁺::R, u⁻::R, θ⁺::R, �
                    + y*(a⁺-a⁻)*(-u⁻ᵣ₊₁*u⁺*cos(θ⁻ᵣ₊₁ - θ⁺ - A₁) + u⁻*u⁺*cos(θ⁻-θ⁺)))
     fv_y = -2*ν*(u⁺*u⁻)^2*y*(a⁺-a⁻)*sin(2(θ⁺ - θ⁻))
 
-    fk_y+fmc_y+fmg_y+fv_y
+    fk_y+fv_y+fmc_y+fmg_y
 end
 # Same but Z-direction
 function  firstDerivativeDensityZ(a⁺::R, a⁻::R, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₃::LatticeSite, s::SystConstants,
-                                  z::I, ν::P, κ₅::P) where {P<:Real, I<:Int, R<:Real}
+                                  z::I, ν::P, κ₅::P, κ) where {P<:Real, I<:Int, R<:Real}
 
     A₁, A₂, A₃ = linkVariables(ϕ, s)
 
     firstDerivativeDensityZ(a⁺, a⁻, findu⁺(ϕ), findu⁻(ϕ), findθ⁺(ϕ), findθ⁻(ϕ), findu⁺(ϕᵣ₊₁), findu⁻(ϕᵣ₊₁), findθ⁺(ϕᵣ₊₁), findθ⁻(ϕᵣ₊₁),
                             findu⁺(ϕᵣ₊₂), findu⁻(ϕᵣ₊₂), findθ⁺(ϕᵣ₊₂), findθ⁻(ϕᵣ₊₂), findu⁺(ϕᵣ₊₃), findu⁻(ϕᵣ₊₃), findθ⁺(ϕᵣ₊₃), findθ⁻(ϕᵣ₊₃),
-                            A₁, A₂, A₃, z, ν, κ₅)
+                            A₁, A₂, A₃, z, ν, κ₅, κ)
 end
 
-function firstDerivativeDensityZ(a⁺::R, a⁻::R, u⁺::R, u⁻::R, θ⁺::R, θ⁻::R, u⁺ᵣ₊₁::R, u⁻ᵣ₊₁::R, θ⁺ᵣ₊₁::R, θ⁻ᵣ₊₁, u⁺ᵣ₊₂::R, u⁻ᵣ₊₂::R, θ⁺ᵣ₊₂::R,
+function firstDerivativeDensityZ(a⁺::R1, a⁻::R1, u⁺::R, u⁻::R, θ⁺::R, θ⁻::R, u⁺ᵣ₊₁::R, u⁻ᵣ₊₁::R, θ⁺ᵣ₊₁::R, θ⁻ᵣ₊₁, u⁺ᵣ₊₂::R, u⁻ᵣ₊₂::R, θ⁺ᵣ₊₂::R,
                                  θ⁻ᵣ₊₂::R, u⁺ᵣ₊₃::R, u⁻ᵣ₊₃::R, θ⁺ᵣ₊₃::R, θ⁻ᵣ₊₃::R, A₁::R, A₂::R, A₃::R,
-                                 z::I, ν::P, κ₅::P) where {P<:Real, I<:Int, R<:Real}
+                                 z::I, ν::P, κ₅::P, κ::P) where {P<:Real, I<:Int, R<:Real, R1<:Real}
 
     dk_z = 2*(u⁺ᵣ₊₃*u⁺*sin(θ⁺ᵣ₊₃-θ⁺-A₃)*a⁺ 
               + u⁻ᵣ₊₃*u⁻*sin(θ⁻ᵣ₊₃-θ⁻-A₃)a⁻)
@@ -99,7 +102,7 @@ function firstDerivativeDensityZ(a⁺::R, a⁻::R, u⁺::R, u⁻::R, θ⁺::R, �
                               - u⁺ᵣ₊₂*u⁻*sin(θ⁺ᵣ₊₂ - θ⁻ - A₂)) 
                    + (a⁻-a⁺)*(u⁻ᵣ₊₁*u⁺*sin(θ⁻ᵣ₊₁ - θ⁺ - A₁) 
                               - u⁻ᵣ₊₂*u⁺*sin(θ⁻ᵣ₊₂ - θ⁺ - A₂)))
-    dmg_z = -(ν-1)z*(a⁺-a⁻)*(u⁺ᵣ₊₁*u⁻ᵣ₊₂*cos(θ⁺ᵣ₊₁-θ⁻ᵣ₊₂-(A₁-A₂)) + u⁺ᵣ₊₁*u⁻*cos(θ⁺ᵣ₊₁-θ⁻-A₁) + u⁺ᵣ₊₂*u⁻*cos(θ⁺ᵣ₊₂-θ⁻-A₂)
+    dmg_z = -κ*(ν-1)z*(a⁺-a⁻)*(u⁺ᵣ₊₁*u⁻ᵣ₊₂*cos(θ⁺ᵣ₊₁-θ⁻ᵣ₊₂-(A₁-A₂)) + u⁺ᵣ₊₁*u⁻*cos(θ⁺ᵣ₊₁-θ⁻-A₁) + u⁺ᵣ₊₂*u⁻*cos(θ⁺ᵣ₊₂-θ⁻-A₂)
                              + u⁺*u⁻*cos(θ⁺-θ⁻)
                             +u⁻ᵣ₊₁*u⁺ᵣ₊₂*cos(θ⁻ᵣ₊₁-θ⁺ᵣ₊₂-(A₁-A₂)) + u⁻ᵣ₊₁*u⁺*cos(θ⁻ᵣ₊₁-θ⁺-A₁) + u⁻ᵣ₊₂*u⁺*cos(θ⁻ᵣ₊₂-θ⁺-A₂)
                             + u⁻*u⁺*cos(θ⁻-θ⁺))
@@ -114,25 +117,25 @@ end
 # Calculates the density of second derivative of the free energy w.r.t. a twist in x direction
 # for a general (a⁺, a⁻) twist.
 function secondDerivativeDensityX(a⁺::R, a⁻::R, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, s::SystConstants,
-                                  x::I, y::I, ν::P, κ₅::P) where {P<:Real, I<:Int, R<:Real}
+                                  x::I, y::I, ν::P, κ₅::P, κ::P) where {P<:Real, I<:Int, R<:Real}
 
     A₁ = linkVariableX(ϕ, s)
     A₂ = linkVariableY(ϕ, s)
 
     secondDerivativeDensityX(a⁺, a⁻, findu⁺(ϕ), findu⁻(ϕ), findθ⁺(ϕ), findθ⁻(ϕ), findu⁺(ϕᵣ₊₁), findu⁻(ϕᵣ₊₁), findθ⁺(ϕᵣ₊₁), findθ⁻(ϕᵣ₊₁),
-                            findu⁺(ϕᵣ₊₂), findu⁻(ϕᵣ₊₂), findθ⁺(ϕᵣ₊₂), findθ⁻(ϕᵣ₊₂), A₁, A₂, x, ν, κ₅)
+                            findu⁺(ϕᵣ₊₂), findu⁻(ϕᵣ₊₂), findθ⁺(ϕᵣ₊₂), findθ⁻(ϕᵣ₊₂), A₁, A₂, x, ν, κ₅, κ)
 end
 
-function secondDerivativeDensityX(a⁺::R, a⁻::R, u⁺::R, u⁻::R, θ⁺::R, θ⁻::R, u⁺ᵣ₊₁::R, u⁻ᵣ₊₁::R, θ⁺ᵣ₊₁::R, θ⁻ᵣ₊₁, u⁺ᵣ₊₂::R, u⁻ᵣ₊₂::R, θ⁺ᵣ₊₂::R,
-                                 θ⁻ᵣ₊₂::R, A₁::R, A₂::R, x::I, ν::P, κ₅::P) where {P<:Real, I<:Int, R<:Real}
+function secondDerivativeDensityX(a⁺::R1, a⁻::R1, u⁺::R, u⁻::R, θ⁺::R, θ⁻::R, u⁺ᵣ₊₁::R, u⁻ᵣ₊₁::R, θ⁺ᵣ₊₁::R, θ⁻ᵣ₊₁::R, u⁺ᵣ₊₂::R, u⁻ᵣ₊₂::R, θ⁺ᵣ₊₂::R,
+                                 θ⁻ᵣ₊₂::R, A₁::R, A₂::R, x::I, ν::P, κ₅::P, κ::P) where {P<:Real, I<:Int, R<:Real, R1<:Real}
 
-    ddk_x = 2*(u⁺ᵣ₊₁*u⁺*cos(θ⁺ᵣ₊₁-θ⁺-A₁)(a⁺)^2
-               + u⁻ᵣ₊₁*u⁻*cos(θ⁻ᵣ₊₁-θ⁻-A₁)(a⁻)^2)
+    ddk_x = 2*(u⁺ᵣ₊₁*u⁺*cos(θ⁺ᵣ₊₁-θ⁺-A₁)*(a⁺)^2
+               + u⁻ᵣ₊₁*u⁻*cos(θ⁻ᵣ₊₁-θ⁻-A₁)*(a⁻)^2)
     ddmc_x = (ν+1)*(u⁺ᵣ₊₁*u⁻*cos(θ⁺ᵣ₊₁ - θ⁻ - A₁)*(a⁺+x*(a⁺-a⁻))^2
                + u⁻ᵣ₊₁*u⁺*cos(θ⁻ᵣ₊₁ - θ⁺ - A₁)*(-a⁻+x*(a⁺-a⁻))^2
                - x^2*(a⁺-a⁻)^2*u⁺ᵣ₊₂*u⁻*cos(θ⁺ᵣ₊₂ - θ⁻ - A₂)
                - x^2*(a⁺-a⁻)^2*u⁻ᵣ₊₂*u⁺*cos(θ⁻ᵣ₊₂ - θ⁺ - A₂))
-    ddmg_x = (ν-1)*(u⁺ᵣ₊₁*u⁻ᵣ₊₂*sin(θ⁺ᵣ₊₁ - θ⁻ᵣ₊₂ - (A₁ - A₂))*(a⁺+x*(a⁺-a⁻))^2 
+    ddmg_x = κ*(ν-1)*(u⁺ᵣ₊₁*u⁻ᵣ₊₂*sin(θ⁺ᵣ₊₁ - θ⁻ᵣ₊₂ - (A₁ - A₂))*(a⁺+x*(a⁺-a⁻))^2 
                  - u⁺ᵣ₊₁*u⁻*sin(θ⁺ᵣ₊₁ - θ⁻ - A₁)*(a⁺+x*(a⁺-a⁻))^2 
                  + x^2*(a⁺-a⁻)^2*(-u⁺ᵣ₊₂*u⁻*sin(θ⁺ᵣ₊₂ - θ⁻ - A₂) + u⁺*u⁻*sin(θ⁺-θ⁻))
                  - u⁻ᵣ₊₁*u⁺ᵣ₊₂*sin(θ⁻ᵣ₊₁ - θ⁺ᵣ₊₂ - (A₁ - A₂))*(-a⁻+x*(a⁺-a⁻))^2 
@@ -140,29 +143,29 @@ function secondDerivativeDensityX(a⁺::R, a⁻::R, u⁺::R, u⁻::R, θ⁺::R, 
                  - x^2*(a⁺-a⁻)^2*(-u⁻ᵣ₊₂*u⁺*sin(θ⁻ᵣ₊₂ - θ⁺ - A₂) + u⁻*u⁺*sin(θ⁻-θ⁺)))
     ddv_x = -4*ν*(u⁺*u⁻)^2*x^2*(a⁺-a⁻)^2*cos(2(θ⁺ - θ⁻))
 
-    ddk_x+ddmc_x+ddmg_x+ddv_x
+    ddk_x+ddv_x+ddmc_x+ddmg_x
 end
 # Same but in Y-direction
 function secondDerivativeDensityY(a⁺::R, a⁻::R, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, s::SystConstants,
-                                  x::I, y::I, ν::P, κ₅::P) where {P<:Real, I<:Int, R<:Real}
+                                  x::I, y::I, ν::P, κ₅::P, κ::P) where {P<:Real, I<:Int, R<:Real}
 
     A₁ = linkVariableX(ϕ, s)
     A₂ = linkVariableY(ϕ, s)
 
     secondDerivativeDensityY(a⁺, a⁻, findu⁺(ϕ), findu⁻(ϕ), findθ⁺(ϕ), findθ⁻(ϕ), findu⁺(ϕᵣ₊₁), findu⁻(ϕᵣ₊₁), findθ⁺(ϕᵣ₊₁), findθ⁻(ϕᵣ₊₁),
-                            findu⁺(ϕᵣ₊₂), findu⁻(ϕᵣ₊₂), findθ⁺(ϕᵣ₊₂), findθ⁻(ϕᵣ₊₂), A₁, A₂, y, ν, κ₅)
+                            findu⁺(ϕᵣ₊₂), findu⁻(ϕᵣ₊₂), findθ⁺(ϕᵣ₊₂), findθ⁻(ϕᵣ₊₂), A₁, A₂, y, ν, κ₅, κ)
 end
 
-function secondDerivativeDensityY(a⁺::R, a⁻::R, u⁺::R, u⁻::R, θ⁺::R, θ⁻::R, u⁺ᵣ₊₁::R, u⁻ᵣ₊₁::R, θ⁺ᵣ₊₁::R, θ⁻ᵣ₊₁, u⁺ᵣ₊₂::R, u⁻ᵣ₊₂::R, θ⁺ᵣ₊₂::R,
-                                 θ⁻ᵣ₊₂::R, A₁::R, A₂::R, y::I, ν::P, κ₅::P) where {P<:Real, I<:Int, R<:Real}
+function secondDerivativeDensityY(a⁺::R1, a⁻::R1, u⁺::R, u⁻::R, θ⁺::R, θ⁻::R, u⁺ᵣ₊₁::R, u⁻ᵣ₊₁::R, θ⁺ᵣ₊₁::R, θ⁻ᵣ₊₁::R, u⁺ᵣ₊₂::R, u⁻ᵣ₊₂::R, θ⁺ᵣ₊₂::R,
+                                 θ⁻ᵣ₊₂::R, A₁::R, A₂::R, y::I, ν::P, κ₅::P, κ::P) where {P<:Real, I<:Int, R<:Real, R1<:Real}
 
-    ddk_y = 2*(u⁺ᵣ₊₂*u⁺*cos(θ⁺ᵣ₊₂-θ⁺-A₂)(a⁺)^2
-               + u⁻ᵣ₊₂*u⁻*cos(θ⁻ᵣ₊₂-θ⁻-A₂)(a⁻)^2)
+    ddk_y = 2*(u⁺ᵣ₊₂*u⁺*cos(θ⁺ᵣ₊₂-θ⁺-A₂)*(a⁺)^2
+               + u⁻ᵣ₊₂*u⁻*cos(θ⁻ᵣ₊₂-θ⁻-A₂)*(a⁻)^2)
     ddmc_y = -(ν+1)*(u⁺ᵣ₊₂*u⁻*cos(θ⁺ᵣ₊₂ - θ⁻ - A₂)*(a⁺+y*(a⁺-a⁻))^2
                      + u⁻ᵣ₊₂*u⁺*cos(θ⁻ᵣ₊₂ - θ⁺ - A₂)*(-a⁻+y*(a⁺-a⁻))^2
                - y^2*(a⁺-a⁻)^2*u⁺ᵣ₊₁*u⁻*cos(θ⁺ᵣ₊₁ - θ⁻ - A₁)
                - y^2*(a⁺-a⁻)^2*u⁻ᵣ₊₁*u⁺*cos(θ⁻ᵣ₊₁ - θ⁺ - A₁))
-    ddmg_y = (ν-1)*(u⁺ᵣ₊₂*u⁻ᵣ₊₁*sin(θ⁺ᵣ₊₂ - θ⁻ᵣ₊₁ - (A₂ - A₁))*(a⁺+y*(a⁺-a⁻))^2 
+    ddmg_y = κ*(ν-1)*(u⁺ᵣ₊₂*u⁻ᵣ₊₁*sin(θ⁺ᵣ₊₂ - θ⁻ᵣ₊₁ - (A₂ - A₁))*(a⁺+y*(a⁺-a⁻))^2 
                     - u⁺ᵣ₊₂*u⁻*sin(θ⁺ᵣ₊₂ - θ⁻ - A₂)*(a⁺+y*(a⁺-a⁻))^2 
                  + y^2*(a⁺-a⁻)^2*(-u⁺ᵣ₊₁*u⁻*sin(θ⁺ᵣ₊₁ - θ⁻ - A₁) + u⁺*u⁻*sin(θ⁺-θ⁻))
                  - u⁻ᵣ₊₂*u⁺ᵣ₊₁*sin(θ⁻ᵣ₊₂ - θ⁺ᵣ₊₁ - (A₂ - A₁))*(-a⁻+y*(a⁺-a⁻))^2 
@@ -170,26 +173,26 @@ function secondDerivativeDensityY(a⁺::R, a⁻::R, u⁺::R, u⁻::R, θ⁺::R, 
                  - y^2*(a⁺-a⁻)^2*(-u⁻ᵣ₊₁*u⁺*sin(θ⁻ᵣ₊₁ - θ⁺ - A₁) + u⁻*u⁺*sin(θ⁻-θ⁺)))
     ddv_y = -4*ν*(u⁺*u⁻)^2*y^2*(a⁺-a⁻)^2*cos(2(θ⁺ - θ⁻))
 
-    ddk_y+ddmc_y+ddmg_y+ddv_y
+    ddk_y+ddv_y+ddmc_y+ddmg_y
 end
 # Same but in Z-direction
 function secondDerivativeDensityZ(a⁺::R, a⁻::R, ϕ::LatticeSite, ϕᵣ₊₁::LatticeSite, ϕᵣ₊₂::LatticeSite, ϕᵣ₊₃::LatticeSite, s::SystConstants,
-                                  z::I, ν::P, κ₅::P) where {P<:Real, I<:Int, R<:Real}
+                                  z::I, ν::P, κ₅::P, κ::P) where {P<:Real, I<:Int, R<:Real}
 
     A₁, A₂, A₃ = linkVariables(ϕ, s)
 
     secondDerivativeDensityZ(a⁺, a⁻, findu⁺(ϕ), findu⁻(ϕ), findθ⁺(ϕ), findθ⁻(ϕ), findu⁺(ϕᵣ₊₁), findu⁻(ϕᵣ₊₁), findθ⁺(ϕᵣ₊₁), findθ⁻(ϕᵣ₊₁),
                              findu⁺(ϕᵣ₊₂), findu⁻(ϕᵣ₊₂), findθ⁺(ϕᵣ₊₂), findθ⁻(ϕᵣ₊₂), findu⁺(ϕᵣ₊₃), findu⁻(ϕᵣ₊₃), findθ⁺(ϕᵣ₊₃), findθ⁻(ϕᵣ₊₃),
-                             A₁, A₂, z, ν, κ₅)
+                             A₁, A₂, A₃, z, ν, κ₅, κ)
 end
-function secondDerivativeDensityZ(a⁺::R, a⁻::R, u⁺::R, u⁻::R, θ⁺::R, θ⁻::R, u⁺ᵣ₊₁::R, u⁻ᵣ₊₁::R, θ⁺ᵣ₊₁::R, θ⁻ᵣ₊₁, u⁺ᵣ₊₂::R, u⁻ᵣ₊₂::R, θ⁺ᵣ₊₂::R,
+function secondDerivativeDensityZ(a⁺::R1, a⁻::R1, u⁺::R, u⁻::R, θ⁺::R, θ⁻::R, u⁺ᵣ₊₁::R, u⁻ᵣ₊₁::R, θ⁺ᵣ₊₁::R, θ⁻ᵣ₊₁, u⁺ᵣ₊₂::R, u⁻ᵣ₊₂::R, θ⁺ᵣ₊₂::R,
                                  θ⁻ᵣ₊₂::R, u⁺ᵣ₊₃::R, u⁻ᵣ₊₃::R, θ⁺ᵣ₊₃::R, θ⁻ᵣ₊₃::R, A₁::R, A₂::R, A₃::R,
-                                 z::I, ν::P, κ₅::P) where {P<:Real, I<:Int, R<:Real}
+                                 z::I, ν::P, κ₅::P, κ::P) where {P<:Real, I<:Int, R<:Real, R1<:Real}
 
     ddk_z = 2*(u⁺ᵣ₊₃*u⁺*cos(θ⁺ᵣ₊₃-θ⁺-A₃)*(a⁺)^2 + u⁻ᵣ₊₃*u⁻*cos(θ⁻ᵣ₊₃-θ⁻-A₃)*(a⁻)^2)
     ddmc_z = (ν+1)*z^2*(a⁺-a⁻)^2*(u⁺ᵣ₊₁*u⁻*cos(θ⁺ᵣ₊₁-θ⁻-A₁) - u⁺ᵣ₊₂*u⁻*cos(θ⁺ᵣ₊₂-θ⁻-A₂)
                                   + u⁻ᵣ₊₁*u⁺*cos(θ⁻ᵣ₊₁-θ⁺-A₁) - u⁻ᵣ₊₂*u⁺*cos(θ⁻ᵣ₊₂-θ⁺-A₂))
-    ddmg_z = (ν-1)*z^2*(a⁺-a⁻)^2*(u⁺ᵣ₊₁*u⁻ᵣ₊₂*sin(θ⁺ᵣ₊₁-θ⁻ᵣ₊₂ - (A₁-A₂)) + u⁺ᵣ₊₁*u⁻*sin(θ⁺ᵣ₊₁-θ⁻-A₁) 
+    ddmg_z = κ*(ν-1)*z^2*(a⁺-a⁻)^2*(u⁺ᵣ₊₁*u⁻ᵣ₊₂*sin(θ⁺ᵣ₊₁-θ⁻ᵣ₊₂ - (A₁-A₂)) + u⁺ᵣ₊₁*u⁻*sin(θ⁺ᵣ₊₁-θ⁻-A₁) 
                                   + u⁺ᵣ₊₂*u⁻*sin(θ⁺ᵣ₊₂-θ⁻-A₂) + u⁺*u⁻*sin(θ⁺-θ⁻)
                                 -(u⁻ᵣ₊₁*u⁺ᵣ₊₂*sin(θ⁻ᵣ₊₁-θ⁺ᵣ₊₂ - (A₁-A₂)) + u⁻ᵣ₊₁*u⁺*sin(θ⁻ᵣ₊₁-θ⁺-A₁) 
                                   + u⁻ᵣ₊₂*u⁺*sin(θ⁻ᵣ₊₂-θ⁺-A₂) + u⁻*u⁺*sin(θ⁻-θ⁺)))
@@ -207,6 +210,7 @@ function firstDerivativeTwist(ψ::Cuboid, a⁺::R, a⁻::R) where R<:Real
     L₁ = s.L₁
     ν = s.ν
     κ₅ = s.κ₅
+    κ = s.κ
 
     # Define dynamic function to be used in lattice sum.
     function densityFunkX(ϕ::LatticeSite, nb::NearestNeighbors, x::I, y::I, z::I) where I<:Int
@@ -214,14 +218,14 @@ function firstDerivativeTwist(ψ::Cuboid, a⁺::R, a⁻::R) where R<:Real
         ϕᵣ₊₁ = nb.ϕᵣ₊₁
         ϕᵣ₊₂ = nb.ϕᵣ₊₂
 
-        firstDerivativeDensityX(a⁺, a⁻, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, s, x, y, ν, κ₅)
+        firstDerivativeDensityX(a⁺, a⁻, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, s, x-1, y-1, ν, κ₅, κ)
     end
     function densityFunkY(ϕ::LatticeSite, nb::NearestNeighbors, x::I, y::I, z::I) where I<:Int
 
         ϕᵣ₊₁ = nb.ϕᵣ₊₁
         ϕᵣ₊₂ = nb.ϕᵣ₊₂
 
-        firstDerivativeDensityY(a⁺, a⁻, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, s, x, y, ν, κ₅)
+        firstDerivativeDensityY(a⁺, a⁻, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, s, x-1, y-1, ν, κ₅, κ)
     end
     function densityFunkZ(ϕ::LatticeSite, nb::NearestNeighbors, x::I, y::I, z::I) where I<:Int
 
@@ -229,11 +233,29 @@ function firstDerivativeTwist(ψ::Cuboid, a⁺::R, a⁻::R) where R<:Real
         ϕᵣ₊₂ = nb.ϕᵣ₊₂
         ϕᵣ₊₃ = nb.ϕᵣ₊₃
 
-        firstDerivativeDensityZ(a⁺, a⁻, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₃, s, z, ν, κ₅)
+        firstDerivativeDensityZ(a⁺, a⁻, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₃, s, z-1, ν, κ₅, κ)
     end
 
     (latticeSiteNeighborSum(densityFunkX, ψ, Float64), latticeSiteNeighborSum(densityFunkY, ψ, Float64),
      latticeSiteNeighborSum(densityFunkZ, ψ, Float64))
+end
+
+# Runs firstDerivativeTwist on each of the states in the list in parallel. 
+function firstDerivativeTwist(cubs::Array{Cuboid, 1}, a⁺::R, a⁻::R) where R<:Real
+    N_c = length(cubs)
+
+    dH_triplets = Array{Tuple{Float64,Float64,Float64}, 1}(undef, N_c)
+    futures = [Future() for cub in cubs]
+    avail = findAvailProc(cubs)
+#    start_pid = cubs[1].grid[1].where-length(cubs)
+    for (i, cub) = enumerate(cubs)
+        futures[i] = @spawnat avail[i] firstDerivativeTwist(cub, a⁺, a⁻)
+#        futures[i] = @spawnat (mod(start_pid+i-2,nprocs())+1) firstDerivativeTwist(cub, a⁺, a⁻)
+    end
+    for (i, fut) = enumerate(futures)
+        dH_triplets[i] = fetch(fut)
+    end
+    dH_triplets
 end
 
 # -----------------------------------------------------------------------------------------------------------
@@ -244,6 +266,7 @@ function secondDerivativeTwist(ψ::Cuboid, a⁺::R, a⁻::R) where R<:Real
     L₁ = s.L₁
     ν = s.ν
     κ₅ = s.κ₅
+    κ = s.κ
 
     # Define dynamic function to be used in lattice sum.
     function densityFunkX(ϕ::LatticeSite, nb::NearestNeighbors, x::I, y::I, z::I) where I<:Int
@@ -251,14 +274,14 @@ function secondDerivativeTwist(ψ::Cuboid, a⁺::R, a⁻::R) where R<:Real
         ϕᵣ₊₁ = nb.ϕᵣ₊₁
         ϕᵣ₊₂ = nb.ϕᵣ₊₂
 
-        secondDerivativeDensityX(a⁺, a⁻, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, s, x, y, ν, κ₅)
+        secondDerivativeDensityX(a⁺, a⁻, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, s, x-1, y-1, ν, κ₅, κ)
     end
     function densityFunkY(ϕ::LatticeSite, nb::NearestNeighbors, x::I, y::I, z::I) where I<:Int
 
         ϕᵣ₊₁ = nb.ϕᵣ₊₁
         ϕᵣ₊₂ = nb.ϕᵣ₊₂
 
-        secondDerivativeDensityY(a⁺, a⁻, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, s, x, y, ν, κ₅)
+        secondDerivativeDensityY(a⁺, a⁻, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, s, x-1, y-1, ν, κ₅, κ)
     end
     function densityFunkZ(ϕ::LatticeSite, nb::NearestNeighbors, x::I, y::I, z::I) where I<:Int
 
@@ -266,10 +289,27 @@ function secondDerivativeTwist(ψ::Cuboid, a⁺::R, a⁻::R) where R<:Real
         ϕᵣ₊₂ = nb.ϕᵣ₊₂
         ϕᵣ₊₃ = nb.ϕᵣ₊₃
 
-        secondDerivativeDensityZ(a⁺, a⁻, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₃, s, z, ν, κ₅)
+        secondDerivativeDensityZ(a⁺, a⁻, ϕ, ϕᵣ₊₁, ϕᵣ₊₂, ϕᵣ₊₃, s, z-1, ν, κ₅, κ)
     end
 
     (latticeSiteNeighborSum(densityFunkX, ψ, Float64), latticeSiteNeighborSum(densityFunkY, ψ, Float64),
      latticeSiteNeighborSum(densityFunkZ, ψ, Float64))
 end
 
+# Runs secondDerivativeTwist on each of the states in the list in parallel. 
+function secondDerivativeTwist(cubs::Array{Cuboid, 1}, a⁺::R, a⁻::R) where R<:Real
+    N_c = length(cubs)
+
+    d²H_triplets = Array{Tuple{Float64,Float64,Float64}, 1}(undef, N_c)
+    futures = [Future() for cub in cubs]
+    avail = findAvailProc(cubs)
+#    start_pid = cubs[1].grid[1].where-length(cubs)
+    for (i, cub) = enumerate(cubs)
+        futures[i] = @spawnat avail[i] secondDerivativeTwist(cub, a⁺, a⁻)
+#        futures[i] = @spawnat (mod(start_pid+i-2,nprocs())+1) secondDerivativeTwist(cub, a⁺, a⁻)
+    end
+    for (i, fut) = enumerate(futures)
+        d²H_triplets[i] = fetch(fut)
+    end
+    d²H_triplets
+end
