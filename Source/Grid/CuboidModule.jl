@@ -3,7 +3,7 @@ module CuboidModule
 export SystConstants, Cuboid, mcSweep!, mcSweepEnUp!, energy, two_pi
 export latticeMap, latticeSiteNeighborMap, latticeSiteMap
 export shellSize, getLattice, fluxDensity, setTemp!, tuneUpdates!, printControls, estimateAR!
-export getBeta, copy, avgZ
+export getBeta, copy, avgZ, getTemp
 export specificHeat, xyVortexSnapshot, vortexSnapshot, getSyst, getControls, chiralAmplitudeSnapshot
 export retuneUpdates!, setUpdates!
 export nMCS!, nMCSEnUp!, xyVortexSnapshotXYBasis
@@ -263,6 +263,17 @@ function Cuboid(choice::Int64, syst::SystConstants, splits::Tuple{I,I,I}, β::Fl
     Cuboid(lattice, syst, sim, splits, β; pid_start=pid_start)
 end
 
+# Finds aviable process ids that are not occupied with sub-cuboids.
+function findAvailProc(cubs::Array{Cuboid, 1})
+    # Finding used workers
+    used = Array{Int64, 1}(undef, 0)
+    for cub in cubs
+        for sc in cub.grid
+            push!(used, sc.where)
+        end
+    end
+    setdiff(vcat([1], workers()), used)
+end
 
 ############################################################################################################################
 #                               MC Functions
@@ -327,9 +338,10 @@ end
 # Runs n MCS on each of the states in the list in parallel. 
 function nMCS!(cubs::Array{Cuboid, 1}, n::Int)
     futures = [Future() for cub in cubs]
-    start_pid = cubs[1].grid[1].where-length(cubs)
+    avail = findAvailProc(cubs)
+#    start_pid = cubs[1].grid[1].where-length(cubs)
     for (i, cub) = enumerate(cubs)
-        futures[i] = @spawnat (mod(start_pid+i-2,nprocs())+1) nMCS!(cub, n)
+        futures[i] = @spawnat avail[i] nMCS!(cub, n)
     end
     for fut in futures; wait(fut); end
     nothing
@@ -414,9 +426,11 @@ function nMCSEnUp!(cubs::Array{Cuboid, 1}, n::Int)
     dE_lists = Array{Array{Float64, 1}, 1}(undef, N_c)
     updates_lists = Array{Array{Int64, 1}, 1}(undef, N_c)
     futures = [Future() for cub in cubs]
-    start_pid = cubs[1].grid[1].where-length(cubs)
+    avail = findAvailProc(cubs)
+#    start_pid = cubs[1].grid[1].where-length(cubs)
     for (i, cub) = enumerate(cubs)
-        futures[i] = @spawnat (mod(start_pid+i-2,nprocs())+1) nMCSEnUp!(cub, n)
+#        futures[i] = @spawnat (mod(start_pid+i-2,nprocs())+1) nMCSEnUp!(cub, n)
+        futures[i] = @spawnat avail[i] nMCSEnUp!(cub, n)
     end
     for (i, fut) = enumerate(futures)
         dE_lists[i], updates_lists[i] = fetch(fut)
@@ -906,11 +920,12 @@ function latticeSiteNeighborSum(funk::Function, cub::Cuboid, T::DataType)
     futures = [Future() for i = 1:length(cub.grid)]
     
     for (i, chan) = enumerate(cub.grid)
-        futures[i] = @spawnat chan.where latticeSiteNeighborSum(funk, chan, range_grid[i], T)
+        futures[i] = @spawnat chan.where latticeSiteNeighborSum(funk, chan, cub.range_grid[i], T)
     end
     
-    for (i, ranges) = enumerate(cub.range_grid)
-        s += fetch(futures[i])
+    for i = 1:length(cub.grid)
+        res = fetch(futures[i])
+        s += T(res)
     end
     
     s
@@ -926,6 +941,10 @@ end
 # Get the inverse temperature of the system
 function getBeta(ψ::Cuboid)
     getSubCuboidProperty(sc -> sc.β, ψ.grid[1])
+end
+# Get the temperature
+function getTemp(ψ::Cuboid)
+    1/getBeta(ψ)
 end
 
 # Get the simulations constants in the system.

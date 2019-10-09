@@ -16,7 +16,7 @@ function proposeLocalUpdate(ϕ::LatticeSite, sim::Controls)
     return LatticeSite(ϕ.A₁+rand(sim.A_rng), ϕ.A₂+rand(sim.A_rng),
                         ϕ.A₃+rand(sim.A_rng),
         (2*rand()-1)*π, (2*rand()-1)*π, # Get θ ∈ [-π, π)
-    #   mod(ϕ.θ⁺ + rand(sim.θ_rng), 2π)-π, mod(ϕ.θ⁻ + rand(sim.θ_rng), 2π)-π, #0.0,#
+    #   mod(ϕ.θ⁺ + π + rand(sim.θ_rng), 2π)-π, mod(ϕ.θ⁻ + π + rand(sim.θ_rng), 2π)-π, #0.0,#
         u⁺, u⁻, ϕ.x, ϕ.y)
     #return LatticeSite([0, 0, 0],
     #    mod(ϕ.θ⁺ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), mod(ϕ.θ⁻ + rand(Uniform(-sim.θmax,sim.θmax)), 2π), 
