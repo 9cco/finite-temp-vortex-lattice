@@ -37,15 +37,16 @@ pyplot()
 using JLD
 
 gs = [0.3]
-nus = [-0.5, 0.0, 0.5, 0.7]
-Ts = [1.7]
+nus = [0.3]
+Ts = [4.0, 2.5, 2.0, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4, 1.3, 1.2]
+κs = [1.0]
 clim_max_meas = 0.02
 clim_max_col = 0.02
 folders = Array{AbstractString, 1}(undef, 0)
 for ν in nus
-    for g in gs
+    for κ in κs
         for T in Ts
-            push!(folders, "full_model_L=64_T=$(T)_g=$(g)_nu=$(ν)_n=1_m=-1_mult_g")
+            push!(folders, "full_model_L=32_T=$(T)_g=0.316_nu=$(ν)_kap=$(κ)_n=1_m=0_mult_kap")
         end
     end
 end
@@ -61,14 +62,14 @@ for folder in folders
 
     num_blocks = 2^7
     meta_di = JLD.load("meta.jld")
-    n = meta_di["n"]; m = meta_di["m"]; M = meta_di["M"]; T = meta_di["T"]; κ₅ = meta_di["kappa"];
+    n = meta_di["n"]; m = meta_di["m"]; M = meta_di["M"]; T = meta_di["T"]; κ₅ = meta_di["kap5"]; κ = meta_di["kap"]
     Δt = meta_di["dt"]; L₁ = meta_di["L1"]; L₂ = meta_di["L2"]; L₃ = meta_di["L3"]; g = meta_di["g"]; ν = meta_di["nu"]
     M_amp = meta_di["M_amp"];
     N_g = 1
 
     f = n/L₁ - m/L₂
     println("\nfL₁ = $(f*L₁), L₁ = $(L₁), L₂ = $(L₂), L₃ = $(L₃), g = $(g)")
-    println("T = $(T), ν = $(ν), κ₅ = $(κ₅), n = $(n), m = $(m)")
+    println("T = $(T), ν = $(ν), κ₅ = $(κ₅), κ = $(κ), n = $(n), m = $(m)")
     T_round = round(T; digits=2)
     N = L₁*L₂*L₃;
 
@@ -196,9 +197,10 @@ for folder in folders
         V⁺_avg  = real_vo_di["vp_avg"]; V⁻_avg = real_vo_di["vm_avg"];
 
         # Setting color limits of average vorticity plots.
-        clims_v_max = maximum(V⁺_avg); clims_v_min = minimum(V⁺_avg)
-        plt⁺ = heatmap(V⁺_avg; aspect_ratio=1.0, clims=(clims_v_min, clims_v_max), title="V⁺_avg, z averaged, T=$(T_round), M=$(M)")
-        plt⁻ = heatmap(V⁻_avg; aspect_ratio=1.0, clims=(clims_v_min, clims_v_max), title="V⁻_avg, z averaged, T=$(T_round), M=$(M)")
+        clims_v⁺_max = maximum(V⁺_avg); clims_v⁺_min = minimum(V⁺_avg)
+        clims_v⁻_max = maximum(V⁺_avg); clims_v⁻_min = minimum(V⁺_avg)
+        plt⁺ = heatmap(V⁺_avg; aspect_ratio=1.0, clims=(clims_v⁺_min, clims_v⁺_max), title="V⁺_avg, z averaged, T=$(T_round), M=$(M)")
+        plt⁻ = heatmap(V⁻_avg; aspect_ratio=1.0, clims=(clims_v⁻_min, clims_v⁻_max), title="V⁻_avg, z averaged, T=$(T_round), M=$(M)")
         savefig(plt⁺, "V+/V+_long_avg_T=$(T_round).png")
         savefig(plt⁻, "V-/V-_long_avg_T=$(T_round).png")
     end
@@ -224,10 +226,8 @@ for folder in folders
         savefig(plt_Sy, xy_vortex_path*"/Sy_avg_T=$(T_round)")
 
         # Plotting average xy vorticity
-        # Setting color limits if not already set
-        if !isfile("real_vorticity.jld")
-            clims_v_max = maximum(Vx_avg); clims_v_min = minimum(Vx_avg)
-        end
+        # Setting color limits
+        clims_v_max = maximum(Vx_avg); clims_v_min = minimum(Vx_avg)
         plt_Vx = heatmap(Vx_avg; aspect_ratio=1.0, clims=(clims_v_min, clims_v_max), title="Vx_avg, z averaged, T=$(T_round), M=$(M)")
         plt_Vy = heatmap(Vy_avg; aspect_ratio=1.0, clims=(clims_v_min, clims_v_max), title="Vy_avg, z averaged, T=$(T_round), M=$(M)")
         savefig(plt_Vx, xy_vortex_path*"/Vx_long_avg_T=$(T_round).png")
@@ -293,18 +293,18 @@ for folder in folders
     N_steps = cooldown_di["N_steps"]
     M_col = M_pr_step*N_steps
     M_est = cooldown_di["M_est"]
-    S⁺_col = cooldown_di["sp"];
+    #S⁺_col = cooldown_di["sp"];
     E_col = cooldown_di["E_list"]
     accepts_col = cooldown_di["accepts_list"]
     temp_col = cooldown_di["temp_list"];
 
     println("Cooldown:")
-    println("Steps pr. temp.: $(steps = length(S⁺_col))")
+    println("Steps pr. temp.: $(steps = length(M_pr_step))")
     normalization = (L₁*L₂*f*two_pi)^2
-    S⁺_col = S⁺_col ./ normalization
+    #S⁺_col = S⁺_col ./ normalization
     #S⁺_col_by_T = [S⁺_steps./normalization for S⁺_steps in S⁺_col_by_T];
-    kx = [two_pi/L₁*(x-1-L₁/2) for x = 1:L₁]
-    ky = [two_pi/L₂*(y-1-L₂/2) for y = 1:L₂];
+    #kx = [two_pi/L₁*(x-1-L₁/2) for x = 1:L₁]
+    #ky = [two_pi/L₂*(y-1-L₂/2) for y = 1:L₂];
     mkcd("Cooldown")
     cd("../")
 
