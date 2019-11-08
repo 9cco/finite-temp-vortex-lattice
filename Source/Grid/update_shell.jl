@@ -47,7 +47,7 @@ function updateShell1!(chan::RemoteChannel{Channel{SubCuboid}}, corner246_update
     nothing
 end
 
-function updateShell1Step4!(chan::RemoteChannel{Channel{SubCuboid}}, edge26_update::Vector{Tuple{I,LatticeSite}},
+function updateShell1Step5!(chan::RemoteChannel{Channel{SubCuboid}}, edge26_update::Vector{Tuple{I,LatticeSite}},
                             corner236_update::Vector{LatticeSite}) where I<:Int
     sc = take!(chan)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
@@ -247,7 +247,7 @@ function updateShell4!(chan::RemoteChannel{Channel{SubCuboid}}, corner136_update
     nothing
 end
 
-function updateShell4Step4!(chan::RemoteChannel{Channel{SubCuboid}}, edge36_update::Vector{Tuple{I,LatticeSite}},
+function updateShell4Step5!(chan::RemoteChannel{Channel{SubCuboid}}, edge36_update::Vector{Tuple{I,LatticeSite}},
                             corner236_update::Vector{LatticeSite}) where I<:Int
     sc = take!(chan)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
@@ -314,20 +314,30 @@ function updateShell5!(chan::RemoteChannel{Channel{SubCuboid}}, edge16_point_upd
     nothing
 end
 
-function updateShell5!(chan::RemoteChannel{Channel{SubCuboid}}, edge16_update::Vector{Tuple{I,LatticeSite}},
-                       edge46_update::Vector{Tuple{I,LatticeSite}}, corner246_update::Vector{LatticeSite},
+function updateShell5Step6!(chan::RemoteChannel{Channel{SubCuboid}}, edge16_update::Vector{Tuple{I,LatticeSite}},
                        corner136_update::Vector{LatticeSite}) where I<:Int
     sc = take!(chan)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
     shell_nr = 5
 
     updateShell!(sc, shell_nr, l₁, edge16_update)
+    if length(corner136_update) > 0
+        updateShell!(sc, shell_nr, corner136_update[1], l₁,l₂)
+    end
+
+    put!(chan, sc)
+    nothing
+end
+
+function updateShell5Step7!(chan::RemoteChannel{Channel{SubCuboid}}, edge46_update::Vector{Tuple{I,LatticeSite}},
+                            corner246_update::Vector{LatticeSite}) where I<:Int
+    sc = take!(chan)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    shell_nr = 5
+
     updateShell!(sc, shell_nr, edge46_update, 1)
     if length(corner246_update) > 0
         updateShell!(sc, shell_nr, corner246_update[1], 1,1)
-    end
-    if length(corner136_update) > 0
-        updateShell!(sc, shell_nr, corner136_update[1], l₁,l₂)
     end
 
     put!(chan, sc)
@@ -372,18 +382,28 @@ function updateShell6!(chan::RemoteChannel{Channel{SubCuboid}}, edge15_point_upd
     nothing
 end
 
-function updateShell6!(chan::RemoteChannel{Channel{SubCuboid}}, edge15_update::Vector{Tuple{I,LatticeSite}},
-                       edge45_update::Vector{Tuple{I,LatticeSite}}, corner135_update::Vector{LatticeSite},
-                       corner245_update::Vector{LatticeSite}) where I<:Int
+function updateShell6Step2!(chan::RemoteChannel{Channel{SubCuboid}}, edge15_update::Vector{Tuple{I,LatticeSite}},
+                       corner135_update::Vector{LatticeSite}) where I<:Int
     sc = take!(chan)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
     shell_nr = 6
 
     updateShell!(sc, shell_nr, l₁, edge15_update)
-    updateShell!(sc, shell_nr, edge45_update, 1)
     if length(corner135_update) > 0
         updateShell!(sc, shell_nr, corner135_update[1], l₁, l₂)
     end
+
+    put!(chan, sc)
+    nothing
+end
+
+function updateShell6Step3!(chan::RemoteChannel{Channel{SubCuboid}}, edge45_update::Vector{Tuple{I,LatticeSite}},
+                       corner245_update::Vector{LatticeSite}) where I<:Int
+    sc = take!(chan)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    shell_nr = 6
+
+    updateShell!(sc, shell_nr, edge45_update, 1)
     if length(corner245_update) > 0
         updateShell!(sc, shell_nr, corner245_update[1], 1, 1)
     end
@@ -391,6 +411,7 @@ function updateShell6!(chan::RemoteChannel{Channel{SubCuboid}}, edge15_update::V
     put!(chan, sc)
     nothing
 end
+
 
 function updateShell6!(chan::RemoteChannel{Channel{SubCuboid}}, plane5_update::Vector{Tuple{I,I,LatticeSite}},
                        edge25_update::Vector{Tuple{I,LatticeSite}}, edge35_update::Vector{Tuple{I,LatticeSite}},
@@ -417,6 +438,34 @@ function updateShellEdge!(shell_edge::Vector{LatticeSite}, edge_update::Vector{T
 end
 function updateShellEdge!(shell_edge::Vector{LatticeSite}, ϕ::LatticeSite, i::I) where I<:Int
     set!(shell_edge[i], ϕ)
+end
+
+function updateShellEdge13!(chan::RemoteChannel{Channel{SubCuboid}}, corner246_update::Vector{LatticeSite})
+
+    if length(corner246_update) > 0
+        sc = take!(chan)
+        shell_edge = sc.shell_edge13
+
+        updateShellEdge!(shell_edge, corner246_update[1], 1)
+
+        put!(chan, sc)
+    end
+    nothing
+end
+
+function updateShellEdge13!(chan::RemoteChannel{Channel{SubCuboid}}, edge24_update::Vector{Tuple{I,LatticeSite}},
+                            corner245_update::Vector{LatticeSite}) where I<:Int
+
+    sc = take!(chan)
+    l₃ = sc.consts.l₃
+    shell_edge = sc.shell_edge13
+
+    updateShellEdge!(shell_edge, edge24_update)
+    if length(corner245_update) > 0
+        updateShellEdge!(shell_edge, corner245_update[1], l₃)
+    end
+    put!(chan, sc)
+    nothing
 end
 
 function updateShellEdge14!(chan::RemoteChannel{Channel{SubCuboid}}, corner236_update::Vector{LatticeSite})
@@ -499,6 +548,34 @@ function updateShellEdge23!(chan::RemoteChannel{Channel{SubCuboid}}, edge14_upda
     updateShellEdge!(shell_edge, edge14_update)
     if length(corner145_update) > 0
         updateShellEdge!(shell_edge, corner145_update[1], l₃)
+    end
+
+    put!(chan, sc)
+    nothing
+end
+
+function updateShellEdge24!(chan::RemoteChannel{Channel{SubCuboid}}, corner136_update::Vector{LatticeSite})
+    if length(corner136_update) > 0
+        sc = take!(chan)
+        l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+        shell_edge = sc.shell_edge24
+
+        updateShellEdge!(shell_edge, corner136_update[1], 1)
+
+        put!(chan, sc)
+    end
+    nothing
+end
+
+function updateShellEdge24!(chan::RemoteChannel{Channel{SubCuboid}}, edge13_update::Vector{Tuple{I,LatticeSite}},
+                            corner135_update::Vector{LatticeSite}) where I<:Int
+    sc = take!(chan)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    shell_edge = sc.shell_edge24
+
+    updateShellEdge!(shell_edge, edge13_update)
+    if length(corner135_update) > 0
+        updateShellEdge!(shell_edge, corner135_update[1], l₃)
     end
 
     put!(chan, sc)

@@ -291,21 +291,195 @@ end
 # Protocol Step 2
 # -------------------------------------------------------------------------------------------------
 
-# This function updates the LatticeSites on the SubCuboid that are on planes 1 and 4, except
-# for points with (x=l₁-1, y=1), (x=l₁, y=2), or points on intersection lines. This corresponds to the
+# This function updates the LatticeSites on the SubCuboid that are on plane 1, except
+# for the point (x=l₁, y=2), or points on intersection lines. This corresponds to the
 # updates necessary for step 2 in the sub-cuboid update protocol. Updated points that could be
-# categorized to be in plane 1 or 4 are placed in these variables and returned.
-function updateIntersectionPlanes!(sc::SubCuboid)
+# categorized to be in plane 1 are placed in these variables and returned.
+function updateIntersectionPlanesStep2!(sc::SubCuboid)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
     
     plane1_update = Array{Tuple{Int64,Int64, LatticeSite}, 1}(undef, 0)
+    edge13_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    edge15_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    corner135_update = Array{LatticeSite, 1}(undef, 0)
+
+    
+    # Update points in plane 1 (not y = l₂ || z = l₃)
+    x = l₁
+    for y = 3:l₂-1, z = 2:l₃-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+            push!(plane1_update, (y,z,ϕ))
+        end
+    end
+    # Update the 13 edge except corner
+    x = l₁; y = l₂
+    for z = 2:l₃-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+            push!(edge13_update, (z,ϕ))
+        end
+    end
+    # Update the 15 edge except corner
+    x = l₁; z = l₃
+    for y = 3:l₂-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+            push!(edge15_update, (y,ϕ))
+        end
+    end
+    # To complete the update of plane 1 except intersection lines and z = 1,
+    # we need to update corner 135
+    x = l₁; y = l₂; z = l₃
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        push!(corner135_update, ϕ)
+    end
+
+    plane1_update, edge13_update, edge15_update, corner135_update
+end
+# Same as above, but returns energy difference and the number of updates
+function updateIntersectionPlanesRetEnUpStep2!(sc::SubCuboid)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    
+    plane1_update = Array{Tuple{Int64,Int64, LatticeSite}, 1}(undef, 0)
+    edge13_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    edge15_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    corner135_update = Array{LatticeSite, 1}(undef, 0)
+
+    en_diff = 0.0
+    updates = 0
+    
+    # Update points in plane 1 (not y = l₂ || z = l₃)
+    x = l₁
+    for y = 3:l₂-1, z = 2:l₃-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(plane1_update, (y,z,ϕ))
+        end
+    end
+    # Update the 13 edge except corner
+    x = l₁; y = l₂
+    for z = 2:l₃-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge13_update, (z,ϕ))
+        end
+    end
+    # Update the 15 edge except corner
+    x = l₁; z = l₃
+    for y = 3:l₂-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge15_update, (y,ϕ))
+        end
+    end
+    # To complete the update of plane 1 except intersection lines and z = 1,
+    # we need to update corner 135
+    x = l₁; y = l₂; z = l₃
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(corner135_update, ϕ)
+    end
+
+    plane1_update, edge13_update, edge15_update, corner135_update, en_diff, updates
+end
+
+
+# Suppose that points on plane 1 that are not intersection lines and does not have x=l₁, y=2,
+# have been updated. This affects shell 2,4,6 as well as shell edge 24
+function intersectionPlanesTransferStep2(sc_nb::RemoteNeighbors{SubCuboid}, plane1_update::Vector{Tuple{I,I,LatticeSite}},
+              edge13_update::Vector{Tuple{I,LatticeSite}},
+              edge15_update::Vector{Tuple{I,LatticeSite}}, corner135_update::Vector{LatticeSite}) where I<:Int
+    
+    # SubCuboid scᵣ₊₁ is affected by updates in plane 1 through its shell[2]
+    chan = sc_nb.rnᵣ₊₁
+    remotecall_wait(updateShell2!, chan.where, chan, plane1_update, edge15_update, edge13_update, corner135_update)
+    
+    # SubCuboid scᵣ₊₂ is affected by updates in the 13 edge through the x=l₁ part of its shell[4]
+    chan = sc_nb.rnᵣ₊₂
+    remotecall_wait(updateShell4!, chan.where, chan, edge13_update, corner135_update)
+    # SubCuboid scᵣ₊₃ is affected by updates in the 15 edge through its shell[6]
+    chan = sc_nb.rnᵣ₊₃
+    remotecall_wait(updateShell6Step2!, chan.where, chan, edge15_update, corner135_update)
+
+    # SubCuboid scᵣ₊₁₊₂ is affected by updated in the 13 edge through its shell_edge24
+    chan = sc_nb.rnᵣ₊₁₊₂
+    remotecall_wait(updateShellEdge24!, chan.where, chan, edge13_update, corner135_update)
+    
+    nothing
+end
+
+
+# Takes the remote reference to a sub-cuboid and execute the update protocal step 2 for completely updating all
+# lattice sites of it and transferring updated points to dependent shells in neighboring sub-cuboids.
+function updateTransferIntersectionPlanesStep2!(chan::RemoteChannel{Channel{SubCuboid}})
+    sc = take!(chan)
+    sc_nb = copy(sc.sc_nb)
+   
+    # 2. step: Update and transfer intersection plane 1 except intersection lines and points with (x=l₁, y=2). 
+    (plane1_update, edge13_update, edge15_update, corner135_update) = updateIntersectionPlanesStep2!(sc)
+    put!(chan, sc)
+    intersectionPlanesTransferStep2(sc_nb, plane1_update, edge13_update, edge15_update, corner135_update)
+    
+    nothing
+end
+function updateTransferIntersectionPlanesRetEnUpStep2!(chan::RemoteChannel{Channel{SubCuboid}})
+    sc = take!(chan)
+    sc_nb = copy(sc.sc_nb)
+   
+    # 2. step: Update and transfer intersection plane 1 except intersection lines and points with (x=l₁, y=2). 
+    (plane1_update, edge13_update, edge15_update, corner135_update, en_diff, updates) = updateIntersectionPlanesRetEnUpStep2!(sc)
+    put!(chan, sc)
+    intersectionPlanesTransferStep2(sc_nb, plane1_update, edge13_update, edge15_update, corner135_update)
+    
+    en_diff, updates
+end
+
+
+
+# Protocol Step 3
+# -------------------------------------------------------------------------------------------------
+
+# This function updates the LatticeSites on the SubCuboid that are on plane 4, except
+# for points with (x=l₁-1, y=1) or points on intersection lines. This corresponds to the
+# updates necessary for step 3 in the sub-cuboid update protocol. Updated points that could be
+# categorized to be in plane 4 are placed in these variables and returned.
+function updateIntersectionPlanesStep3!(sc::SubCuboid)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    
     plane4_update = Array{Tuple{Int64,Int64, LatticeSite}, 1}(undef, 0)
     edge24_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
-    edge13_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
     edge45_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
-    edge15_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
     corner245_update = Array{LatticeSite, 1}(undef, 0)
-    corner135_update = Array{LatticeSite, 1}(undef, 0)
 
     
     # First we update the points in plane 4 (not x = 1 || z = l₃)
@@ -348,60 +522,17 @@ function updateIntersectionPlanes!(sc::SubCuboid)
         push!(corner245_update, ϕ)
     end
 
-    # Update points in plane 1 (not y = l₂ || z = l₃)
-    x = l₁
-    for y = 3:l₂-1, z = 2:l₃-1
-        ϕ = sc.lattice[x,y,z]
-        nb = sc.nb[x,y,z]
-        nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
-            push!(plane1_update, (y,z,ϕ))
-        end
-    end
-    # Update the 13 edge except corner
-    x = l₁; y = l₂
-    for z = 2:l₃-1
-        ϕ = sc.lattice[x,y,z]
-        nb = sc.nb[x,y,z]
-        nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
-            push!(edge13_update, (z,ϕ))
-        end
-    end
-    # Update the 15 edge except corner
-    x = l₁; z = l₃
-    for y = 3:l₂-1
-        ϕ = sc.lattice[x,y,z]
-        nb = sc.nb[x,y,z]
-        nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
-            push!(edge15_update, (y,ϕ))
-        end
-    end
-    # To complete the update of plane 1 except intersection lines and z = 1,
-    # we need to update corner 135
-    x = l₁; y = l₂; z = l₃
-    ϕ = sc.lattice[x,y,z]
-    nb = sc.nb[x,y,z]
-    nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
-        push!(corner135_update, ϕ)
-    end
 
-    plane1_update, plane4_update, edge13_update, edge15_update, edge24_update, edge45_update, corner135_update, corner245_update
+    plane4_update, edge24_update, edge45_update, corner245_update
 end
 # Same as above, but returns energy difference and the number of updates
-function updateIntersectionPlanesRetEnUp!(sc::SubCuboid)
+function updateIntersectionPlanesRetEnUpStep3!(sc::SubCuboid)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
     
-    plane1_update = Array{Tuple{Int64,Int64, LatticeSite}, 1}(undef, 0)
     plane4_update = Array{Tuple{Int64,Int64, LatticeSite}, 1}(undef, 0)
     edge24_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
-    edge13_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
     edge45_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
-    edge15_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
     corner245_update = Array{LatticeSite, 1}(undef, 0)
-    corner135_update = Array{LatticeSite, 1}(undef, 0)
 
     en_diff = 0.0
     updates = 0
@@ -458,131 +589,70 @@ function updateIntersectionPlanesRetEnUp!(sc::SubCuboid)
         push!(corner245_update, ϕ)
     end
 
-    # Update points in plane 1 (not y = l₂ || z = l₃)
-    x = l₁
-    for y = 3:l₂-1, z = 2:l₃-1
-        ϕ = sc.lattice[x,y,z]
-        nb = sc.nb[x,y,z]
-        nnb = sc.nnb[x,y,z]
-        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
-        if updated
-            en_diff += δE
-            updates += 1
-            push!(plane1_update, (y,z,ϕ))
-        end
-    end
-    # Update the 13 edge except corner
-    x = l₁; y = l₂
-    for z = 2:l₃-1
-        ϕ = sc.lattice[x,y,z]
-        nb = sc.nb[x,y,z]
-        nnb = sc.nnb[x,y,z]
-        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
-        if updated
-            en_diff += δE
-            updates += 1
-            push!(edge13_update, (z,ϕ))
-        end
-    end
-    # Update the 15 edge except corner
-    x = l₁; z = l₃
-    for y = 3:l₂-1
-        ϕ = sc.lattice[x,y,z]
-        nb = sc.nb[x,y,z]
-        nnb = sc.nnb[x,y,z]
-        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
-        if updated
-            en_diff += δE
-            updates += 1
-            push!(edge15_update, (y,ϕ))
-        end
-    end
-    # To complete the update of plane 1 except intersection lines and z = 1,
-    # we need to update corner 135
-    x = l₁; y = l₂; z = l₃
-    ϕ = sc.lattice[x,y,z]
-    nb = sc.nb[x,y,z]
-    nnb = sc.nnb[x,y,z]
-    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
-    if updated
-        en_diff += δE
-        updates += 1
-        push!(corner135_update, ϕ)
-    end
 
-    plane1_update, plane4_update, edge13_update, edge15_update, edge24_update, edge45_update, corner135_update, corner245_update, en_diff, updates
+    plane4_update, edge24_update, edge45_update, corner245_update, en_diff, updates
 end
 
 
-# Suppose that points on the boundary planes that are not intersection lines and does not have x=l₁-1, y=1 or x=l₁, y=2,
-# have been updated. This affects shell 1-4,6.
-function intersectionPlanesTransfer(sc_nb::RemoteNeighbors{SubCuboid}, plane1_update::Vector{Tuple{I,I,LatticeSite}},
-              plane4_update::Vector{Tuple{I,I,LatticeSite}}, edge13_update::Vector{Tuple{I,LatticeSite}},
-              edge15_update::Vector{Tuple{I,LatticeSite}}, edge24_update::Vector{Tuple{I,LatticeSite}},
-              edge45_update::Vector{Tuple{I,LatticeSite}}, corner135_update::Vector{LatticeSite}, 
+# Suppose that points on the boundary plane 4 that are not intersection lines and does not have x=l₁-1, y=1,
+# have been updated. This affects shell 1,3,6 as well as shell edges 36, 13 and 16.
+function intersectionPlanesTransferStep3(sc_nb::RemoteNeighbors{SubCuboid}, plane4_update::Vector{Tuple{I,I,LatticeSite}},
+              edge24_update::Vector{Tuple{I,LatticeSite}}, edge45_update::Vector{Tuple{I,LatticeSite}}, 
               corner245_update::Vector{LatticeSite}) where I<:Int
     
     # SubCuboid scᵣ₋₂ is affected  by updates in plane 4 through its shell[3]
     chan = sc_nb.rnᵣ₋₂
     remotecall_wait(updateShell3!, chan.where, chan, plane4_update, edge24_update, edge45_update, corner245_update)
-    # SubCuboid scᵣ₊₁ is affected by updates in plane 1 through its shell[2]
-    chan = sc_nb.rnᵣ₊₁
-    remotecall_wait(updateShell2!, chan.where, chan, plane1_update, edge15_update, edge13_update, corner135_update)
     
     # SubCuboid scᵣ₋₁ is affected by updates in the 24 edge through the y=1 part of its shell[1]
     chan = sc_nb.rnᵣ₋₁
     remotecall_wait(updateShell1!, chan.where, chan, edge24_update, corner245_update)
-    # SubCuboid scᵣ₊₂ is affected by updates in the 13 edge through the x=l₁ part of its shell[4]
-    chan = sc_nb.rnᵣ₊₂
-    remotecall_wait(updateShell4!, chan.where, chan, edge13_update, corner135_update)
-    # SubCuboid scᵣ₊₃ is affected by updates in the 45 edge and 15 edge through its shell[6]
+    # SubCuboid scᵣ₊₃ is affected by updates in the 45 edge and 245 corner through its shell[6]
     chan = sc_nb.rnᵣ₊₃
-    remotecall_wait(updateShell6!, chan.where, chan, edge15_update, edge45_update, corner135_update, corner245_update)
+    remotecall_wait(updateShell6Step3!, chan.where, chan, edge45_update, corner245_update)
 
-    # SubCuboid scᵣ₋₂₊₃ is affected by updated in the 45 edge through its shell_edge36
+    # SubCuboid scᵣ₋₂₊₃ is affected by updated in the 45 edge and 245 corner through its shell_edge36
     chan = sc_nb.rnᵣ₋₂₊₃
     remotecall_wait(updateShellEdge36!, chan.where, chan, edge45_update, corner245_update)
     # SubCuboid scᵣ₋₁₊₃ is affected by updates in the 245 corner through its shell_edge16
     chan = sc_nb.rnᵣ₋₁₊₃
     remotecall_wait(updateShellEdge16!, chan.where, chan, corner245_update)
+    # SubCuboid scᵣ₋₁₋₂ is affected by updated in the 24 edge and 245 corner through its shell_edge13
+    chan = sc_nb.rnᵣ₋₁₋₂
+    remotecall_wait(updateShellEdge13!, chan.where, chan, edge24_update, corner245_update)
     
     nothing
 end
 
 
-# Takes the remote reference to a sub-cuboid and execute the update protocal step 2 for completely updating all
-# lattice sites of it and transferring updated points to dependent shells in neighboring sub-cuboids.
-function updateTransferIntersectionPlanes!(chan::RemoteChannel{Channel{SubCuboid}})
+# Takes the remote reference to a sub-cuboid and execute the update protocal step 3 for completely updating all
+# lattice sites of it and transferring updated points to dependent shells and shell-edges in neighboring sub-cuboids.
+function updateTransferIntersectionPlanesStep3!(chan::RemoteChannel{Channel{SubCuboid}})
     sc = take!(chan)
     sc_nb = copy(sc.sc_nb)
    
-    # 2. step: Update and transfer intersection planes except intersection lines and points with (x=l₁-1, y=1)
-    # and (x=l₁, y=2). For z = 1 the completely internal as well as 3 specific points are updated and transferred.
-    (plane1_update, plane4_update, edge13_update, edge15_update,
-     edge24_update, edge45_update, corner135_update, corner245_update) = updateIntersectionPlanes!(sc)
+    # 3. step: Update and transfer intersection planes except intersection lines and points with (x=l₁-1, y=1).
+    (plane4_update, edge24_update, edge45_update, corner245_update) = updateIntersectionPlanesStep3!(sc)
     put!(chan, sc)
-    intersectionPlanesTransfer(sc_nb, plane1_update, plane4_update, edge13_update, edge15_update,
-                               edge24_update, edge45_update, corner135_update, corner245_update)
+    intersectionPlanesTransferStep3(sc_nb, plane4_update, edge24_update, edge45_update, corner245_update)
     
     nothing
 end
-function updateTransferIntersectionPlanesRetEnUp!(chan::RemoteChannel{Channel{SubCuboid}})
+function updateTransferIntersectionPlanesRetEnUpStep3!(chan::RemoteChannel{Channel{SubCuboid}})
     sc = take!(chan)
     sc_nb = copy(sc.sc_nb)
    
-    # 2. step: Update and transfer intersection planes except intersection lines and points with (x=l₁-1, y=1)
-    # and (x=l₁, y=2). For z = 1 the completely internal as well as 3 specific points are updated and transferred.
-    (plane1_update, plane4_update, edge13_update, edge15_update,
-     edge24_update, edge45_update, corner135_update, corner245_update, en_diff, updates) = updateIntersectionPlanesRetEnUp!(sc)
+    # 3. step: Update and transfer intersection planes except intersection lines and points with (x=l₁-1, y=1).
+    (plane4_update, edge24_update, edge45_update, corner245_update, en_diff, updates) = updateIntersectionPlanesRetEnUpStep3!(sc)
     put!(chan, sc)
-    intersectionPlanesTransfer(sc_nb, plane1_update, plane4_update, edge13_update, edge15_update,
-                               edge24_update, edge45_update, corner135_update, corner245_update)
+    intersectionPlanesTransferStep3(sc_nb, plane4_update, edge24_update, edge45_update, corner245_update)
     
     en_diff, updates
 end
 
 
-# Protocol Step 3
+
+# Protocol Step 4
 # Updates the intersection line between plane 4 and 1 in addition to two lines in each plane on each
 # side of the intersection line.
 # -------------------------------------------------------------------------------------------------
@@ -798,7 +868,7 @@ function updateTransferIntersectionLinesRetEnUp!(chan::RemoteChannel{Channel{Sub
 end
 
 
-# Protocol Step 4
+# Protocol Step 5
 # This is a pure z = 1 protocol step going through the non- plane1 and plane4 parts of plane6.
 # -------------------------------------------------------------------------------------------------
 
@@ -937,10 +1007,10 @@ function plane6InternalsTransfer(sc_nb::RemoteNeighbors{SubCuboid}, plane6_updat
     remotecall_wait(updateShell5!, chan.where, chan, plane6_update, edge26_update, edge36_update, corner236_update)
     # SubCuboid scᵣ₋₁ is affected by updates in edge 26 through its shell[1]
     chan = sc_nb.rnᵣ₋₁
-    remotecall_wait(updateShell1Step4!, chan.where, chan, edge26_update, corner236_update)
+    remotecall_wait(updateShell1Step5!, chan.where, chan, edge26_update, corner236_update)
     # SubCuboid scᵣ₊₂ is affected by updates in edge 36 through its shell[4]
     chan = sc_nb.rnᵣ₊₂
-    remotecall_wait(updateShell4Step4!, chan.where, chan, edge36_update, corner236_update)
+    remotecall_wait(updateShell4Step5!, chan.where, chan, edge36_update, corner236_update)
 
     # SubCuboid scᵣ₋₁₊₂ is affected by updates in corner 236 through its shell_edge14
     chan = sc_nb.rnᵣ₋₁₊₂
@@ -960,7 +1030,7 @@ function updateTransferPlane6Internals!(chan::RemoteChannel{Channel{SubCuboid}})
     sc_nb = copy(sc.sc_nb)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂
    
-    # 4. step: Update and transfer points z=1, x ∈ [1:l₁-1], y ∈ [2:l₂] internal to plane6
+    # 5. step: Update and transfer points z=1, x ∈ [1:l₁-1], y ∈ [2:l₂] internal to plane6
     plane6_update, edge26_update, edge36_update, corner236_update = updatePlane6Internals!(sc)
     put!(chan, sc)
     plane6InternalsTransfer(sc_nb, plane6_update, edge26_update, edge36_update, corner236_update)
@@ -973,7 +1043,7 @@ function updateTransferPlane6InternalsRetEnUp!(chan::RemoteChannel{Channel{SubCu
     sc_nb = copy(sc.sc_nb)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂
    
-    # 4. step: Update and transfer points z=1, x ∈ [1:l₁-1], y ∈ [2:l₂] internal to plane6
+    # 5. step: Update and transfer points z=1, x ∈ [1:l₁-1], y ∈ [2:l₂] internal to plane6
     plane6_update, edge26_update, edge36_update, corner236_update, en_diff, updates = updatePlane6InternalsRetEnUp!(sc)
     put!(chan, sc)
     plane6InternalsTransfer(sc_nb, plane6_update, edge26_update, edge36_update, corner236_update)
@@ -981,39 +1051,18 @@ function updateTransferPlane6InternalsRetEnUp!(chan::RemoteChannel{Channel{SubCu
     en_diff, updates
 end
 
-# Protocol Step 5
-# This is a pure z = 1 protocol step updating plane6 intersection lines except for x = l₁-1, y = 2
-# and (x=l₁, y=1).
+
+# Protocol Step 6
+# This is a pure z = 1 protocol step updating plane6 intersection line 16 except for (x=l₁, y=1)
+# and (x=l₁, y=2).
 # -------------------------------------------------------------------------------------------------
 
-function updatePlane6IntersectionLines!(sc::SubCuboid)
+function updatePlane6IntersectionLinesStep6!(sc::SubCuboid)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
     z = 1
     
-    edge46_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
     edge16_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
-    corner246_update = Array{LatticeSite, 1}(undef, 0)
     corner136_update = Array{LatticeSite, 1}(undef, 0)
-
-    # Updating edge 46 except corner
-    y = 1; z = 1
-    for x = 2:l₁-2
-        ϕ = sc.lattice[x,y,z]
-        nb = sc.nb[x,y,z]
-        nnb = sc.nnb[x,y,z]
-        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
-            push!(edge46_update, (x,ϕ))
-        end
-    end
-
-    # Updating corner 246
-    x = 1
-    ϕ = sc.lattice[x,y,z]
-    nb = sc.nb[x,y,z]
-    nnb = sc.nnb[x,y,z]
-    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
-        push!(corner246_update, ϕ)
-    end
 
     # Updating edge 16 except corner
     x = l₁; z = 1
@@ -1035,17 +1084,146 @@ function updatePlane6IntersectionLines!(sc::SubCuboid)
         push!(corner136_update, ϕ)
     end
 
-    edge16_update, edge46_update, corner246_update, corner136_update
+    edge16_update, corner136_update
 end
 # Same as above, but also return the number of successful updates
-function updatePlane6IntersectionLinesRetEnUp!(sc::SubCuboid)
+function updatePlane6IntersectionLinesRetEnUpStep6!(sc::SubCuboid)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    z = 1
+    
+    edge16_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    corner136_update = Array{LatticeSite, 1}(undef, 0)
+
+    en_diff = 0.0
+    updates = 0
+
+    # Updating edge 16 except corner
+    x = l₁; z = 1
+    for y = 3:l₂-1
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        if updated
+            en_diff += δE
+            updates += 1
+            push!(edge16_update, (y,ϕ))
+        end
+    end
+
+    # Updating corner 136
+    y = l₂
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+    if updated
+        en_diff += δE
+        updates += 1
+        push!(corner136_update, ϕ)
+    end
+
+    edge16_update, corner136_update, en_diff, updates
+end
+
+# Suppose we have updated all points in edge 16 except the 2 points (x=l₁, y=1) and (x=l₁, y=2). 
+# This function sends information to the shells 2,4,5 and shell-edges 24, 25, 45 of neighboring sub-cuboids to reflect this.
+function plane6IntersectionLinesTransferStep6(sc_nb::RemoteNeighbors{SubCuboid}, edge16_update::Vector{Tuple{I,LatticeSite}},
+               corner136_update::Vector{LatticeSite}) where I<:Int
+
+    # SubCuboid scᵣ₊₁ is affected by updates in edge 16 through its shell[2]
+    chan = sc_nb.rnᵣ₊₁
+    remotecall_wait(updateShell2!, chan.where, chan, edge16_update, corner136_update)
+    # SubCuboid scᵣ₊₂ is affected by updates in corner 136 through its shell[4]
+    chan = sc_nb.rnᵣ₊₂
+    remotecall_wait(updateShell4!, chan.where, chan, corner136_update)
+    # SubCuboid scᵣ₋₃ is affected by updates in plane 6 through its shell[5]
+    chan = sc_nb.rnᵣ₋₃
+    remotecall_wait(updateShell5Step6!, chan.where, chan, edge16_update, corner136_update)
+
+    # SubCuboid scᵣ₊₁₊₂ is affected by updates in corner 136 through its shell_edge24
+    chan = sc_nb.rnᵣ₊₁₊₂
+    remotecall_wait(updateShellEdge24!, chan.where, chan, corner136_update)
+    # SubCuboid scᵣ₊₁₋₃ is affected by updates in edge 16 through its shell_edge25
+    chan = sc_nb.rnᵣ₊₁₋₃
+    remotecall_wait(updateShellEdge25!, chan.where, chan, edge16_update, corner136_update)
+    # SubCuboid scᵣ₊₂₋₃ is affected by updates in corner 136 through its shell_edge45
+    chan = sc_nb.rnᵣ₊₂₋₃
+    remotecall_wait(updateShellEdge45!, chan.where, chan, corner136_update)
+
+    nothing
+end
+
+# Takes the remote reference to a sub-cuboid and execute the update protocal step 6 for completely updating all
+# lattice sites of it and transferring updated points to dependent shells in neighboring sub-cuboids.
+function updateTransferPlane6IntersectionLinesStep6!(chan::RemoteChannel{Channel{SubCuboid}})
+    sc = take!(chan)
+    sc_nb = copy(sc.sc_nb)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂
+   
+    # 6. step: Update and transfer intersection lines in plane 6 excepting intersection point and its two neighbors.
+    edge16_update, corner136_update = updatePlane6IntersectionLinesStep6!(sc)
+    put!(chan, sc)
+    plane6IntersectionLinesTransferStep6(sc_nb, edge16_update, corner136_update)
+    
+    nothing
+end
+# Same as above, but also return the number of successful updates
+function updateTransferPlane6IntersectionLinesRetEnUpStep6!(chan::RemoteChannel{Channel{SubCuboid}})
+    sc = take!(chan)
+    sc_nb = copy(sc.sc_nb)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂
+   
+    # 6. step: Update and transfer intersection lines in plane 6 excepting intersection point and its two neighbors.
+    edge16_update, corner136_update, en_diff, updates = updatePlane6IntersectionLinesRetEnUpStep6!(sc)
+    put!(chan, sc)
+    plane6IntersectionLinesTransferStep6(sc_nb, edge16_update, corner136_update)
+    
+    en_diff, updates
+end
+
+
+# Protocol Step 7
+# This is a pure z = 1 protocol step updating plane6 intersection line 46 except for (x=l₁-1, y=1)
+# and (x=l₁, y=1).
+# -------------------------------------------------------------------------------------------------
+
+function updatePlane6IntersectionLinesStep7!(sc::SubCuboid)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
     z = 1
     
     edge46_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
-    edge16_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
     corner246_update = Array{LatticeSite, 1}(undef, 0)
-    corner136_update = Array{LatticeSite, 1}(undef, 0)
+
+    # Updating edge 46 except corner
+    y = 1; z = 1
+    for x = 2:l₁-2
+        ϕ = sc.lattice[x,y,z]
+        nb = sc.nb[x,y,z]
+        nnb = sc.nnb[x,y,z]
+        if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+            push!(edge46_update, (x,ϕ))
+        end
+    end
+
+    # Updating corner 246
+    x = 1
+    ϕ = sc.lattice[x,y,z]
+    nb = sc.nb[x,y,z]
+    nnb = sc.nnb[x,y,z]
+    if updateLatticeSite!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
+        push!(corner246_update, ϕ)
+    end
+
+    edge46_update, corner246_update
+end
+# Same as above, but also return the number of successful updates
+function updatePlane6IntersectionLinesRetEnUpStep7!(sc::SubCuboid)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    z = 1
+    
+    edge46_update = Array{Tuple{Int64, LatticeSite}, 1}(undef, 0)
+    corner246_update = Array{LatticeSite, 1}(undef, 0)
 
     en_diff = 0.0
     updates = 0
@@ -1076,100 +1254,61 @@ function updatePlane6IntersectionLinesRetEnUp!(sc::SubCuboid)
         push!(corner246_update, ϕ)
     end
 
-    # Updating edge 16 except corner
-    x = l₁; z = 1
-    for y = 3:l₂-1
-        ϕ = sc.lattice[x,y,z]
-        nb = sc.nb[x,y,z]
-        nnb = sc.nnb[x,y,z]
-        updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
-        if updated
-            en_diff += δE
-            updates += 1
-            push!(edge16_update, (y,ϕ))
-        end
-    end
-
-    # Updating corner 136
-    y = l₂
-    ϕ = sc.lattice[x,y,z]
-    nb = sc.nb[x,y,z]
-    nnb = sc.nnb[x,y,z]
-    updated, δE = updateLatticeSiteRetEn!(ϕ, nb, nnb, sc.syst, sc.sim, sc.β)
-    if updated
-        en_diff += δE
-        updates += 1
-        push!(corner136_update, ϕ)
-    end
-
-    edge16_update, edge46_update, corner246_update, corner136_update, en_diff, updates
+    edge46_update, corner246_update, en_diff, updates
 end
 
-
-# Suppose we have updated all points in edge 46 and 16 except the 3 points (x=l₁-1, y=1), (x=l₁, y=1) and (x=l₁, y=2). 
-# This function sends information to the shells and shell-edges of neighboring sub-cuboids to reflect this.
-function plane6IntersectionLinesTransfer(sc_nb::RemoteNeighbors{SubCuboid}, edge16_update::Vector{Tuple{I,LatticeSite}},
-               edge46_update::Vector{Tuple{I,LatticeSite}}, corner246_update::Vector{LatticeSite},
-               corner136_update::Vector{LatticeSite}) where I<:Int
+# Suppose we have updated all points in edge 46 except the 2 points (x=l₁-1, y=1), (x=l₁, y=1). 
+# This function sends information to the shells 1,3,5 and shell-edge 13 of neighboring sub-cuboids to reflect this.
+function plane6IntersectionLinesTransferStep7(sc_nb::RemoteNeighbors{SubCuboid}, edge46_update::Vector{Tuple{I,LatticeSite}},
+                                         corner246_update::Vector{LatticeSite}) where I<:Int
 
     # SubCuboid scᵣ₋₁ is affected by updates in corner 246 through its shell[1]
     chan = sc_nb.rnᵣ₋₁
     remotecall_wait(updateShell1!, chan.where, chan, corner246_update)
-    # SubCuboid scᵣ₊₁ is affected by updates in edge 16 through its shell[2]
-    chan = sc_nb.rnᵣ₊₁
-    remotecall_wait(updateShell2!, chan.where, chan, edge16_update, corner136_update)
-    # SubCuboid scᵣ₊₂ is affected by updates in corner 136 through its shell[4]
-    chan = sc_nb.rnᵣ₊₂
-    remotecall_wait(updateShell4!, chan.where, chan, corner136_update)
-    # SubCuboid scᵣ₋₂ is affected by updates in edge 46 through its shell[3]
+    # SubCuboid scᵣ₋₂ is affected by updates in edge 46 and corner 246 through its shell[3]
     chan = sc_nb.rnᵣ₋₂
     remotecall_wait(updateShell3!, chan.where, chan, edge46_update, corner246_update)
     # SubCuboid scᵣ₋₃ is affected by updates in plane 6 through its shell[5]
     chan = sc_nb.rnᵣ₋₃
-    remotecall_wait(updateShell5!, chan.where, chan, edge16_update, edge46_update, corner246_update, corner136_update)
+    remotecall_wait(updateShell5Step7!, chan.where, chan, edge46_update, corner246_update)
 
-    # SubCuboid scᵣ₊₁₋₃ is affected by updates in edge 16 through its shell_edge25
-    chan = sc_nb.rnᵣ₊₁₋₃
-    remotecall_wait(updateShellEdge25!, chan.where, chan, edge16_update, corner136_update)
-    # SubCuboid scᵣ₊₂₋₃ is affected by updates in corner 136 through its shell_edge45
-    chan = sc_nb.rnᵣ₊₂₋₃
-    remotecall_wait(updateShellEdge45!, chan.where, chan, corner136_update)
+    # SubCuboid scᵣ₋₁₋₂ is affected by updates in corner 246 through its shell_edge13
+    chan = sc_nb.rnᵣ₋₁₋₂
+    remotecall_wait(updateShellEdge13!, chan.where, chan, corner246_update)
 
     nothing
 end
 
-
-
-# Takes the remote reference to a sub-cuboid and execute the update protocal step 5 for completely updating all
+# Takes the remote reference to a sub-cuboid and execute the update protocal step 7 for completely updating all
 # lattice sites of it and transferring updated points to dependent shells in neighboring sub-cuboids.
-function updateTransferPlane6IntersectionLines!(chan::RemoteChannel{Channel{SubCuboid}})
+function updateTransferPlane6IntersectionLinesStep7!(chan::RemoteChannel{Channel{SubCuboid}})
     sc = take!(chan)
     sc_nb = copy(sc.sc_nb)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂
    
-    # 5. step: Update and transfer intersection lines in plane 6 excepting intersection point and its two neighbors.
-    edge16_update, edge46_update, corner246_update, corner136_update = updatePlane6IntersectionLines!(sc)
+    # 7. step: Update and transfer intersection line 46 in plane 6 excepting intersection point and its two neighbors.
+    edge46_update, corner246_update = updatePlane6IntersectionLinesStep7!(sc)
     put!(chan, sc)
-    plane6IntersectionLinesTransfer(sc_nb, edge16_update, edge46_update, corner246_update, corner136_update)
+    plane6IntersectionLinesTransferStep7(sc_nb, edge46_update, corner246_update)
     
     nothing
 end
 # Same as above, but also return the number of successful updates
-function updateTransferPlane6IntersectionLinesRetEnUp!(chan::RemoteChannel{Channel{SubCuboid}})
+function updateTransferPlane6IntersectionLinesRetEnUpStep7!(chan::RemoteChannel{Channel{SubCuboid}})
     sc = take!(chan)
     sc_nb = copy(sc.sc_nb)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂
    
-    # 5. step: Update and transfer intersection lines in plane 6 excepting intersection point and its two neighbors.
-    edge16_update, edge46_update, corner246_update, corner136_update, en_diff, updates = updatePlane6IntersectionLinesRetEnUp!(sc)
+    # 7. step: Update and transfer intersection line 46 in plane 6 excepting intersection point and its two neighbors.
+    edge46_update, corner246_update, en_diff, updates = updatePlane6IntersectionLinesRetEnUpStep7!(sc)
     put!(chan, sc)
-    plane6IntersectionLinesTransfer(sc_nb, edge16_update, edge46_update, corner246_update, corner136_update)
+    plane6IntersectionLinesTransferStep7(sc_nb, edge46_update, corner246_update)
     
     en_diff, updates
 end
 
 
-# Protocol Step 6
+# Protocol Step 8
 # This is a pure z = 1 protocol step updating the intersection point between planes 1, 4 and 6
 # and its two neighbors along the intersection lines
 # -------------------------------------------------------------------------------------------------
@@ -1290,7 +1429,7 @@ function updateTransferPlane6IntersectionPoint!(chan::RemoteChannel{Channel{SubC
     sc_nb = copy(sc.sc_nb)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂
    
-    # 5. step: Update and transfer intersection lines in plane 6 excepting intersection point and its two neighbors.
+    # 8. step: Update and transfer intersection lines in plane 6 excepting intersection point and its two neighbors.
     edge16_update, edge46_update, corner_update = updatePlane6IntersectionPoint!(sc)
     put!(chan, sc)
     plane6IntersectionPointTransfer(sc_nb, edge16_update, edge46_update, corner_update)
@@ -1302,7 +1441,7 @@ function updateTransferPlane6IntersectionPointRetEnUp!(chan::RemoteChannel{Chann
     sc_nb = copy(sc.sc_nb)
     l₁ = sc.consts.l₁; l₂ = sc.consts.l₂
    
-    # 5. step: Update and transfer intersection lines in plane 6 excepting intersection point and its two neighbors.
+    # 8. step: Update and transfer intersection lines in plane 6 excepting intersection point and its two neighbors.
     edge16_update, edge46_update, corner_update, en_diff, updates = updatePlane6IntersectionPointRetEnUp!(sc)
     put!(chan, sc)
     plane6IntersectionPointTransfer(sc_nb, edge16_update, edge46_update, corner_update)

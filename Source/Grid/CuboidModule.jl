@@ -159,10 +159,12 @@ end
 # Same as above but constructs one grid for each edge of the SubCuboid
 function genShellEdgeGrid(lattice::Array{LatticeSite, 3}, s₁::I, s₂::I, s₃::I,
     range_grid::Array{Tuple{UnitRange{I},UnitRange{I},UnitRange{I}}, 3}) where I<:Int
-    
+   
+    shell_edge13 = Array{Vector{LatticeSite}, 3}(undef, s₁,s₂,s₃)
     shell_edge14 = Array{Vector{LatticeSite}, 3}(undef, s₁,s₂,s₃)
     shell_edge16 = Array{Vector{LatticeSite}, 3}(undef, s₁,s₂,s₃)
     shell_edge23 = Array{Vector{LatticeSite}, 3}(undef, s₁,s₂,s₃)
+    shell_edge24 = Array{Vector{LatticeSite}, 3}(undef, s₁,s₂,s₃)
     shell_edge25 = Array{Vector{LatticeSite}, 3}(undef, s₁,s₂,s₃)
     shell_edge36 = Array{Vector{LatticeSite}, 3}(undef, s₁,s₂,s₃)
     shell_edge45 = Array{Vector{LatticeSite}, 3}(undef, s₁,s₂,s₃)
@@ -173,21 +175,25 @@ function genShellEdgeGrid(lattice::Array{LatticeSite, 3}, s₁::I, s₂::I, s₃
         l₃ = length(range_grid[i₁,i₂,i₃][3])
         # Get next-neighboring sub-cuboids (give periodic BC)
         scᵣ₊₁₋₂ = lattice[range_grid[mod(i₁+1-1,s₁)+1, mod(i₂-1-1,s₂)+1, i₃]...]
+        scᵣ₊₁₊₂ = lattice[range_grid[mod(i₁+1-1,s₁)+1, mod(i₂+1-1,s₂)+1, i₃]...]
         scᵣ₊₁₋₃ = lattice[range_grid[mod(i₁+1-1,s₁)+1, i₂, mod(i₃-1-1,s₃)+1]...]
         scᵣ₋₁₊₂ = lattice[range_grid[mod(i₁-1-1,s₁)+1, mod(i₂+1-1,s₂)+1, i₃]...]
+        scᵣ₋₁₋₂ = lattice[range_grid[mod(i₁-1-1,s₁)+1, mod(i₂-1-1,s₂)+1, i₃]...]
         scᵣ₋₁₊₃ = lattice[range_grid[mod(i₁-1-1,s₁)+1, i₂, mod(i₃+1-1,s₃)+1]...]
         scᵣ₊₂₋₃ = lattice[range_grid[i₁, mod(i₂+1-1,s₂)+1, mod(i₃-1-1,s₃)+1]...]
         scᵣ₋₂₊₃ = lattice[range_grid[i₁, mod(i₂-1-1,s₂)+1, mod(i₃+1-1,s₃)+1]...]
-        
+       
+        shell_edge13[i₁,i₂,i₃] = scᵣ₊₁₊₂[1,1,:]
         shell_edge14[i₁,i₂,i₃] = scᵣ₊₁₋₂[1,end,:]
         shell_edge16[i₁,i₂,i₃] = scᵣ₊₁₋₃[1,:,end]
         shell_edge23[i₁,i₂,i₃] = scᵣ₋₁₊₂[end,1,:]
+        shell_edge24[i₁,i₂,i₃] = scᵣ₋₁₋₂[end,end,:]
         shell_edge25[i₁,i₂,i₃] = scᵣ₋₁₊₃[end,:,1]
         shell_edge36[i₁,i₂,i₃] = scᵣ₊₂₋₃[:,1,end]
         shell_edge45[i₁,i₂,i₃] = scᵣ₋₂₊₃[:,end,1]
     end
     
-    shell_edge14, shell_edge16, shell_edge23, shell_edge25, shell_edge36, shell_edge45
+    shell_edge13, shell_edge14, shell_edge16, shell_edge23, shell_edge24, shell_edge25, shell_edge36, shell_edge45
 end
 
 # Given a full lattice with constants. Splits the lattice into sub-cuboids with corresponding nearest neighbor
@@ -202,7 +208,7 @@ function Cuboid(lattice::Array{LatticeSite, 3}, syst::SystConstants, sim::Contro
     # We still need to make the shell around the sub-cuboid.
     
     shell_grid = genShellGrid(lattice, s₁,s₂,s₃, unit_range_grid)
-    (shell_edge14_grid, shell_edge16_grid, shell_edge23_grid, shell_edge25_grid,
+    (shell_edge13_grid, shell_edge14_grid, shell_edge16_grid, shell_edge23_grid, shell_edge24_grid, shell_edge25_grid,
      shell_edge36_grid, shell_edge45_grid)  = genShellEdgeGrid(lattice, s₁,s₂,s₃, unit_range_grid)
     
     # With all the ingredients in hand, we just need to place the different sub-cuboids on the different available
@@ -227,8 +233,8 @@ function Cuboid(lattice::Array{LatticeSite, 3}, syst::SystConstants, sim::Contro
         # Then we create a SubCuboid and put it in the channel
         cub_lattice = lattice[unit_range_grid[i₁,i₂,i₃]...]
         shell = shell_grid[i₁,i₂,i₃]
-        shell_edge14 = shell_edge14_grid[i₁,i₂,i₃]; shell_edge16 = shell_edge16_grid[i₁,i₂,i₃]
-        shell_edge23 = shell_edge23_grid[i₁,i₂,i₃]; shell_edge25 = shell_edge25_grid[i₁,i₂,i₃]
+        shell_edge13 = shell_edge13_grid[i₁,i₂,i₃]; shell_edge14 = shell_edge14_grid[i₁,i₂,i₃]; shell_edge16 = shell_edge16_grid[i₁,i₂,i₃]
+        shell_edge23 = shell_edge23_grid[i₁,i₂,i₃]; shell_edge24 = shell_edge24_grid[i₁,i₂,i₃]; shell_edge25 = shell_edge25_grid[i₁,i₂,i₃]
         shell_edge36 = shell_edge36_grid[i₁,i₂,i₃]; shell_edge45 = shell_edge45_grid[i₁,i₂,i₃]
         l₁ = size(cub_lattice, 1); l₂ = size(cub_lattice, 2); l₃ = size(cub_lattice, 3)
         cub_consts = CubConstants(l₁, l₂, l₃)
@@ -237,8 +243,8 @@ function Cuboid(lattice::Array{LatticeSite, 3}, syst::SystConstants, sim::Contro
         # be to the objects on this process, thus we need to create it on the worker-process
         
         remotecall_fetch(remoteSubCuboid!, pid, grid[i₁,i₂,i₃], cub_lattice, sc_nb, shell,
-            shell_edge14, shell_edge16, shell_edge23, shell_edge25, shell_edge36, shell_edge45,
-            cub_consts, syst, sim, β)
+            shell_edge13, shell_edge14, shell_edge16, shell_edge23, shell_edge24, shell_edge25,
+            shell_edge36, shell_edge45, cub_consts, syst, sim, β)
         # This calls the function SubCuboid on the process at pid, which should put a sub-cuboid in the
         # channel pointed to by the remote-channel grid[i₁,i₂,i₃] with correctly set neighbors.
         # A question here is if remotecall_fetch does a deep-copy of the function arguments such that
@@ -292,40 +298,54 @@ function mcSweep!(cub::Cuboid)
     for fut in futs; wait(fut); end
     #println("Step 1")
     
-    # Step 2: Updates intersection planes 4 and 1 in parallel
+    # Step 2: Updates intersection plane 1 in parallel
     for (i, chan) = enumerate(cub.grid)
-        futs[i] = @spawnat chan.where updateTransferIntersectionPlanes!(chan)
+        futs[i] = @spawnat chan.where updateTransferIntersectionPlanesStep2!(chan)
     end
     for fut in futs; wait(fut); end
     #println("Step 2")
-    
-    # Step 3: Updates intersection lines 14 and neighboring two lines in parallel
+
+    # Step 3: Updates intersection plane 4 in parallel
+    for (i, chan) = enumerate(cub.grid)
+        futs[i] = @spawnat chan.where updateTransferIntersectionPlanesStep3!(chan)
+    end
+    for fut in futs; wait(fut); end
+    #println("Step 3")
+
+    # Step 4: Updates intersection lines 14 and neighboring two lines in parallel
     for (i, chan) = enumerate(cub.grid)
         futs[i] = @spawnat chan.where updateTransferIntersectionLines!(chan)
     end
     for fut in futs; wait(fut); end
-    #println("Step 3")
+    #println("Step 4")
     
-    # Step 4: Updates plane 6 internal points in parallel
+    # Step 5: Updates plane 6 internal points in parallel
     for (i, chan) = enumerate(cub.grid)
         futs[i] = @spawnat chan.where updateTransferPlane6Internals!(chan)
     end
     for fut in futs; wait(fut); end
-    #println("Step 4")
-    
-    # Step 5: Updates plane 6 intersection lines in parallel
-    for (i, chan) = enumerate(cub.grid)
-        futs[i] = @spawnat chan.where updateTransferPlane6IntersectionLines!(chan)
-    end
-    for fut in futs; wait(fut); end
     #println("Step 5")
     
-    # Step 6: Updates intersection point and two neighboring plane 6 points in parallel
+    # Step 6: Updates plane 6 intersection lines in parallel
+    for (i, chan) = enumerate(cub.grid)
+        futs[i] = @spawnat chan.where updateTransferPlane6IntersectionLinesStep6!(chan)
+    end
+    for fut in futs; wait(fut); end
+    #println("Step 6")
+    
+    # Step 7: Updates plane 6 intersection lines in parallel
+    for (i, chan) = enumerate(cub.grid)
+        futs[i] = @spawnat chan.where updateTransferPlane6IntersectionLinesStep7!(chan)
+    end
+    for fut in futs; wait(fut); end
+    #println("Step 7")
+    
+    # Step 8: Updates intersection point and two neighboring plane 6 points in parallel
     for (i, chan) = enumerate(cub.grid)
         futs[i] = @spawnat chan.where updateTransferPlane6IntersectionPoint!(chan)
     end
     for fut in futs; wait(fut); end
-    #println("Step 6")
+    #println("Step 8")
 
     nothing
 end
@@ -363,16 +383,25 @@ function mcSweepEnUp!(cub::Cuboid)
         en_diff += δE; updates += up
     end
     
-    # Step 2: Updates intersection planes 4 and 1 in parallel
+    # Step 2: Updates intersection plane 1 in parallel
     for (i, chan) = enumerate(cub.grid)
-        futs[i] = @spawnat chan.where updateTransferIntersectionPlanesRetEnUp!(chan)
+        futs[i] = @spawnat chan.where updateTransferIntersectionPlanesRetEnUpStep2!(chan)
     end
     for fut in futs
         δE, up = fetch(fut)
         en_diff += δE; updates += up
     end
     
-    # Step 3: Updates intersection lines 14 and neighboring two lines in parallel
+    # Step 3: Updates intersection plan 4 in parallel
+    for (i, chan) = enumerate(cub.grid)
+        futs[i] = @spawnat chan.where updateTransferIntersectionPlanesRetEnUpStep3!(chan)
+    end
+    for fut in futs
+        δE, up = fetch(fut)
+        en_diff += δE; updates += up
+    end
+    
+    # Step 4: Updates intersection lines 14 and neighboring two lines in parallel
     for (i, chan) = enumerate(cub.grid)
         futs[i] = @spawnat chan.where updateTransferIntersectionLinesRetEnUp!(chan)
     end
@@ -381,7 +410,7 @@ function mcSweepEnUp!(cub::Cuboid)
         en_diff += δE; updates += up
     end
     
-    # Step 4: Updates plane 6 internal points in parallel
+    # Step 5: Updates plane 6 internal points in parallel
     for (i, chan) = enumerate(cub.grid)
         futs[i] = @spawnat chan.where updateTransferPlane6InternalsRetEnUp!(chan)
     end
@@ -390,16 +419,26 @@ function mcSweepEnUp!(cub::Cuboid)
         en_diff += δE; updates += up
     end
     
-    # Step 5: Updates plane 6 intersection lines in parallel
+    # Step 6: Updates plane 6 intersection lines in parallel
     for (i, chan) = enumerate(cub.grid)
-        futs[i] = @spawnat chan.where updateTransferPlane6IntersectionLinesRetEnUp!(chan)
+        futs[i] = @spawnat chan.where updateTransferPlane6IntersectionLinesRetEnUpStep6!(chan)
     end
     for fut in futs
         δE, up = fetch(fut)
         en_diff += δE; updates += up
     end
+
+    # Step 7: Updates plane 6 intersection lines in parallel
+    for (i, chan) = enumerate(cub.grid)
+        futs[i] = @spawnat chan.where updateTransferPlane6IntersectionLinesRetEnUpStep7!(chan)
+    end
+    for fut in futs
+        δE, up = fetch(fut)
+        en_diff += δE; updates += up
+    end
+
     
-    # Step 6: Updates intersection point and two neighboring plane 6 points in parallel
+    # Step 8: Updates intersection point and two neighboring plane 6 points in parallel
     for (i, chan) = enumerate(cub.grid)
         futs[i] = @spawnat chan.where updateTransferPlane6IntersectionPointRetEnUp!(chan)
     end

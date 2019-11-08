@@ -64,7 +64,9 @@ struct NearestNeighbors
 end
 struct NextNeighbors
 	ϕᵣ₊₁₋₂::LatticeSite
+    ϕᵣ₊₁₊₂::LatticeSite # New
 	ϕᵣ₋₁₊₂::LatticeSite
+    ϕᵣ₋₁₋₂::LatticeSite # New
     ϕᵣ₊₁₋₃::LatticeSite
     ϕᵣ₋₁₊₃::LatticeSite
     ϕᵣ₊₂₋₃::LatticeSite
@@ -78,8 +80,10 @@ struct RemoteNeighbors{T}
     rnᵣ₊₃::RemoteChannel{Channel{T}}
     rnᵣ₋₃::RemoteChannel{Channel{T}}
     rnᵣ₊₁₋₂::RemoteChannel{Channel{T}}
+    rnᵣ₊₁₊₂::RemoteChannel{Channel{T}} # New
     rnᵣ₊₁₋₃::RemoteChannel{Channel{T}}
     rnᵣ₋₁₊₂::RemoteChannel{Channel{T}}
+    rnᵣ₋₁₋₂::RemoteChannel{Channel{T}} # New
     rnᵣ₋₁₊₃::RemoteChannel{Channel{T}}
     rnᵣ₊₂₋₃::RemoteChannel{Channel{T}}
     rnᵣ₋₂₊₃::RemoteChannel{Channel{T}}
@@ -95,9 +99,11 @@ mutable struct SubCuboid
     shell::Vector{Array{LatticeSite, 2}}      # Shell around the sub cuboid consisting of nearest neighbors of the lattice
                                       # sites on the perifery of the cuboid. These have equal values to lattice sites
                                       # at neighboring sub-cuboids. Contains 6 planes of neighbor points.
+    shell_edge13::Vector{LatticeSite} # New
     shell_edge14::Vector{LatticeSite} # Two vectors of lattice sites for the 41 and 23 edge.
     shell_edge16::Vector{LatticeSite}
     shell_edge23::Vector{LatticeSite}
+    shell_edge24::Vector{LatticeSite} # New
     shell_edge25::Vector{LatticeSite}
     shell_edge36::Vector{LatticeSite}
     shell_edge45::Vector{LatticeSite}
@@ -205,12 +211,20 @@ function copy(re_nb::RemoteNeighbors{T}) where T
     rnᵣ₊₃ = re_nb.rnᵣ₊₃
     rnᵣ₋₃ = re_nb.rnᵣ₋₃
     rnᵣ₊₁₋₂ = re_nb.rnᵣ₊₁₋₂
+    rnᵣ₊₁₊₂ = re_nb.rnᵣ₊₁₊₂ # New
     rnᵣ₊₁₋₃ = re_nb.rnᵣ₊₁₋₃
     rnᵣ₋₁₊₂ = re_nb.rnᵣ₋₁₊₂
+    rnᵣ₋₁₋₂ = re_nb.rnᵣ₋₁₋₂ # New
     rnᵣ₋₁₊₃ = re_nb.rnᵣ₋₁₊₃
     rnᵣ₊₂₋₃ = re_nb.rnᵣ₊₂₋₃
     rnᵣ₋₂₊₃ = re_nb.rnᵣ₋₂₊₃
-    RemoteNeighbors{T}(rnᵣ₊₁, rnᵣ₋₁, rnᵣ₊₂, rnᵣ₋₂, rnᵣ₊₃, rnᵣ₋₃, rnᵣ₊₁₋₂, rnᵣ₊₁₋₃, rnᵣ₋₁₊₂, rnᵣ₋₁₊₃, rnᵣ₊₂₋₃, rnᵣ₋₂₊₃)
+    RemoteNeighbors{T}(rnᵣ₊₁, rnᵣ₋₁, rnᵣ₊₂, rnᵣ₋₂, rnᵣ₊₃, rnᵣ₋₃, rnᵣ₊₁₋₂, rnᵣ₊₁₊₂, rnᵣ₊₁₋₃, rnᵣ₋₁₊₂, rnᵣ₋₁₋₂, rnᵣ₋₁₊₃, rnᵣ₊₂₋₃, rnᵣ₋₂₊₃)
+end
+function copy(ϕ::LatticeSite)
+    LatticeSite(ϕ.A₁, ϕ.A₂, ϕ.A₃, ϕ.θ⁺, ϕ.θ⁻, ϕ.u⁺, ϕ.u⁻, ϕ.x, ϕ.y)
+end
+function copy(s::SystConstants)
+    SystConstants(s.L₁, s.L₂, s.L₃, s.g⁻², s.ν, s.κ₅, s.κ, s.n, s.m)
 end
 
 # -------------------------------------------------------------------------------------------------
@@ -280,9 +294,9 @@ end
 
 # Ties a lattice, shell and constants together to form a sub-cuboid object by establishing the nearest neighbors of
 # the lattice-sites on the lattice.
-function SubCuboid(lattice::Array{LatticeSite, 3}, sc_nb::RemoteNeighbors{SubCuboid},
-        shell::Vector{Array{LatticeSite, 2}}, shell_edge14::Vector{LatticeSite}, shell_edge16::Vector{LatticeSite},
-        shell_edge23::Vector{LatticeSite}, shell_edge25::Vector{LatticeSite},
+function SubCuboid(lattice::Array{LatticeSite, 3}, sc_nb::RemoteNeighbors{SubCuboid}, shell::Vector{Array{LatticeSite, 2}},
+        shell_edge13::Vector{LatticeSite}, shell_edge14::Vector{LatticeSite}, shell_edge16::Vector{LatticeSite},
+        shell_edge23::Vector{LatticeSite}, shell_edge24::Vector{LatticeSite}, shell_edge25::Vector{LatticeSite},
         shell_edge36::Vector{LatticeSite}, shell_edge45::Vector{LatticeSite},
         consts::CubConstants, syst::SystConstants, sim::Controls, β::Float64)
     
@@ -290,20 +304,22 @@ function SubCuboid(lattice::Array{LatticeSite, 3}, sc_nb::RemoteNeighbors{SubCub
     (l₁ < 2 || l₂ < 2 || l₃ < 2) && throw(error("ERROR: Length < 2 when creating SubCuboid"))
     
     nb = latticeNeighbors(lattice, shell)
-    nnb = latticeNextNeighbors(lattice, shell, shell_edge14, shell_edge16, shell_edge23, shell_edge25, shell_edge36, shell_edge45)
-    SubCuboid(lattice, nb, nnb, sc_nb, shell, shell_edge14, shell_edge16, shell_edge23, shell_edge25, shell_edge36, shell_edge45,
-              consts, syst, sim, β)
+    nnb = latticeNextNeighbors(lattice, shell, shell_edge13, shell_edge14, shell_edge16, shell_edge23, shell_edge24,
+                               shell_edge25, shell_edge36, shell_edge45)
+    SubCuboid(lattice, nb, nnb, sc_nb, shell, shell_edge13, shell_edge14, shell_edge16, shell_edge23, shell_edge24,
+              shell_edge25, shell_edge36, shell_edge45, consts, syst, sim, β)
 end
 
 # Creates a SubCuboid and puts a reference to it in the remote-channel. This should be called from the process
 # that the remote-channel is pointing to.
 function remoteSubCuboid!(chan::RemoteChannel{Channel{SubCuboid}}, cub_lattice::Array{LatticeSite, 3}, 
-        sc_nb::RemoteNeighbors{SubCuboid}, shell::Vector{Array{LatticeSite, 2}}, shell_edge14::Vector{LatticeSite},
-        shell_edge16::Vector{LatticeSite}, shell_edge23::Vector{LatticeSite}, shell_edge25::Vector{LatticeSite},
+        sc_nb::RemoteNeighbors{SubCuboid}, shell::Vector{Array{LatticeSite, 2}}, 
+        shell_edge13::Vector{LatticeSite}, shell_edge14::Vector{LatticeSite}, shell_edge16::Vector{LatticeSite},
+        shell_edge23::Vector{LatticeSite}, shell_edge24::Vector{LatticeSite}, shell_edge25::Vector{LatticeSite},
         shell_edge36::Vector{LatticeSite}, shell_edge45::Vector{LatticeSite},
         cub_consts::CubConstants, syst::SystConstants, sim::Controls, β::Float64)
     
-    obj = SubCuboid(cub_lattice, sc_nb, shell, shell_edge14, shell_edge16, shell_edge23, shell_edge25, shell_edge36,
+    obj = SubCuboid(cub_lattice, sc_nb, shell, shell_edge13, shell_edge14, shell_edge16, shell_edge23, shell_edge24, shell_edge25, shell_edge36,
                     shell_edge45, cub_consts, syst, sim, β)
     put!(chan, obj)
     nothing
@@ -321,12 +337,14 @@ function RemoteNeighbors(grid::Array{RemoteChannel{Channel{SubCuboid}},3}, pos::
     nbᵣ₊₃ = grid[i₁, i₂, mod(i₃+1-1,s₃)+1]
     nbᵣ₋₃ = grid[i₁, i₂, mod(i₃-1-1,s₃)+1]
     nbᵣ₊₁₋₂ = grid[mod(i₁+1-1,s₁)+1, mod(i₂-1-1,s₂)+1, i₃]
+    nbᵣ₊₁₊₂ = grid[mod(i₁+1-1,s₁)+1, mod(i₂+1-1,s₂)+1, i₃] # New
     nbᵣ₊₁₋₃ = grid[mod(i₁+1-1,s₁)+1, i₂, mod(i₃-1-1,s₃)+1]
     nbᵣ₋₁₊₂ = grid[mod(i₁-1-1,s₁)+1, mod(i₂+1-1,s₂)+1, i₃]
+    nbᵣ₋₁₋₂ = grid[mod(i₁-1-1,s₁)+1, mod(i₂-1-1,s₂)+1, i₃] # New
     nbᵣ₋₁₊₃ = grid[mod(i₁-1-1,s₁)+1, i₂, mod(i₃+1-1,s₃)+1]
     nbᵣ₊₂₋₃ = grid[i₁, mod(i₂+1-1,s₂)+1, mod(i₃-1-1,s₃)+1]
     nbᵣ₋₂₊₃ = grid[i₁, mod(i₂-1-1,s₂)+1, mod(i₃+1-1,s₃)+1]
-    RemoteNeighbors{SubCuboid}(nbᵣ₊₁, nbᵣ₋₁, nbᵣ₊₂, nbᵣ₋₂, nbᵣ₊₃, nbᵣ₋₃, nbᵣ₊₁₋₂, nbᵣ₊₁₋₃, nbᵣ₋₁₊₂, nbᵣ₋₁₊₃, nbᵣ₊₂₋₃, nbᵣ₋₂₊₃)
+    RemoteNeighbors{SubCuboid}(nbᵣ₊₁, nbᵣ₋₁, nbᵣ₊₂, nbᵣ₋₂, nbᵣ₊₃, nbᵣ₋₃, nbᵣ₊₁₋₂, nbᵣ₊₁₊₂, nbᵣ₊₁₋₃, nbᵣ₋₁₊₂, nbᵣ₋₁₋₂, nbᵣ₋₁₊₃, nbᵣ₊₂₋₃, nbᵣ₋₂₊₃)
 end
 
 

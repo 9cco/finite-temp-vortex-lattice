@@ -319,79 +319,92 @@ function setBorderInternalPoints!(nnb::Array{NextNeighbors, 3}, lattice::Array{L
     x = l₁
     for y = 2:l₂-1, z = 2:l₃-1
         ϕᵣ₊₁₋₂ = shell[1][y-1,z]
+        ϕᵣ₊₁₊₂ = shell[1][y+1,z]
         ϕᵣ₋₁₊₂ = lattice[x-1,y+1,z]
+        ϕᵣ₋₁₋₂ = lattice[x-1,y-1,z]
         ϕᵣ₊₁₋₃ = shell[1][y,z-1]
         ϕᵣ₋₁₊₃ = lattice[x-1,y,z+1]
         ϕᵣ₊₂₋₃ = lattice[x,y+1,z-1]
         ϕᵣ₋₂₊₃ = lattice[x,y-1,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
     end
 
     # Plane 2
     x = 1
     for y = 2:l₂-1, z = 2:l₃-1
         ϕᵣ₊₁₋₂ = lattice[x+1,y-1,z]
+        ϕᵣ₊₁₊₂ = lattice[x+1,y+1,z]
         ϕᵣ₋₁₊₂ = shell[2][y+1,z]
+        ϕᵣ₋₁₋₂ = shell[2][y-1,z]
         ϕᵣ₊₁₋₃ = lattice[x+1,y,z-1]
         ϕᵣ₋₁₊₃ = shell[2][y,z+1]
         ϕᵣ₊₂₋₃ = lattice[x,y+1,z-1]
         ϕᵣ₋₂₊₃ = lattice[x,y-1,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
     end
 
     # Plane 3
     y = l₂
     for x = 2:l₁-1, z = 2:l₃-1
         ϕᵣ₊₁₋₂ = lattice[x+1,y-1,z]
+        ϕᵣ₊₁₊₂ = shell[3][x+1,z]
         ϕᵣ₋₁₊₂ = shell[3][x-1,z]
+        ϕᵣ₋₁₋₂ = lattice[x-1,y-1,z]
         ϕᵣ₊₁₋₃ = lattice[x+1,y,z-1]
         ϕᵣ₋₁₊₃ = lattice[x-1,y,z+1]
         ϕᵣ₊₂₋₃ = shell[3][x,z-1]
         ϕᵣ₋₂₊₃ = lattice[x,y-1,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
     end
 
     # Plane 4
     y = 1
     for x = 2:l₁-1, z = 2:l₃-1
         ϕᵣ₊₁₋₂ = shell[4][x+1,z]
+        ϕᵣ₊₁₊₂ = lattice[x+1,y+1,z]
         ϕᵣ₋₁₊₂ = lattice[x-1,y+1,z]
+        ϕᵣ₋₁₋₂ = shell[4][x-1,z]
         ϕᵣ₊₁₋₃ = lattice[x+1,y,z-1]
         ϕᵣ₋₁₊₃ = lattice[x-1,y,z+1]
         ϕᵣ₊₂₋₃ = lattice[x,y+1,z-1]
         ϕᵣ₋₂₊₃ = shell[4][x,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
     end
 
     # Plane 5
     z = l₃
     for x = 2:l₁-1, y = 2:l₂-1
         ϕᵣ₊₁₋₂ = lattice[x+1,y-1,z]
+        ϕᵣ₊₁₊₂ = lattice[x+1,y+1,z]
         ϕᵣ₋₁₊₂ = lattice[x-1,y+1,z]
+        ϕᵣ₋₁₋₂ = lattice[x-1,y-1,z]
         ϕᵣ₊₁₋₃ = lattice[x+1,y,z-1]
         ϕᵣ₋₁₊₃ = shell[5][x-1,y]
         ϕᵣ₊₂₋₃ = lattice[x,y+1,z-1]
         ϕᵣ₋₂₊₃ = shell[5][x,y-1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
     end
 
     # Plane 6
     z = 1
     for x = 2:l₁-1, y = 2:l₂-1
         ϕᵣ₊₁₋₂ = lattice[x+1,y-1,z]
+        ϕᵣ₊₁₊₂ = lattice[x+1,y+1,z]
         ϕᵣ₋₁₊₂ = lattice[x-1,y+1,z]
+        ϕᵣ₋₁₋₂ = lattice[x-1,y-1,z]
         ϕᵣ₊₁₋₃ = shell[6][x+1,y]
         ϕᵣ₋₁₊₃ = lattice[x-1,y,z+1]
         ϕᵣ₊₂₋₃ = shell[6][x,y+1]
         ϕᵣ₋₂₊₃ = lattice[x,y-1,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
     end
 
     nothing
 end
 
 function setBorderEdges!(nnb::Array{NextNeighbors, 3}, lattice::Array{LatticeSite, 3}, shell::Vector{Array{LatticeSite, 2}},
-                         shell_edge14::Vector{LatticeSite}, shell_edge16::Vector{LatticeSite}, shell_edge23::Vector{LatticeSite},
+                         shell_edge13::Vector{LatticeSite}, shell_edge14::Vector{LatticeSite}, shell_edge16::Vector{LatticeSite},
+                         shell_edge23::Vector{LatticeSite}, shell_edge24::Vector{LatticeSite},
                          shell_edge25::Vector{LatticeSite}, shell_edge36::Vector{LatticeSite}, shell_edge45::Vector{LatticeSite},
                          l₁::I,l₂::I,l₃::I) where I<:Int
 
@@ -400,42 +413,50 @@ function setBorderEdges!(nnb::Array{NextNeighbors, 3}, lattice::Array{LatticeSit
         # Edge 14
         x = l₁; y = 1
         ϕᵣ₊₁₋₂ = shell_edge14[z]
+        ϕᵣ₊₁₊₂ = shell[1][y+1,z]
         ϕᵣ₋₁₊₂ = lattice[x-1,y+1,z]
+        ϕᵣ₋₁₋₂ = shell[4][x-1,z]
         ϕᵣ₊₁₋₃ = shell[1][y,z-1]
         ϕᵣ₋₁₊₃ = lattice[x-1,y,z+1]
         ϕᵣ₊₂₋₃ = lattice[x,y+1,z-1]
         ϕᵣ₋₂₊₃ = shell[4][x,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
         # Edge 13
         x = l₁; y = l₂
         ϕᵣ₊₁₋₂ = shell[1][y-1,z]
+        ϕᵣ₊₁₊₂ = shell_edge13[z]
         ϕᵣ₋₁₊₂ = shell[3][x-1,z]
+        ϕᵣ₋₁₋₂ = lattice[x-1,y-1,z]
         ϕᵣ₊₁₋₃ = shell[1][y,z-1]
         ϕᵣ₋₁₊₃ = lattice[x-1,y,z+1]
         ϕᵣ₊₂₋₃ = shell[3][x,z-1]
         ϕᵣ₋₂₊₃ = lattice[x,y-1,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
         # Edge 23
         x = 1; y = l₂
         ϕᵣ₊₁₋₂ = lattice[x+1,y-1,z]
+        ϕᵣ₊₁₊₂ = shell[3][x+1,z]
         ϕᵣ₋₁₊₂ = shell_edge23[z]
+        ϕᵣ₋₁₋₂ = shell[2][y-1,z]
         ϕᵣ₊₁₋₃ = lattice[x+1,y,z-1]
         ϕᵣ₋₁₊₃ = shell[2][y,z+1]
         ϕᵣ₊₂₋₃ = shell[3][x,z-1]
         ϕᵣ₋₂₊₃ = lattice[x,y-1,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
         # Edge 24
         x = 1; y = 1
         ϕᵣ₊₁₋₂ = shell[4][x+1,z]
+        ϕᵣ₊₁₊₂ = lattice[x+1,y+1,z]
         ϕᵣ₋₁₊₂ = shell[2][y+1,z]
+        ϕᵣ₋₁₋₂ = shell_edge24[z]
         ϕᵣ₊₁₋₃ = lattice[x+1,y,z-1]
         ϕᵣ₋₁₊₃ = shell[2][y,z+1]
         ϕᵣ₊₂₋₃ = lattice[x,y+1,z-1]
         ϕᵣ₋₂₊₃ = shell[4][x,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
     end
 
     # Then we do edges parallel to the x-axis
@@ -443,42 +464,50 @@ function setBorderEdges!(nnb::Array{NextNeighbors, 3}, lattice::Array{LatticeSit
         # Edge 45
         y = 1; z = l₃
         ϕᵣ₊₁₋₂ = shell[4][x+1,z]
+        ϕᵣ₊₁₊₂ = lattice[x+1,y+1,z]
         ϕᵣ₋₁₊₂ = lattice[x-1,y+1,z]
+        ϕᵣ₋₁₋₂ = shell[4][x-1,z]
         ϕᵣ₊₁₋₃ = lattice[x+1,y,z-1]
         ϕᵣ₋₁₊₃ = shell[5][x-1,y]
         ϕᵣ₊₂₋₃ = lattice[x,y+1,z-1]
         ϕᵣ₋₂₊₃ = shell_edge45[x]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
         # Edge 35
         y = l₂; z = l₃
         ϕᵣ₊₁₋₂ = lattice[x+1,y-1,z]
+        ϕᵣ₊₁₊₂ = shell[3][x+1,z]
         ϕᵣ₋₁₊₂ = shell[3][x-1,z]
+        ϕᵣ₋₁₋₂ = lattice[x-1,y-1,z]
         ϕᵣ₊₁₋₃ = lattice[x+1,y,z-1]
         ϕᵣ₋₁₊₃ = shell[5][x-1,y]
         ϕᵣ₊₂₋₃ = shell[3][x,z-1]
         ϕᵣ₋₂₊₃ = shell[5][x,y-1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
         # Edge 36
         y = l₂; z = 1
         ϕᵣ₊₁₋₂ = lattice[x+1,y-1,z]
+        ϕᵣ₊₁₊₂ = shell[3][x+1,z]
         ϕᵣ₋₁₊₂ = shell[3][x-1,z]
+        ϕᵣ₋₁₋₂ = lattice[x-1,y-1,z]
         ϕᵣ₊₁₋₃ = shell[6][x+1,y]
         ϕᵣ₋₁₊₃ = lattice[x-1,y,z+1]
         ϕᵣ₊₂₋₃ = shell_edge36[x]
         ϕᵣ₋₂₊₃ = lattice[x,y-1,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
         # Edge 46
         y = 1; z = 1
         ϕᵣ₊₁₋₂ = shell[4][x+1,z]
+        ϕᵣ₊₁₊₂ = lattice[x+1,y+1,z]
         ϕᵣ₋₁₊₂ = lattice[x-1,y+1,z]
+        ϕᵣ₋₁₋₂ = shell[4][x-1,z]
         ϕᵣ₊₁₋₃ = shell[6][x+1,y]
         ϕᵣ₋₁₊₃ = lattice[x-1,y,z+1]
         ϕᵣ₊₂₋₃ = shell[6][x,y+1]
         ϕᵣ₋₂₊₃ = shell[4][x,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
     end
 
     # Finally we need to set the next nearest neighbors of points on edges parallel to the y-axis
@@ -486,50 +515,58 @@ function setBorderEdges!(nnb::Array{NextNeighbors, 3}, lattice::Array{LatticeSit
         # Edge 15
         x = l₁; z = l₃
         ϕᵣ₊₁₋₂ = shell[1][y-1,z]
+        ϕᵣ₊₁₊₂ = shell[1][y+1,z]
         ϕᵣ₋₁₊₂ = lattice[x-1,y+1,z]
+        ϕᵣ₋₁₋₂ = lattice[x-1,y-1,z]
         ϕᵣ₊₁₋₃ = shell[1][y,z-1]
         ϕᵣ₋₁₊₃ = shell[5][x-1,y]
         ϕᵣ₊₂₋₃ = lattice[x,y+1,z-1]
         ϕᵣ₋₂₊₃ = shell[5][x,y-1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
         # Edge 25
         x = 1; z = l₃
         ϕᵣ₊₁₋₂ = lattice[x+1,y-1,z]
+        ϕᵣ₊₁₊₂ = lattice[x+1,y+1,z]
         ϕᵣ₋₁₊₂ = shell[2][y+1,z]
+        ϕᵣ₋₁₋₂ = shell[2][y-1,z]
         ϕᵣ₊₁₋₃ = lattice[x+1,y,z-1]
         ϕᵣ₋₁₊₃ = shell_edge25[y]
         ϕᵣ₊₂₋₃ = lattice[x,y+1,z-1]
         ϕᵣ₋₂₊₃ = shell[5][x,y-1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
         # Edge 26
         x = 1; z = 1
         ϕᵣ₊₁₋₂ = lattice[x+1,y-1,z]
+        ϕᵣ₊₁₊₂ = lattice[x+1,y+1,z]
         ϕᵣ₋₁₊₂ = shell[2][y+1,z]
+        ϕᵣ₋₁₋₂ = shell[2][y-1,z]
         ϕᵣ₊₁₋₃ = shell[6][x+1,y]
         ϕᵣ₋₁₊₃ = shell[2][y,z+1]
         ϕᵣ₊₂₋₃ = shell[6][x,y+1]
         ϕᵣ₋₂₊₃ = lattice[x,y-1,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
         # Edge 16
         x = l₁; z = 1
         ϕᵣ₊₁₋₂ = shell[1][y-1,z]
+        ϕᵣ₊₁₊₂ = shell[1][y+1,z]
         ϕᵣ₋₁₊₂ = lattice[x-1,y+1,z]
+        ϕᵣ₋₁₋₂ = lattice[x-1,y-1,z]
         ϕᵣ₊₁₋₃ = shell_edge16[y]
         ϕᵣ₋₁₊₃ = lattice[x-1,y,z+1]
         ϕᵣ₊₂₋₃ = shell[6][x,y+1]
         ϕᵣ₋₂₊₃ = lattice[x,y-1,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
     end
 end
 
 # Sets next nearest neighbors of the points on the 8 corners of the cuboid lattice.
 function setBorderCorners!(nnb::Array{NextNeighbors, 3}, lattice::Array{LatticeSite, 3}, shell::Vector{Array{LatticeSite, 2}},
-                         shell_edge14::Vector{LatticeSite}, shell_edge16::Vector{LatticeSite}, shell_edge23::Vector{LatticeSite},
-                         shell_edge25::Vector{LatticeSite}, shell_edge36::Vector{LatticeSite}, shell_edge45::Vector{LatticeSite},
-                         l₁::I,l₂::I,l₃::I) where I<:Int
+                           shell_edge13::Vector{LatticeSite}, shell_edge14::Vector{LatticeSite}, shell_edge16::Vector{LatticeSite},
+                           shell_edge23::Vector{LatticeSite}, shell_edge24::Vector{LatticeSite}, shell_edge25::Vector{LatticeSite},
+                           shell_edge36::Vector{LatticeSite}, shell_edge45::Vector{LatticeSite}, l₁::I,l₂::I,l₃::I) where I<:Int
 
     # Corners in z = l₃
     z = l₃
@@ -537,42 +574,50 @@ function setBorderCorners!(nnb::Array{NextNeighbors, 3}, lattice::Array{LatticeS
     # Corner 145
     x = l₁; y = 1
     ϕᵣ₊₁₋₂ = shell_edge14[z]
+    ϕᵣ₊₁₊₂ = shell[1][y+1,z]
     ϕᵣ₋₁₊₂ = lattice[x-1,y+1,z]
+    ϕᵣ₋₁₋₂ = shell[4][x-1,z]
     ϕᵣ₊₁₋₃ = shell[1][y,z-1]
     ϕᵣ₋₁₊₃ = shell[5][x-1,y]
     ϕᵣ₊₂₋₃ = lattice[x,y+1,z-1]
     ϕᵣ₋₂₊₃ = shell_edge45[x]
-    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
     # Corner 135
     x = l₁; y = l₂
     ϕᵣ₊₁₋₂ = shell[1][y-1,z]
+    ϕᵣ₊₁₊₂ = shell_edge13[z]
     ϕᵣ₋₁₊₂ = shell[3][x-1,z]
+    ϕᵣ₋₁₋₂ = lattice[x-1,y-1,z]
     ϕᵣ₊₁₋₃ = shell[1][y,z-1]
     ϕᵣ₋₁₊₃ = shell[5][x-1,y]
     ϕᵣ₊₂₋₃ = shell[3][x,z-1]
     ϕᵣ₋₂₊₃ = shell[5][x,y-1]
-    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
     # Corner 235
     x = 1; y = l₂
     ϕᵣ₊₁₋₂ = lattice[x+1,y-1,z]
+    ϕᵣ₊₁₊₂ = shell[3][x+1,z]
     ϕᵣ₋₁₊₂ = shell_edge23[z]
+    ϕᵣ₋₁₋₂ = shell[2][y-1,z]
     ϕᵣ₊₁₋₃ = lattice[x+1,y,z-1]
     ϕᵣ₋₁₊₃ = shell_edge25[y]
     ϕᵣ₊₂₋₃ = shell[3][x,z-1]
     ϕᵣ₋₂₊₃ = shell[5][x,y-1]
-    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
     # Corner 245
     x = 1; y = 1
     ϕᵣ₊₁₋₂ = shell[4][x+1,z]
+    ϕᵣ₊₁₊₂ = lattice[x+1,y+1,z]
     ϕᵣ₋₁₊₂ = shell[2][y+1,z]
+    ϕᵣ₋₁₋₂ = shell_edge24[z]
     ϕᵣ₊₁₋₃ = lattice[x+1,y,z-1]
     ϕᵣ₋₁₊₃ = shell_edge25[y]
     ϕᵣ₊₂₋₃ = lattice[x,y+1,z-1]
     ϕᵣ₋₂₊₃ = shell_edge45[x]
-    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
     # Corners in z = 1
     z = 1
@@ -580,49 +625,59 @@ function setBorderCorners!(nnb::Array{NextNeighbors, 3}, lattice::Array{LatticeS
     # Corner 146
     x = l₁; y = 1
     ϕᵣ₊₁₋₂ = shell_edge14[z]
+    ϕᵣ₊₁₊₂ = shell[1][y+1,z]
     ϕᵣ₋₁₊₂ = lattice[x-1,y+1,z]
+    ϕᵣ₋₁₋₂ = shell[4][x-1,z]
     ϕᵣ₊₁₋₃ = shell_edge16[y]
     ϕᵣ₋₁₊₃ = lattice[x-1,y,z+1]
     ϕᵣ₊₂₋₃ = shell[6][x,y+1]
     ϕᵣ₋₂₊₃ = shell[4][x,z+1]
-    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
     # Corner 136
     x = l₁; y = l₂
     ϕᵣ₊₁₋₂ = shell[1][y-1,z]
+    ϕᵣ₊₁₊₂ = shell_edge13[z]
     ϕᵣ₋₁₊₂ = shell[3][x-1,z]
+    ϕᵣ₋₁₋₂ = lattice[x-1,y-1,z]
     ϕᵣ₊₁₋₃ = shell_edge16[y]
     ϕᵣ₋₁₊₃ = lattice[x-1,y,z+1]
     ϕᵣ₊₂₋₃ = shell_edge36[x]
     ϕᵣ₋₂₊₃ = lattice[x,y-1,z+1]
-    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
     # Corner 236
     x = 1; y = l₂
     ϕᵣ₊₁₋₂ = lattice[x+1,y-1,z]
+    ϕᵣ₊₁₊₂ = shell[3][x+1,z]
     ϕᵣ₋₁₊₂ = shell_edge23[z]
+    ϕᵣ₋₁₋₂ = shell[2][y-1,z]
     ϕᵣ₊₁₋₃ = shell[6][x+1,y]
     ϕᵣ₋₁₊₃ = shell[2][y,z+1]
     ϕᵣ₊₂₋₃ = shell_edge36[x]
     ϕᵣ₋₂₊₃ = lattice[x,y-1,z+1]
-    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 
     # Corner 246
     x = 1; y = 1
     ϕᵣ₊₁₋₂ = shell[4][x+1,z]
+    ϕᵣ₊₁₊₂ = lattice[x+1,y+1,z]
     ϕᵣ₋₁₊₂ = shell[2][y+1,z]
+    ϕᵣ₋₁₋₂ = shell_edge24[z]
     ϕᵣ₊₁₋₃ = shell[6][x+1,y]
     ϕᵣ₋₁₊₃ = shell[2][y,z+1]
     ϕᵣ₊₂₋₃ = shell[6][x,y+1]
     ϕᵣ₋₂₊₃ = shell[4][x,z+1]
-    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+    nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
 end
 
 # ---------------------------------------------------------------------------------------------------
 # Set the next nearest neighbors on the lattice of a sub-cuboid with shells around it.
 function latticeNextNeighbors(lattice::Array{LatticeSite, 3}, shell::Vector{Array{LatticeSite, 2}},
-                shell_edge14::Vector{LatticeSite}, shell_edge16::Vector{LatticeSite}, shell_edge23::Vector{LatticeSite},
-                shell_edge25::Vector{LatticeSite}, shell_edge36::Vector{LatticeSite}, shell_edge45::Vector{LatticeSite})
+                shell_edge13::Vector{LatticeSite}, shell_edge14::Vector{LatticeSite}, shell_edge16::Vector{LatticeSite},
+                shell_edge23::Vector{LatticeSite}, shell_edge24::Vector{LatticeSite}, shell_edge25::Vector{LatticeSite},
+                shell_edge36::Vector{LatticeSite}, shell_edge45::Vector{LatticeSite})
+
     l₁ = size(lattice, 1); l₂ = size(lattice, 2); l₃ = size(lattice, 3)
     (l₁ < 1 || l₂ < 1 || l₃ < 1) && throw(DomainError())
     nnb = Array{NextNeighbors, 3}(undef, l₁, l₂, l₃)
@@ -630,23 +685,25 @@ function latticeNextNeighbors(lattice::Array{LatticeSite, 3}, shell::Vector{Arra
     # First we do all internal points, which are trivial and not dependent on the shell.
     for x = 2:l₁-1, y = 2:l₂-1, z = 2:l₃-1
         ϕᵣ₊₁₋₂ = lattice[x+1,y-1,z]
+        ϕᵣ₊₁₊₂ = lattice[x+1,y+1,z]
         ϕᵣ₋₁₊₂ = lattice[x-1,y+1,z]
+        ϕᵣ₋₁₋₂ = lattice[x-1,y-1,z]
         ϕᵣ₊₁₋₃ = lattice[x+1,y,z-1]
         ϕᵣ₋₁₊₃ = lattice[x-1,y,z+1]
         ϕᵣ₊₂₋₃ = lattice[x,y+1,z-1]
         ϕᵣ₋₂₊₃ = lattice[x,y-1,z+1]
-        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₋₁₊₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
+        nnb[x,y,z] = NextNeighbors(ϕᵣ₊₁₋₂, ϕᵣ₊₁₊₂, ϕᵣ₋₁₊₂, ϕᵣ₋₁₋₂, ϕᵣ₊₁₋₃, ϕᵣ₋₁₊₃, ϕᵣ₊₂₋₃, ϕᵣ₋₂₊₃)
     end
     
     # Next we do points that are internal to the different planes
     setBorderInternalPoints!(nnb, lattice, shell, l₁,l₂,l₃)
 
     # Then we do points that are internal to edges of the lattice, i.e. the edges except corners.
-    setBorderEdges!(nnb, lattice, shell, shell_edge14, shell_edge16, shell_edge23,
+    setBorderEdges!(nnb, lattice, shell, shell_edge13, shell_edge14, shell_edge16, shell_edge23, shell_edge24,
                              shell_edge25, shell_edge36, shell_edge45, l₁,l₂,l₃)
 
     # Finally we set the 8 corners of the lattice
-    setBorderCorners!(nnb, lattice, shell, shell_edge14, shell_edge16, shell_edge23,
+    setBorderCorners!(nnb, lattice, shell, shell_edge13, shell_edge14, shell_edge16, shell_edge23, shell_edge24,
                              shell_edge25, shell_edge36, shell_edge45, l₁,l₂,l₃)
 
     nnb
