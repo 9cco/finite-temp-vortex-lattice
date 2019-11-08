@@ -208,19 +208,19 @@ function measureStates(cubs::Array{Cuboid, 1}; full_amplitude_lattice=false)
     end
     
     # Measure phase twist derivatives
-    dH_01s = firstDerivativeTwist(cubs, 0, 1)
-    dH_10s = firstDerivativeTwist(cubs, 1, 0)
-    dH_11s = firstDerivativeTwist(cubs, 1, 1)
-    d²H_01s = secondDerivativeTwist(cubs, 0, 1)
-    d²H_10s = secondDerivativeTwist(cubs, 1, 0)
-    d²H_11s = secondDerivativeTwist(cubs, 1, 1)
+    #dH_01s = firstDerivativeTwist(cubs, 0, 1)
+    #dH_10s = firstDerivativeTwist(cubs, 1, 0)
+    #dH_11s = firstDerivativeTwist(cubs, 1, 1)
+    #d²H_01s = secondDerivativeTwist(cubs, 0, 1)
+    #d²H_10s = secondDerivativeTwist(cubs, 1, 0)
+    #d²H_11s = secondDerivativeTwist(cubs, 1, 1)
 
     if full_amplitude_lattice
-        return (proj_V⁺, proj_V⁻, S⁺, S⁻, proj_Vx, proj_Vy, Sx, Sy, u⁺_lattices, u⁻_lattices, u⁺_avg_z, u⁻_avg_z, u⁺_avg, u⁻_avg, δu²,
-            dH_01s, dH_10s, dH_11s, d²H_01s, d²H_10s, d²H_11s)
+        return (proj_V⁺, proj_V⁻, S⁺, S⁻, proj_Vx, proj_Vy, Sx, Sy, u⁺_lattices, u⁻_lattices, u⁺_avg_z, u⁻_avg_z, u⁺_avg, u⁻_avg, δu²)
+     #       dH_01s, dH_10s, dH_11s, d²H_01s, d²H_10s, d²H_11s)
     else
-        return (proj_V⁺, proj_V⁻, S⁺, S⁻, proj_Vx, proj_Vy, Sx, Sy, u⁺_avg_z, u⁻_avg_z, u⁺_avg, u⁻_avg, δu²,
-            dH_01s, dH_10s, dH_11s, d²H_01s, d²H_10s, d²H_11s)
+        return (proj_V⁺, proj_V⁻, S⁺, S⁻, proj_Vx, proj_Vy, Sx, Sy, u⁺_avg_z, u⁻_avg_z, u⁺_avg, u⁻_avg, δu²)
+#            dH_01s, dH_10s, dH_11s, d²H_01s, d²H_10s, d²H_11s)
     end
 end
 

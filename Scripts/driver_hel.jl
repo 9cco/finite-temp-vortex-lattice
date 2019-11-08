@@ -41,9 +41,9 @@ using JLD
 
 # Enter data directory for structure function
 fixRC()
-# We run a simulation with parameter κ supplied by script
+# We run a simulation with parameter ν supplied by script
 if length(ARGS) != 1
-    println("ERROR: Need κ supplied as script argument.")
+    println("ERROR: Need ν supplied as script argument.")
     exit(-1)
 end
 ν = parse(Float64, ARGS[1])             # Fermi surface anisotropy
