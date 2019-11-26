@@ -361,7 +361,8 @@ function nMCS!(cubs::Array{Cuboid, 1}, n::Int)
     avail = findAvailProc(cubs)
 #    start_pid = cubs[1].grid[1].where-length(cubs)
     for (i, cub) = enumerate(cubs)
-        futures[i] = @spawnat avail[i] nMCS!(cub, n)
+        futures[i] = @spawnat cub.grid[end].where nMCS!(cub, n)
+#        futures[i] = @spawnat avail[i] nMCS!(cub, n)
     end
     for fut in futures; wait(fut); end
     nothing
@@ -469,7 +470,8 @@ function nMCSEnUp!(cubs::Array{Cuboid, 1}, n::Int)
 #    start_pid = cubs[1].grid[1].where-length(cubs)
     for (i, cub) = enumerate(cubs)
 #        futures[i] = @spawnat (mod(start_pid+i-2,nprocs())+1) nMCSEnUp!(cub, n)
-        futures[i] = @spawnat avail[i] nMCSEnUp!(cub, n)
+#        futures[i] = @spawnat avail[i] nMCSEnUp!(cub, n)
+        futures[i] = @spawnat cub.grid[end].where nMCSEnUp!(cub, n)
     end
     for (i, fut) = enumerate(futures)
         dE_lists[i], updates_lists[i] = fetch(fut)
