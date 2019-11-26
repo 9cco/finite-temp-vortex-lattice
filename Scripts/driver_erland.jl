@@ -1,14 +1,13 @@
 # Current intention:
-# Figure out if we can use 1/4 of thermalization steps and still get a valid state, while using new code
-# with measured helicity modulus and variable MGT term. We would also like, when this is imported over
-# to Fram to run two L=64 states using a single script, where each state is divided in 16 subcubes,
-# instead of a single state divided on 32 subcubes as previously.
-#
-# To simulate the 1/4 of thermalization steps better we use a script that can make measurements over
-# multiple temperatures so we don't need to restart the script all the time.
+# Using not as many thermalization steps like we figured out that we could use previously we want to
+# explore a wide range of ν values at different weights of the MGT term.
 
 # Change list: erland <-> fram
 # out_path, staging_path, src_path, split, readline comment, target temp
+
+# Change list: κs -> νs
+# setting vector and parse argument, ARGS println, init_files, :%s/N_κ/N_ν/g, N_ν length, :%s/_by_κ/_by_ν/g, out_folder
+# estimate AR, println MEASUREMENTS, save meta, save final state, :%s/κs/κ/gc, search manually for ν -> νs 
 
 println("
   _________                                                   .___             __  .__      .__  __          
@@ -18,7 +17,8 @@ println("
 /_______  /____/|   __/ \\___  >__|    \\___  >____/|___|  /\\____ |____/  \\___  >__| |__| \\_/ |__||__|  / ____|
         \\/      |__|        \\/            \\/           \\/      \\/           \\/                        \\/     
         ")
-println("Script created by Fredrik Nicolai Krohg")
+println("Script created by Fredrik Nicolai Krohg @ fredrik.n.krohg@ntnu.no")
+println("This line updated on 8/11")
 
 using Distributed
 @everywhere using Distributions
@@ -35,7 +35,7 @@ end
 fixRC()
 
 @everywhere src_path = "/home/nicolai/Documents/Work/PhD/Numerikk/MC/finite-temp-vortex-lattice/Source/Grid/"
-#@everywhere src_path = "/cluster/home/fredrkro/mc/SourceUpdate/Grid/"
+#@everywhere src_path = "/cluster/home/fredrkro/mc/Source/Grid/"
 out_path = "/home/nicolai/mc/Scripts/"
 #out_path = "/cluster/home/fredrkro/mc/Data/ExperimentalRuns/"
 staging_path = ""
@@ -53,49 +53,52 @@ using JLD
 fixRC()
 # We run a simulation with parameter ν supplied by script
 if length(ARGS) != 1
-    println("ERROR: Need ν supplied as script argument.")
+    println("ERROR: Need κ supplied as script argument.")
     exit(-1)
 end
-ν = parse(Float64, ARGS[1])             # Fermi surface anisotropy
-κs = [1.0]#[2.0, 0.8, 0.4, 0.0]                         # MGT weights
+κ = parse(Float64, ARGS[1])                         # MGT weights
+νs =  [0.25] #[-0.5, -0.3, -0.1, 0.0, 0.1, 0.3, 0.4, 0.5, 0.7]
+#[-0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]#
+# [-0.9, -0.85, -0.8, -0.75, -0.7, -0.65, -0.6, -0.55, -0.5, -0.45, -0.4, -0.35, -0.3, -0.25, -0.2, -0.15, -0.1, -0.05, 0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]# [-0.7, -0.5, -0.4, -0.2, 0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]             # Fermi surface anisotropy
 g = 0.316227766                               # Gauge couplings
 κ₅ = 1.0
-N_κ = length(κs)
+N_ν = length(νs)
 
 # Other parameters
-M_est = 2^8  # Number of MC-steps to do at T_start before cooldown.
+M_est = 2^7  # Number of MC-steps to do at T_start before cooldown.
 M_col = 2^17 # Number of MC-steps to use for cooling down the systems
 N_steps = 2^10   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
 M_th = 2^17  # Number of MC-steps to do for thermalization.
-M = 2^12     # Number of measurements
+M = 2^11     # Number of measurements
 M_amp = 2^5   # Number of these measurements that will be amplitude measurements, i.e. we need M >= M_amp
-Δt = 2^5      # Number of MC-steps between each measurement
+Δt = 2^8      # Number of MC-steps between each measurement
 # L is assumed to be even.
 L = 32     # System length
 L₁ = L
 L₂ = L
 L₃ = L
-split = (1,1,3)#(1,1,2)#
+split = (1,1,4) #(1,1,2)#
 N = L₁*L₂*L₃
 # Specify extended landau gauge using n,m s.t. constant Aᵢ(Lⱼ+1) = Aᵢ(0) mod 2π
 # n | L₁ and m | L₂
 n = 1; m = 0
 f = n/L₁ - m/L₂
-Ts = [4.0, 2.0, 1.8, 1.7, 1.6, 1.5]#[2.0, 1.9, 1.8, 1.7]
+Ts = [4.0, 2.5, 2.0, 1.9, 1.8, 1.7, 1.65, 1.6, 1.55, 1.5]#[2.0, 1.9, 1.8, 1.7]
 T_start = 2*4.0+0.1   # Start-temperature of states when thermalizing from ab-inito state
 
 
 # Print parameters
-println("\nStarted script at: $(Dates.format(now(), "HH:MM"))")
+println("\nStarted script at: $(Dates.format(now(), "HH:MM")) on $(Dates.format(now(), "d/m"))")
 println("Target temps: $(Ts)")
 println("f = $(f)")
 println("n = $(n)")
 println("m = $(m)")
 println("L = $(L)")
-println("ν = $(ν)")
+println("νs = $(νs)")
 println("κ₅ = $(κ₅)")
-println("κs = $(κs)")
+println("κ = $(κ)")
 println("g = $(g)")
+println("Each state split in $(split)")
 if f < 0
     println("Number of anti-vortices: $(-f*L₁*L₂)")
 else
@@ -106,20 +109,22 @@ cd(out_path)
 
 # Checking available workers
 workers_pr_state = Int(prod(split))
-needed_workers = workers_pr_state*N_κ + N_κ - 1
+needed_workers = workers_pr_state*N_ν - 1 + 1# + N_ν
 if nprocs()-1 < needed_workers
+    #println("ERROR: Only $(nprocs()-1) workers have been allocated. $(needed_workers) are needed to split all
+#of the $((needed_workers-N_ν+1)/workers_pr_state) states into $(workers_pr_state) subcuboids and then
+#run these in parallel using $(N_ν) additional workers.")
     println("ERROR: Only $(nprocs()-1) workers have been allocated. $(needed_workers) are needed to split all
-of the $((needed_workers-N_κ+1)/workers_pr_state) states into $(workers_pr_state) subcuboids and then
-run these in parallel using $(N_κ) additional workers.")
+of the $((needed_workers-1+1)/workers_pr_state) states into $(workers_pr_state) subcuboids.")
     exit()
 end
 
 
 
-# Initiating states
+# Initiating sates
 ################################################################################################
-init_files = [staging_path*"init_state_g=$(round(g; digits=3))_nu=$(round(ν; digits=3))_kap=$(round(κ, digits=3)).jld" for κ in κs]
-cubs, systs, init_temps = initiateStates(init_files, L₁, L₂, L₃, g, ν, κ₅, κs, n, m, split)
+init_files = [staging_path*"init_state_g=$(round(g; digits=3))_nu=$(round(ν; digits=3))_kap=$(round(κ, digits=3)).jld" for ν in νs]
+cubs, systs, init_temps = initiateStates(init_files, L₁, L₂, L₃, g, νs, κ₅, κ, n, m, split)
 
 
 
@@ -127,8 +132,11 @@ cubs, systs, init_temps = initiateStates(init_files, L₁, L₂, L₃, g, ν, κ
 ################################################################################################
 
 N_T = length(Ts)
-estimateRuntime!(cubs, N, M_est, N_T*M_col, N_T*M_th, N_T*M, Δt)
+t_MCS = estimateRuntime!(cubs, N, M_est, Δt)
 
+# Estimating ETC
+println("Measurements and thermalization will do $(N_T*(Δt*M + M_th + M_col)) MCS for each of the $(N_ν)
+states, which has an ETC of $(round((Δt*M + M_th + M_col)*N_T*N_ν*t_MCS/3600; digits=2)) h")
 print("Continue with thermalization and measurements? (y/n): ")
 flush(stdout)
 
@@ -141,12 +149,13 @@ for T in Ts         #>>>>>>>>>>>>>>>>> Start of T loop <<<<<<<<<<<<<<<<<<<<#
 # Making global variables be assignable in the new local scope
 global M_col
 
-out_folders = ["C4_model_L=$(L)_T=$(round(T; digits=2))_g=$(round(g; digits=3))_nu=$(round(ν; digits=3))_kap=$(κ)_n=$(n)_m=$(m)_mult_kap" for κ in κs]
+out_folders = ["C4_model_L=$(L)_T=$(round(T; digits=2))_g=$(round(g; digits=3))_nu=$(round(ν; digits=3))_kap=$(κ)_n=$(n)_m=$(m)_mult_kap" for ν in νs]
 for folder in out_folders
     mkcd(folder)
     cd("../")
     println("Making folder $(folder) in path $(out_path)")
 end
+
 
 println("\nCOOLDOWN & THERMALIZATION T -> $(T)\n#############################################################")
 
@@ -158,7 +167,7 @@ M_col, t_col = cooldownStates!(cubs, N, M_col, N_steps, M_est, init_temps, T, ou
 # cool down from the previous temperature.
 fill!(init_temps, T)
 
-t_MCS0 = t_col/(M_col*N_κ)
+t_MCS0 = t_col/(M_col*N_ν)
 
 
 
@@ -171,58 +180,58 @@ t_MCS_av = (t_MCS0 + t_MCS1)/2
 
 AR_est = [estimateAR!(cub)[1] for cub in cubs]
 println("After thermalization the estimated AR are:")
-for (k, est) = enumerate(AR_est); println("AR(κ=$(round(κs[k]; digits=1))): ≈ $(round(est*100; digits=2))%"); end
+for (k, est) = enumerate(AR_est); println("AR(ν=$(round(νs[k]; digits=1))): ≈ $(round(est*100; digits=2))%"); end
 
 
 
 # Doing measurements
 ################################################################################################
 println("\nMEASUREMENTS\n#############################################################")
-println("We will now do $(Δt*M) MCS pr κ value  which gives
-$(M) measurements and has an ETC of $(round(Δt*M*N_κ*t_MCS_av/3600; digits=2)) h")
-println("Started measurements at: $(Dates.format(now(), "HH:MM"))")
+println("We will now do $(Δt*M) MCS pr ν value  which gives
+$(M) measurements and has an ETC of $(round(Δt*M*N_ν*t_MCS_av/3600; digits=2)) h")
+println("Started measurements at: $(Dates.format(now(), "HH:MM")) on $(Dates.format(now(), "d/m"))")
 flush(stdout)
 
 # Setup storage for dual stifness and energy
-E_by_κ = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
+E_by_ν = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
 E_prev = [energy(cub) for cub in cubs]
 # Storage for vortices and dual vortices
-S⁺_by_κ = [Array{Array{Float64, 2},1}(undef, M) for k = 1:N_κ]
-S⁻_by_κ = [Array{Array{Float64, 2},1}(undef, M) for k = 1:N_κ]
-V⁺_avg_by_κ = [zeros(Float64, L₁, L₂) for k = 1:N_κ]
-V⁻_avg_by_κ = [zeros(Float64, L₁, L₂) for k = 1:N_κ]
-Vx_avg_by_κ = [zeros(Float64, L₁, L₂) for k = 1:N_κ]
-Vy_avg_by_κ = [zeros(Float64, L₁, L₂) for k = 1:N_κ]
-Sx_avg_by_κ = [zeros(Float64, L₁, L₂) for k = 1:N_κ]
-Sy_avg_by_κ = [zeros(Float64, L₁, L₂) for k = 1:N_κ]
+S⁺_by_ν = [Array{Array{Float64, 2},1}(undef, M) for k = 1:N_ν]
+S⁻_by_ν = [Array{Array{Float64, 2},1}(undef, M) for k = 1:N_ν]
+V⁺_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
+V⁻_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
+Vx_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
+Vy_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
+Sx_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
+Sy_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
 # Storage for amplitude matrices
-u⁺_lattices_by_κ = [Array{Array{Float64, 3},1}(undef, M_amp) for k = 1:N_κ]
-u⁻_lattices_by_κ = [Array{Array{Float64, 3},1}(undef, M_amp) for k = 1:N_κ]
-u⁺_xy_lattices_by_κ = [zeros(Float64, L₁, L₂) for k = 1:N_κ]
-u⁻_xy_lattices_by_κ = [zeros(Float64, L₁, L₂) for k = 1:N_κ]
-u⁺_avg_by_κ = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-u⁻_avg_by_κ = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-δu²_by_κ = [Array{Float64, 1}(undef, M) for k = 1:N_κ] # 1/N*sum_r( (u⁺ᵣ)^2 - (u⁻ᵣ)^2 )
+u⁺_lattices_by_ν = [Array{Array{Float64, 3},1}(undef, M_amp) for k = 1:N_ν]
+u⁻_lattices_by_ν = [Array{Array{Float64, 3},1}(undef, M_amp) for k = 1:N_ν]
+u⁺_xy_lattices_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
+u⁻_xy_lattices_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
+u⁺_avg_by_ν = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+u⁻_avg_by_ν = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+δu²_by_ν = [Array{Float64, 1}(undef, M) for k = 1:N_ν] # 1/N*sum_r( (u⁺ᵣ)^2 - (u⁻ᵣ)^2 )
 
 # Storage for helicity modulus derivatives
-#dH_01_x = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#dH_01_y = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#dH_01_z = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#dH_10_x = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#dH_10_y = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#dH_10_z = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#dH_11_x = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#dH_11_y = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#dH_11_z = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#d²H_01_x = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#d²H_01_y = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#d²H_01_z = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#d²H_10_x = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#d²H_10_y = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#d²H_10_z = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#d²H_11_x = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#d²H_11_y = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
-#d²H_11_z = [Array{Float64, 1}(undef, M) for k = 1:N_κ]
+#dH_01_x = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#dH_01_y = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#dH_01_z = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#dH_10_x = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#dH_10_y = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#dH_10_z = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#dH_11_x = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#dH_11_y = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#dH_11_z = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#d²H_01_x = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#d²H_01_y = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#d²H_01_z = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#d²H_10_x = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#d²H_10_y = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#d²H_10_z = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#d²H_11_x = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#d²H_11_y = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
+#d²H_11_z = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
 
 
 # We preform M measurements
@@ -231,8 +240,8 @@ t_meas = @elapsed @time for m = 1:M
     δE = [sum(dE_list) for dE_list in dE_lists]
 
     # Sort results in terms of temperature.
-    for i = 1:N_κ
-        E_by_κ[i][m] = E_prev[i] + δE[i]
+    for i = 1:N_ν
+        E_by_ν[i][m] = E_prev[i] + δE[i]
         E_prev[i] += δE[i]
     end
 
@@ -247,22 +256,22 @@ t_meas = @elapsed @time for m = 1:M
     end
 
     # Organize measurements into storage arrays
-    for k = 1:N_κ
-        V⁺_avg_by_κ[k] .+= proj_V⁺[k]; V⁻_avg_by_κ[k] .+= proj_V⁻[k]
-        S⁺_by_κ[k][m] = S⁺[k]; S⁻_by_κ[k][m] = S⁻[k]
-        Vx_avg_by_κ[k] .+= proj_Vx[k]; Vy_avg_by_κ[k] .+= proj_Vy[k]
-        Sx_avg_by_κ[k] .+= Sx[k]; Sy_avg_by_κ[k] .+= Sy[k]
+    for k = 1:N_ν
+        V⁺_avg_by_ν[k] .+= proj_V⁺[k]; V⁻_avg_by_ν[k] .+= proj_V⁻[k]
+        S⁺_by_ν[k][m] = S⁺[k]; S⁻_by_ν[k][m] = S⁻[k]
+        Vx_avg_by_ν[k] .+= proj_Vx[k]; Vy_avg_by_ν[k] .+= proj_Vy[k]
+        Sx_avg_by_ν[k] .+= Sx[k]; Sy_avg_by_ν[k] .+= Sy[k]
 
         # Save z-averaged lattices
-        u⁺_xy_lattices_by_κ[k] .+= u⁺_avg_z[k]
-        u⁻_xy_lattices_by_κ[k] .+= u⁻_avg_z[k]
-        u⁺_avg_by_κ[k][m] = u⁺_avg[k]
-        u⁻_avg_by_κ[k][m] = u⁻_avg[k]
+        u⁺_xy_lattices_by_ν[k] .+= u⁺_avg_z[k]
+        u⁻_xy_lattices_by_ν[k] .+= u⁻_avg_z[k]
+        u⁺_avg_by_ν[k][m] = u⁺_avg[k]
+        u⁻_avg_by_ν[k][m] = u⁻_avg[k]
         if m <= M_amp
-            u⁺_lattices_by_κ[k][m] = u⁺_lattices[k]
-            u⁻_lattices_by_κ[k][m] = u⁻_lattices[k]
+            u⁺_lattices_by_ν[k][m] = u⁺_lattices[k]
+            u⁻_lattices_by_ν[k][m] = u⁻_lattices[k]
         end
-        δu²_by_κ[k][m] = δu²[k]
+        δu²_by_ν[k][m] = δu²[k]
 
 #        dH_01_x[k][m], dH_01_y[k][m], dH_01_z[k][m] = dH_01s[k]
 #        dH_10_x[k][m], dH_10_y[k][m], dH_10_z[k][m] = dH_10s[k] 
@@ -273,28 +282,28 @@ t_meas = @elapsed @time for m = 1:M
 #        d²H_11_x[k][m], d²H_11_y[k][m], d²H_11_z[k][m] = d²H_11s[k]
     end
 end
-V⁺_avg_by_κ = V⁺_avg_by_κ./M; V⁻_avg_by_κ  = V⁻_avg_by_κ./M
-Vx_avg_by_κ = Vx_avg_by_κ./M; Vy_avg_by_κ = Vy_avg_by_κ./M
-Sx_avg_by_κ = Sx_avg_by_κ./M; Sy_avg_by_κ = Sy_avg_by_κ./M
+V⁺_avg_by_ν = V⁺_avg_by_ν./M; V⁻_avg_by_ν  = V⁻_avg_by_ν./M
+Vx_avg_by_ν = Vx_avg_by_ν./M; Vy_avg_by_ν = Vy_avg_by_ν./M
+Sx_avg_by_ν = Sx_avg_by_ν./M; Sy_avg_by_ν = Sy_avg_by_ν./M
 final_lattices = [getLattice(cub) for cub in cubs]
-vortices_by_κ = [vortexSnapshot(lattice, getSyst(cubs[1])) for lattice in final_lattices]
+vortices_by_ν = [vortexSnapshot(lattice, getSyst(cubs[1])) for lattice in final_lattices]
 
-println("Measurements used $(round(t_meas/3600; digits=1)) h, which means it took on average $(round(t_meas/(M*N_κ); digits=1)) s pr. measurement.")
-println("and $(round(t_meas/(M*Δt*N*N_κ)*1e6; digits=2)) μs pr. MCS pr. lattice site.")
+println("Measurements used $(round(t_meas/3600; digits=1)) h, which means it took on average $(round(t_meas/(M*N_ν); digits=1)) s pr. measurement.")
+println("and $(round(t_meas/(M*Δt*N*N_ν)*1e6; digits=2)) μs pr. MCS pr. lattice site.")
 println("-------------------------------------------------------------\n\n")
 
 
 
 # Saving results to file
 ################################################################################################
-for k = 1:N_κ
-    JLD.save(out_folders[k]*"/energies.jld", "Es", E_by_κ[k])
+for k = 1:N_ν
+    JLD.save(out_folders[k]*"/energies.jld", "Es", E_by_ν[k])
 
-    JLD.save(out_folders[k]*"/meta.jld", "L1", L₁, "L2", L₂, "L3", L₃, "M", M, "M_amp", M_amp, "dt", Δt, "T", T, "n", n, "m", m, "kap5", κ₅, "kap", κs[k], "nu", ν, "g", g)
-    JLD.save(out_folders[k]*"/vorticity.jld", "vortexes", vortices_by_κ[k], "sp", S⁺_by_κ[k], "sm", S⁻_by_κ[k])
-    JLD.save(out_folders[k]*"/real_vorticity.jld", "vp_avg", V⁺_avg_by_κ[k], "vm_avg", V⁻_avg_by_κ[k])
-    JLD.save(out_folders[k]*"/XY_vorticity.jld", "vx_avg", Vx_avg_by_κ[k], "vy_avg", Vy_avg_by_κ[k], "sx_avg", Sx_avg_by_κ[k], "sy_avg", Sy_avg_by_κ[k])
-    JLD.save(out_folders[k]*"/amplitudes.jld", "up_lattices", u⁺_lattices_by_κ[k], "um_lattices", u⁻_lattices_by_κ[k], "up_xy", u⁺_xy_lattices_by_κ[k], "um_xy", u⁻_xy_lattices_by_κ[k], "up_avg", u⁺_avg_by_κ, "um_avg", u⁻_avg_by_κ, "du2", δu²_by_κ)
+    JLD.save(out_folders[k]*"/meta.jld", "L1", L₁, "L2", L₂, "L3", L₃, "M", M, "M_amp", M_amp, "dt", Δt, "T", T, "n", n, "m", m, "kap5", κ₅, "kap", κ, "nu", νs[k], "g", g)
+    JLD.save(out_folders[k]*"/vorticity.jld", "vortexes", vortices_by_ν[k], "sp", S⁺_by_ν[k], "sm", S⁻_by_ν[k])
+    JLD.save(out_folders[k]*"/real_vorticity.jld", "vp_avg", V⁺_avg_by_ν[k], "vm_avg", V⁻_avg_by_ν[k])
+    JLD.save(out_folders[k]*"/XY_vorticity.jld", "vx_avg", Vx_avg_by_ν[k], "vy_avg", Vy_avg_by_ν[k], "sx_avg", Sx_avg_by_ν[k], "sy_avg", Sy_avg_by_ν[k])
+    JLD.save(out_folders[k]*"/amplitudes.jld", "up_lattices", u⁺_lattices_by_ν[k], "um_lattices", u⁻_lattices_by_ν[k], "up_xy", u⁺_xy_lattices_by_ν[k], "um_xy", u⁻_xy_lattices_by_ν[k], "up_avg", u⁺_avg_by_ν, "um_avg", u⁻_avg_by_ν, "du2", δu²_by_ν)
 
     # Saving Helicity moduli
 #    JLD.save(out_folders[k]*"/hel_mod.jld", "dH_01_x", dH_01_x[k], "dH_01_y", dH_01_y[k], "dH_01_z", dH_01_z[k],
@@ -305,7 +314,7 @@ for k = 1:N_κ
 #             "d2H_11_x", d²H_11_x[k], "d2H_11_y", d²H_11_y[k], "d2H_11_z", d²H_11_z[k])
 
     # Saving final state
-    JLD.save(out_folders[k]*"/final_state_g=$(round(g; digits=3))_nu=$(round(ν; digits=3))_kap=$(round(κs[k], digits=3)).jld", "lattice", final_lattices[k], "syst", getSyst(cubs[k]), "T", getTemp(cubs[k]), "controls", getControls(cubs[k]))
+    JLD.save(out_folders[k]*"/final_state_g=$(round(g; digits=3))_nu=$(round(νs[k]; digits=3))_kap=$(round(κ, digits=3)).jld", "lattice", final_lattices[k], "syst", getSyst(cubs[k]), "T", getTemp(cubs[k]), "controls", getControls(cubs[k]))
 end
 
 end          #>>>>>>>>>>>>>>>>> End of T loop <<<<<<<<<<<<<<<<<<<<#
