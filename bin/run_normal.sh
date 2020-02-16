@@ -14,14 +14,14 @@
 #SBATCH --account=nn2819k
 
 ## Job name:
-#SBATCH --job-name=MCMCNo
+#SBATCH --job-name=LowField
 ## Allocating amount of resources:
 #SBATCH --nodes=4
 ## Number of tasks (aka processes) to start on each node: Pure mpi, one task per core
 #SBATCH --ntasks-per-node=32 --cpus-per-task=1
 ## No memory pr task since this option is turned off on Fram in QOS normal.
 ## Run for x minutes, syntax is d-hh:mm:ss
-#SBATCH --time=2-00:00:00 
+#SBATCH --time=7-00:00:00 
 
 # turn on all mail notification, and also provide mail address:
 ##SBATCH --mail-type=ALL
@@ -35,6 +35,10 @@
 set -o errexit # Make bash exit on any error
 set -o nounset # Treat unset variables as errors
 
+# Needed for jobs in normal or optimist partition:
+#export SLURM_MEM_PER_CPU=1920
+
+#1-01:00:00 
 error_exit()
 {
 	echo "$1" 1>&2
@@ -45,23 +49,26 @@ SOURCE_PATH="/cluster/projects/nn2819k/finite-temp-vortex-lattice/Source/"
 SCRIPTS_PATH="/cluster/projects/nn2819k/finite-temp-vortex-lattice/Scripts/"
 JULIA_PATH="/cluster/home/fredrkro/Programs/julia-1.0.4/bin/julia"
 
-# We use 4 nodes and will thus run 4 simulations for 4 different temperatures
-# which should output to 4 diffferent output files
-gs=(1.0 1.0 1.0 1.0 0.3 0.3 0.3 0.3 0.5 0.5 0.5 0.5)
-nus=(0.0 0.3 0.5 1.0 0.0 0.3 0.5 1.0 0.0 0.3 0.5 1.0)
+# Each node will run 3 different temperature intervals, where each temp. int. contains 3 different temperatures.
+T_start1=(1.999 1.972 1.945 1.919) #(1.975) 
+T_start2=(1.99 1.963 1.936 1.91)
+T_start3=(1.981 1.954 1.927 1.901)
+# Each interval will be initialized from a separate state with temperatures set below
+T_init1=(2.0 2.0 2.0 2.0)
+T_init2=(2.0 2.0 2.0 2.0)
+T_init3=(2.0 2.0 2.0 2.0)
 
-# Check that arrays are equal
-[ ${#gs[@]} = ${#nus[@]} ] || error_exit "ERROR: input arrays of un-equal length"
 
 declare -a outputs
-for (( i=0; i<${#nus[@]}; i++))
+for (( i=0; i<${#T_start1[@]}; i++))
 do
-    outputs[i]="g${gs[i]}_nu${nus[i]}.out"
+    outputs[i]="T_start1_${T_start1[i]}_field.out"
 done
 
 # Needs to be edited when changing scripts
-JULIA_SCRIPT="driver_new.jl"
-CPUS="8" # Max is --ntasks-per-node * --nodes
+JULIA_SCRIPT="driver_Ts.jl"
+AUX_SCRIPT="script_functions.jl"
+CPUS="50" # Max is --ntasks-per-node * --nodes * --cpus-per-task (is it though?)
 
 
 # Making sure we are in the right directory
@@ -69,6 +76,8 @@ CPUS="8" # Max is --ntasks-per-node * --nodes
 cd $SCRIPTS_PATH
 [ -f ./$JULIA_SCRIPT ] || error_exit "ERROR: Could not find julia script $JULIA_SCRIPT in `pwd`"
 cp $JULIA_SCRIPT $SCRATCH/
+[ -f ./$AUX_SCRIPT ] || error_exit "ERROR: Could not find auxhillary script code $AUX_SCRIPT in `pwd`"
+cp $AUX_SCRIPT $SCRATCH/
 
 #######################################################
 ## Prepare jobs, moving input files and making sure 
@@ -81,7 +90,7 @@ cp $JULIA_SCRIPT $SCRATCH/
 
 # Make sure output is copied back after job finishes
 #savefile outputfile1 outputfile2
-for (( i=0; i<${#nus[@]}; i++))
+for (( i=0; i<${#T_start1[@]}; i++))
 do
     savefile ${outputs[i]}
 done
@@ -92,9 +101,9 @@ done
 
 echo "Handling control to julia script."
 cd $SCRATCH
-for (( i=0; i<${#nus[@]}; i++ ))
+for (( i=0; i<${#T_start1[@]}; i++ ))
 do
-    $JULIA_PATH -p $CPUS $JULIA_SCRIPT ${gs[i]} ${nus[i]} > ${outputs[i]} &
+    srun -N1 --ntasks=1 $JULIA_PATH -p $CPUS $JULIA_SCRIPT ${T_start1[i]} ${T_start2[i]} ${T_start3[i]} ${T_init1[i]} ${T_init2[i]} ${T_init3[i]} > ${outputs[i]} &
 done
 
 wait
