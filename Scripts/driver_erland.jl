@@ -18,7 +18,7 @@ println("
         \\/      |__|        \\/            \\/           \\/      \\/           \\/                        \\/     
         ")
 println("Script created by Fredrik Nicolai Krohg @ fredrik.n.krohg@ntnu.no")
-println("This line updated on 8/11")
+println("This line updated on 18/12")
 
 using Distributed
 @everywhere using Distributions
@@ -37,9 +37,9 @@ fixRC()
 @everywhere src_path = "/home/nicolai/Documents/Work/PhD/Numerikk/MC/finite-temp-vortex-lattice/Source/Grid/"
 #@everywhere src_path = "/cluster/home/fredrkro/mc/Source/Grid/"
 out_path = "/home/nicolai/mc/Scripts/"
-#out_path = "/cluster/home/fredrkro/mc/Data/ExperimentalRuns/"
+#out_path = "/cluster/home/fredrkro/mc/Data/FieldRuns/"
 staging_path = ""
-#staging_path = "/cluster/home/fredrkro/Staging2/"
+#staging_path = "/cluster/home/fredrkro/StagingField/"
 @everywhere push!(LOAD_PATH, $src_path)
 @everywhere using CuboidModule
 
@@ -57,23 +57,21 @@ if length(ARGS) != 1
     exit(-1)
 end
 κ = parse(Float64, ARGS[1])                         # MGT weights
-νs =  [0.25] #[-0.5, -0.3, -0.1, 0.0, 0.1, 0.3, 0.4, 0.5, 0.7]
-#[-0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]#
-# [-0.9, -0.85, -0.8, -0.75, -0.7, -0.65, -0.6, -0.55, -0.5, -0.45, -0.4, -0.35, -0.3, -0.25, -0.2, -0.15, -0.1, -0.05, 0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]# [-0.7, -0.5, -0.4, -0.2, 0.0, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]             # Fermi surface anisotropy
-g = 0.316227766                               # Gauge couplings
+νs =  [0.3] #[-0.5, -0.3, -0.1, 0.0, 0.1, 0.3, 0.4, 0.5, 0.7]
+g = 0.3                               # Gauge couplings
 κ₅ = 1.0
 N_ν = length(νs)
 
 # Other parameters
-M_est = 2^7  # Number of MC-steps to do at T_start before cooldown.
-M_col = 2^17 # Number of MC-steps to use for cooling down the systems
+M_est = 2^6  # Number of MC-steps to do at T_start before cooldown.
+M_col = 2^16 # Number of MC-steps to use for cooling down the systems
 N_steps = 2^10   # Number of temperatures to go through from high temp before reaching the final temperature. (will divide M_col) must be >= 2
-M_th = 2^17  # Number of MC-steps to do for thermalization.
-M = 2^11     # Number of measurements
-M_amp = 2^5   # Number of these measurements that will be amplitude measurements, i.e. we need M >= M_amp
-Δt = 2^8      # Number of MC-steps between each measurement
+M_th = 2^16  # Number of MC-steps to do for thermalization.
+M = 2^13     # Number of measurements
+M_amp = 2^3   # Number of these measurements that will be amplitude measurements, i.e. we need M >= M_amp
+Δt = 2^6      # Number of MC-steps between each measurement
 # L is assumed to be even.
-L = 32     # System length
+L = 42     # System length
 L₁ = L
 L₂ = L
 L₃ = L
@@ -83,7 +81,7 @@ N = L₁*L₂*L₃
 # n | L₁ and m | L₂
 n = 1; m = 0
 f = n/L₁ - m/L₂
-Ts = [4.0, 2.5, 2.0, 1.9, 1.8, 1.7, 1.65, 1.6, 1.55, 1.5]#[2.0, 1.9, 1.8, 1.7]
+Ts = [1.756, 1.752, 1.748, 1.744, 1.741, 1.736, 1.732, 1.728, 1.724, 1.721, 1.716, 1.712, 1.708, 1.704, 1.701]#[1.805, 1.801, 1.795, 1.79, 1.785, 1.781, 1.775, 1.77, 1.765, 1.761]#[1.845, 1.84, 1.835, 1.83, 1.825, 1.82, 1.815, 1.81]#[1.45, 1.4, 1.35, 1.3, 1.25, 1.2, 1.15, 1.1, 1.05, 1.0, 0.95, 0.9] #[4.0, 2.5, 2.0, 1.9, 1.8, 1.7, 1.65, 1.6, 1.55, 1.5]#[2.0, 1.9, 1.8, 1.7]
 T_start = 2*4.0+0.1   # Start-temperature of states when thermalizing from ab-inito state
 
 
@@ -149,7 +147,7 @@ for T in Ts         #>>>>>>>>>>>>>>>>> Start of T loop <<<<<<<<<<<<<<<<<<<<#
 # Making global variables be assignable in the new local scope
 global M_col
 
-out_folders = ["C4_model_L=$(L)_T=$(round(T; digits=2))_g=$(round(g; digits=3))_nu=$(round(ν; digits=3))_kap=$(κ)_n=$(n)_m=$(m)_mult_kap" for ν in νs]
+out_folders = ["C4_model_L=$(L)_T=$(round(T; digits=3))_g=$(round(g; digits=3))_nu=$(round(ν; digits=3))_kap=$(κ)_n=$(n)_m=$(m)_mult_kap" for ν in νs]
 for folder in out_folders
     mkcd(folder)
     cd("../")
@@ -196,10 +194,10 @@ flush(stdout)
 E_by_ν = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
 E_prev = [energy(cub) for cub in cubs]
 # Storage for vortices and dual vortices
-S⁺_by_ν = [Array{Array{Float64, 2},1}(undef, M) for k = 1:N_ν]
-S⁻_by_ν = [Array{Array{Float64, 2},1}(undef, M) for k = 1:N_ν]
-V⁺_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
-V⁻_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
+S⁺_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
+S⁻_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
+V⁺_by_ν = [Array{Array{Float64, 2}, 1}(undef, M) for k = 1:N_ν]
+V⁻_by_ν = [Array{Array{Float64, 2}, 1}(undef, M) for k = 1:N_ν]
 Vx_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
 Vy_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
 Sx_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
@@ -212,6 +210,9 @@ u⁻_xy_lattices_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
 u⁺_avg_by_ν = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
 u⁻_avg_by_ν = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
 δu²_by_ν = [Array{Float64, 1}(undef, M) for k = 1:N_ν] # 1/N*sum_r( (u⁺ᵣ)^2 - (u⁻ᵣ)^2 )
+
+Bz_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
+Δθ_avg_by_ν = [zeros(Float64, L₁, L₂) for k = 1:N_ν]
 
 # Storage for helicity modulus derivatives
 #dH_01_x = [Array{Float64, 1}(undef, M) for k = 1:N_ν]
@@ -247,18 +248,18 @@ t_meas = @elapsed @time for m = 1:M
 
     if m <= M_amp
         (proj_V⁺, proj_V⁻, S⁺, S⁻, proj_Vx, proj_Vy, Sx, Sy, u⁺_lattices, u⁻_lattices, u⁺_avg_z, u⁻_avg_z, u⁺_avg, u⁻_avg,
-         δu²) = measureStates(cubs; full_amplitude_lattice = true)
+         δu², Bz_proj, Δθ_proj) = measureStates(cubs; full_amplitude_lattice = true)
 #         dH_01s, dH_10s, dH_11s, d²H_01s, d²H_10s, d²H_11s) = measureStates(cubs; full_amplitude_lattice = true)
     else
         (proj_V⁺, proj_V⁻, S⁺, S⁻, proj_Vx, proj_Vy, Sx, Sy, u⁺_avg_z, u⁻_avg_z, u⁺_avg, u⁻_avg,
-         δu²) = measureStates(cubs, full_amplitude_lattice = false)
+         δu², Bz_proj, Δθ_proj) = measureStates(cubs, full_amplitude_lattice = false)
 #         dH_01s, dH_10s, dH_11s, d²H_01s, d²H_10s, d²H_11s) = measureStates(cubs, full_amplitude_lattice = false)
     end
 
     # Organize measurements into storage arrays
     for k = 1:N_ν
-        V⁺_avg_by_ν[k] .+= proj_V⁺[k]; V⁻_avg_by_ν[k] .+= proj_V⁻[k]
-        S⁺_by_ν[k][m] = S⁺[k]; S⁻_by_ν[k][m] = S⁻[k]
+        V⁺_by_ν[k][m] = proj_V⁺[k]; V⁻_by_ν[k][m] = proj_V⁻[k]
+        S⁺_avg_by_ν[k] .+= S⁺[k]; S⁻_avg_by_ν[k] .+= S⁻[k]
         Vx_avg_by_ν[k] .+= proj_Vx[k]; Vy_avg_by_ν[k] .+= proj_Vy[k]
         Sx_avg_by_ν[k] .+= Sx[k]; Sy_avg_by_ν[k] .+= Sy[k]
 
@@ -273,6 +274,9 @@ t_meas = @elapsed @time for m = 1:M
         end
         δu²_by_ν[k][m] = δu²[k]
 
+        Bz_avg_by_ν[k] .+= Bz_proj[k]
+        Δθ_avg_by_ν[k] .+= Δθ_proj[k]
+
 #        dH_01_x[k][m], dH_01_y[k][m], dH_01_z[k][m] = dH_01s[k]
 #        dH_10_x[k][m], dH_10_y[k][m], dH_10_z[k][m] = dH_10s[k] 
 #        dH_11_x[k][m], dH_11_y[k][m], dH_11_z[k][m] = dH_11s[k]
@@ -282,9 +286,10 @@ t_meas = @elapsed @time for m = 1:M
 #        d²H_11_x[k][m], d²H_11_y[k][m], d²H_11_z[k][m] = d²H_11s[k]
     end
 end
-V⁺_avg_by_ν = V⁺_avg_by_ν./M; V⁻_avg_by_ν  = V⁻_avg_by_ν./M
+S⁺_avg_by_ν = S⁺_avg_by_ν./M; S⁻_avg_by_ν = S⁻_avg_by_ν./M
 Vx_avg_by_ν = Vx_avg_by_ν./M; Vy_avg_by_ν = Vy_avg_by_ν./M
 Sx_avg_by_ν = Sx_avg_by_ν./M; Sy_avg_by_ν = Sy_avg_by_ν./M
+Bz_avg_bu_ν = Bz_avg_by_ν./M; Δθ_avg_by_ν = Δθ_avg_by_ν./M
 final_lattices = [getLattice(cub) for cub in cubs]
 vortices_by_ν = [vortexSnapshot(lattice, getSyst(cubs[1])) for lattice in final_lattices]
 
@@ -300,10 +305,10 @@ for k = 1:N_ν
     JLD.save(out_folders[k]*"/energies.jld", "Es", E_by_ν[k])
 
     JLD.save(out_folders[k]*"/meta.jld", "L1", L₁, "L2", L₂, "L3", L₃, "M", M, "M_amp", M_amp, "dt", Δt, "T", T, "n", n, "m", m, "kap5", κ₅, "kap", κ, "nu", νs[k], "g", g)
-    JLD.save(out_folders[k]*"/vorticity.jld", "vortexes", vortices_by_ν[k], "sp", S⁺_by_ν[k], "sm", S⁻_by_ν[k])
-    JLD.save(out_folders[k]*"/real_vorticity.jld", "vp_avg", V⁺_avg_by_ν[k], "vm_avg", V⁻_avg_by_ν[k])
+    JLD.save(out_folders[k]*"/vorticity.jld", "vortexes", vortices_by_ν[k], "sp_avg", S⁺_avg_by_ν[k], "sm_avg", S⁻_avg_by_ν[k], "vp", V⁺_by_ν[k], "vm", V⁻_by_ν[k])
     JLD.save(out_folders[k]*"/XY_vorticity.jld", "vx_avg", Vx_avg_by_ν[k], "vy_avg", Vy_avg_by_ν[k], "sx_avg", Sx_avg_by_ν[k], "sy_avg", Sy_avg_by_ν[k])
-    JLD.save(out_folders[k]*"/amplitudes.jld", "up_lattices", u⁺_lattices_by_ν[k], "um_lattices", u⁻_lattices_by_ν[k], "up_xy", u⁺_xy_lattices_by_ν[k], "um_xy", u⁻_xy_lattices_by_ν[k], "up_avg", u⁺_avg_by_ν, "um_avg", u⁻_avg_by_ν, "du2", δu²_by_ν)
+    JLD.save(out_folders[k]*"/amplitudes.jld", "up_lattices", u⁺_lattices_by_ν[k], "um_lattices", u⁻_lattices_by_ν[k], "up_xy", u⁺_xy_lattices_by_ν[k], "um_xy", u⁻_xy_lattices_by_ν[k], "up_avg", u⁺_avg_by_ν[k], "um_avg", u⁻_avg_by_ν[k], "du2", δu²_by_ν[k])
+    JLD.save(out_folders[k]*"/vortex_consequences.jld", "Bz_avg", Bz_avg_by_ν[k], "phaseDiff_avg", Δθ_avg_by_ν[k])
 
     # Saving Helicity moduli
 #    JLD.save(out_folders[k]*"/hel_mod.jld", "dH_01_x", dH_01_x[k], "dH_01_y", dH_01_y[k], "dH_01_z", dH_01_z[k],
