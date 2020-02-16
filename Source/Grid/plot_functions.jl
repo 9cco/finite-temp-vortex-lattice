@@ -19,13 +19,13 @@ function plotEnergyHistograms(E_by_T::Vector{Vector{T}}, temps::Vector{T};
         edges = collect(hist.edges[1])
         xs = [(edges[i] + edges[i+1])/2 for i = 1:length(edges)-1]
         ys = hist.weights
-        plt = plot(xs, ys; label="T = $(round(temps[1]; digits=2))", xaxis="Energy pr. site", yaxis="number in bin", title=title);
+        plt = plot(xs, ys; label="T = $(round(temps[1]; digits=3))", xaxis="Energy pr. site", yaxis="number in bin", title=title);
         for k = 2:N₀
             hist = fit(Histogram, E_by_T[k])
             edges = collect(hist.edges[1])
             xs = [(edges[i] + edges[i+1])/2 for i = 1:length(edges)-1]
             ys = hist.weights
-            plot!(plt, xs, ys; label="T = $(round(temps[k]; digits=2))");
+            plot!(plt, xs, ys; label="T = $(round(temps[k]; digits=3))");
         end
     else
         # If we are using fixed number of bins
@@ -34,13 +34,13 @@ function plotEnergyHistograms(E_by_T::Vector{Vector{T}}, temps::Vector{T};
         edges = collect(hist.edges[1])
         xs = [(edges[i] + edges[i+1])/2 for i = 1:length(edges)-1]
         ys = hist.weights
-        plt = plot(xs, ys; label="T = $(round(temps[1]; digits=2))", xaxis="Energy pr. site", yaxis="number in bin", title=title)
+        plt = plot(xs, ys; label="T = $(round(temps[1]; digits=3))", xaxis="Energy pr. site", yaxis="number in bin", title=title)
         for k = 2:N₀
             hist = fit(Histogram, E_by_T[k]; nbins=nbins)
             edges = collect(hist.edges[1])
             xs = [(edges[i] + edges[i+1])/2 for i = 1:length(edges)-1]
             ys = hist.weights
-            plot!(plt, xs, ys; label="T = $(round(temps[k]; digits=2))");
+            plot!(plt, xs, ys; label="T = $(round(temps[k]; digits=3))");
         end
     end
     savefig(plt, filename);

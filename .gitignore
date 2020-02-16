@@ -1,6 +1,7 @@
 # Ignoring specific files in Notebooks directory
 Notebooks/Test*
 Notebooks/SearchAndReplace*
+Notebooks/Note*
 
 # Ignore data directory
 Data/

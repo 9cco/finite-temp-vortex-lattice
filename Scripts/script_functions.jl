@@ -1,27 +1,163 @@
+function checkOverlap(Tss::Array{Array{R, 1}, 1}) where R<:Real
+    N_T = length(Tss)
+    for i = 1:(N_T-1)
+        for j = (i+1):N_T
+            if (maximum(Tss[i]) >= minimum(Tss[j]) && maximum(Tss[j]) >= minimum(Tss[i]))
+                println("Warning: There is an overlap between the temperature-intervals\n$(Tss[i]) and\n$(Tss[j]).")
+            end
+        end
+    end
+    nothing
+end
+function printVectorsHorizontally(ess::Array{Array{R, 1}, 1}) where R<:Real
+    N_v = length(ess)
+    for i = 1:N_v
+        print("[")
+        for j = 1:length(ess[i])-1
+            print("$(ess[i][j]), ")
+        end
+        println("$(ess[i][end])]")
+    end
+    nothing
+end
+function checkSystsEqual(systs::Array{SystConstants, 1}, L₁::I, L₂::I, L₃::I, g::R, ν::R, κ₅::R, κ::R, n::I2, m::I2; err_msg="ERROR: Parameters constructed systems does not match those specified.") where {I<:Int, R<:Real, I2<:Int}
+    
+    control_syst = SystConstants(L₁,L₂,L₃,1/g^2,ν,κ₅,κ,n,m)
+    for syst in systs
+        if syst != control_syst
+            println()
+            exit(-1)
+        end
+    end
+    true
+end
+
+# --------------------------------------------------------------------------------------------------
+# Construct a state from file path and check that it has the inserted system constants.
+function constructStateFromJLD(file_path::AbstractString, control_syst::SystConstants, split::Tuple{Int64,Int64,Int64}, pid_start::Int64)
+    cub, init_syst, init_T = constructStateFromJLD(file_path, split, pid_start)
+    if init_syst != control_syst
+        println("ERROR: Parameters in initial-states file does not match target parameters in script.")
+        exit(-1)
+    end
+    cub, init_syst, init_T
+end
+function constructStateFromJLD(file_path::AbstractString, split::Tuple{Int64,Int64,Int64}, pid_start::Int64)
+    println("Constructing file from $(file_path)")
+    flush(stdout)
+    # Reading the first initial file.
+    init_file_di = JLD.load(file_path)
+    init_lattice = init_file_di["lattice"]
+    init_syst = init_file_di["syst"]
+    init_T = init_file_di["T"]
+    init_controls = init_file_di["controls"]
+
+    # Construct first initial state
+    cub = Cuboid(init_lattice, init_syst, init_controls, split, 1/init_T; pid_start=pid_start)
+    cub, init_syst, init_T
+end
+
 function initiateStates(init_files::Array{String, 1}, L₁::I, L₂::I, L₃::I, g::P, ν::P, κ₅::P, κs::Array{P, 1}, n::I2, m::I2, 
                         split::Tuple{I3, I3, I3}; T_start=8.0) where {I<:Int, P<:Real, I2<:Int, I3<:Int}
     N_κ = length(κs); workers_pr_state = Int(prod(split))
 
     println("\nINITIATING STATES\n#############################################################")
-    #
+    
     # We check if the staging folder (could be current folder) includes an initial state file for
     # each state going to be simulated.
     has_init_files = true; for path in init_files; if !isfile(path); has_init_files=false; break; end; end;
     if has_init_files
+        cubs, systs, init_temps = initiateStates(init_files, split)
+    else # If no initial file is found, then we contruct initial states at temperature T_start and thermalize them
+        # Make ab inito un-correlated phases state if no initial_state is given.
+        systs = [SystConstants(L₁,L₂,L₃,1/g^2,ν,κ₅,κ,n,m) for κ in κs]
+        cubs, systs, init_temps = initiateStates(systs, split; T_start=T_start, M_th=M_th)
+    end
+
+    cubs, systs, init_temps
+end
+
+# Re-constructs systems stored in files. Assumes these files exists and distribute the systems in memory according to split.
+function initiateStates(init_files::Array{String, 1}, split::Tuple{I, I, I}) where {I<:Int}
+    N_f = length(init_files)
+    workers_pr_state = Int(prod(split))
+
+    # Construct initial states
+    cubs = Array{Cuboid, 1}(undef, N_f)
+    systs = Array{SystConstants, 1}(undef, N_f)
+    init_temps = Array{Float64, 1}(undef, N_f)
+
+    for i = 1:N_f
+        # Making control system to compare with
+        cubs[i], systs[i], init_temps[i] = constructStateFromJLD(init_files[i], split, (i-1)*workers_pr_state + 2) # N_f + 1)
+    end
+    
+    println("$(N_f) state(s) created from initiation file(s)")
+    println("Controls of read state:")
+    printControls(cubs)
+    
+    # Tuning initial controls
+    flush(stdout)
+    AR_est = [estimateAR!(cub)[1] for cub in cubs]
+    println("Current AR with these controls:")
+    for (k, est) = enumerate(AR_est); println("AR($(init_files[k])): ≈ $(round(est*100; digits=2))%"); end
+
+    cubs, systs, init_temps
+end
+
+# Initiates fresh states based on the systems in systs. Initial thermalization and temperature set by M_th and T_start.
+# Systems are constructed on processes according to split.
+function initiateStates(systs::Array{SystConstants, 1}, split::Tuple{I, I, I}; T_start=8.0, M_th=2^17, θ_max = 3.13, u_max = 1.0/√(2), A_max = 1e-1) where {I<:Int}
+    N_s = length(systs); workers_pr_state = Int(prod(split))
+    N = systs[1].L₁*systs[1].L₂*systs[1].L₃
+    cubs = Array{Cuboid, 1}(undef, N_s)
+    for k = 1:N_s
+        cubs[k] = Cuboid(6, systs[k], split, 1/T_start; u⁺=1/√(2), u⁻=1/√(2), pid_start=(k-1)*workers_pr_state + 2) # + N_s + 1)
+    end
+    init_temps = [T_start for syst in systs]
+
+    println("No initialization file found. Thermalizing ab-inito states.")
+    flush(stdout)
+    # Tune and thermalize start-temperature
+    t_init_th = @elapsed nMCS!(cubs, ceil(Int64, M_th/4))
+
+    println("Adjusting simulation constants in initial states.")
+    for k = 1:N_s; setUpdates!(cubs[k]; θ_max = θ_max, u_max = u_max, A_max = A_max); end # If we set updates manually
+    println("Controls after adjustment:")
+    printControls(cubs)
+    flush(stdout)
+
+    t_init_th2 = @elapsed nMCS!(cubs, ceil(Int64, 3*M_th/4))
+    println("Thermalization of ab-inito states used $(round((t_init_th+t_init_th2)/3600; digits=1)) h i.e.
+$(round((t_init_th+t_init_th2)/(M_th*N)*1e6; digits=1)) μs on average pr. lattice site.")
+    
+    cubs, systs, init_temps
+end
+
+function initiateStates(init_files::Array{String, 1}, L₁::I, L₂::I, L₃::I, g::P, νs::Array{P, 1}, κ₅::P, κ::P, n::I2, m::I2, 
+                        split::Tuple{I3, I3, I3}; T_start=8.0) where {I<:Int, P<:Real, I2<:Int, I3<:Int}
+    N_ν = length(νs); workers_pr_state = Int(prod(split))
+
+    println("\nINITIATING STATES\n#############################################################")
+    #
+    # We check if the staging folder (could be current folder) includes an initial state file for
+    # each state going to be simulated.
+    has_init_files = true; for path in init_files; if !isfile(path); has_init_files=false; println("File not found: $(path)"); break; end; end;
+    if has_init_files
 
         # Construct initial states
-        cubs = Array{Cuboid, 1}(undef, N_κ)
-        systs = Array{SystConstants, 1}(undef, N_κ)
-        init_temps = Array{Float64, 1}(undef, N_κ)
+        cubs = Array{Cuboid, 1}(undef, N_ν)
+        systs = Array{SystConstants, 1}(undef, N_ν)
+        init_temps = Array{Float64, 1}(undef, N_ν)
 
-        for i = 1:N_κ
+        for i = 1:N_ν
             # Making control system to compare with
-            control_syst = SystConstants(L₁,L₂,L₃,1/g^2,ν,κ₅,κs[i],n,m)
-            cubs[i], systs[i], init_temps[i] = constructStateFromJLD(init_files[i], control_syst, split, (i-1)*workers_pr_state + N_κ + 1)
+            control_syst = SystConstants(L₁,L₂,L₃,1/g^2,νs[i],κ₅,κ,n,m)
+            cubs[i], systs[i], init_temps[i] = constructStateFromJLD(init_files[i], control_syst, split, (i-1)*workers_pr_state + 2) # N_ν + 1)
         end
         
-        println("$(N_κ) state(s) created from initiation file with κ-value(s):")
-        println(κs)
+        println("$(N_ν) state(s) created from initiation file with ν-value(s):")
+        println(νs)
         println("Controls of read state:")
         printControls(cubs)
         
@@ -29,14 +165,14 @@ function initiateStates(init_files::Array{String, 1}, L₁::I, L₂::I, L₃::I,
         flush(stdout)
         AR_est = [estimateAR!(cub)[1] for cub in cubs]
         println("Current AR with these controls:")
-        for (k, est) = enumerate(AR_est); println("AR(g=$(round(κs[k]; digits=1))): ≈ $(round(est*100; digits=2))%"); end
+        for (k, est) = enumerate(AR_est); println("AR(ν=$(round(νs[k]; digits=1))): ≈ $(round(est*100; digits=2))%"); end
 
     else # If no initial file is found, then we contruct initial states at temperature T_start and thermalize them
         # Make ab inito un-correlated phases state if no initial_state is given.
-        systs = [SystConstants(L₁,L₂,L₃,1/g^2,ν,κ₅,κ,n,m) for κ in κs]
-        cubs = Array{Cuboid, 1}(undef, N_κ)
-        for k = 1:N_κ
-            cubs[k] = Cuboid(6, systs[k], split, 1/T_start; u⁺=1/√(2), u⁻=1/√(2), pid_start=(k-1)*workers_pr_state + N_κ + 1)
+        systs = [SystConstants(L₁,L₂,L₃,1/g^2,ν,κ₅,κ,n,m) for ν in νs]
+        cubs = Array{Cuboid, 1}(undef, N_ν)
+        for k = 1:N_ν
+            cubs[k] = Cuboid(6, systs[k], split, 1/T_start; u⁺=1/√(2), u⁻=1/√(2), pid_start=(k-1)*workers_pr_state + 2) #N_ν + 1)
         end
         init_temps = [T_start for syst in systs]
 
@@ -46,7 +182,7 @@ function initiateStates(init_files::Array{String, 1}, L₁::I, L₂::I, L₃::I,
         t_init_th = @elapsed nMCS!(cubs, ceil(Int64, M_th/4))
 
         println("Adjusting simulation constants in initial states.")
-        for k = 1:N_κ; setUpdates!(cubs[k]; θ_max = 3.13, u_max = 1.0/√(2), A_max = 1e-1); end # If we set updates manually
+        for k = 1:N_ν; setUpdates!(cubs[k]; θ_max = 3.13, u_max = 1.0/√(2), A_max = 1e-1); end # If we set updates manually
         println("Controls after adjustment:")
         printControls(cubs)
         flush(stdout)
@@ -59,7 +195,9 @@ function initiateStates(init_files::Array{String, 1}, L₁::I, L₂::I, L₃::I,
     cubs, systs, init_temps
 end
 
-function estimateRuntime!(cubs::Array{Cuboid, 1}, N::I, M_est::I2, M_col::I2, M_th::I2, M::I2, Δt::I2) where {I<:Int, I2<:Int}
+
+
+function estimateRuntime!(cubs::Array{Cuboid, 1}, N::I, M_est::I2, Δt::I2) where {I<:Int, I2<:Int}
     N_c = length(cubs)
 
     # Do M_est MC-sweeps on first
@@ -73,18 +211,13 @@ function estimateRuntime!(cubs::Array{Cuboid, 1}, N::I, M_est::I2, M_col::I2, M_
     t_meas = t_meas/M_est
     t_MCS = t_meas/(Δt*length(cubs))
     println("We did $(M_est) measurement steps using average $(round(t_meas; digits=1)) s pr measurement. 
-    This yields $(round(t_MCS*1000; digits=1)) ms on average for each MCS")
-    println("and $(round(t_MCS/N*1e6; digits=1)) μs on average pr. lattice site.")
+    This yields $(round(t_MCS*1000; digits=2)) ms on average for each MCS")
+    println("and $(round(t_MCS/N*1e6; digits=3)) μs on average pr. lattice site.")
 
-    # Estimating ETC
-    println("Measurements and thermalization will do $(Δt*M + M_th + M_col) MCS for each of the $(N_c)
-    states, which has an ETC of $(round((Δt*M + M_th + M_col)*N_c*t_MCS/3600; digits=2)) h")
-    print("Continue with thermalization and measurements? (y/n): ")
-    flush(stdout)
-    nothing
+    t_MCS
 end
 
-function cooldownStates!(cubs::Array{Cuboid, 1}, N::I, M_col::I2, N_steps::I2, M_est::I2, init_temps::Array{R, 1}, T::R,
+function cooldownStates!(cubs::Array{Cuboid, 1}, N::I, M_col::I2, N_steps::I2, M_est::I2, init_temps::Array{R, 1}, Ts::Array{R, 1},
                          out_folders::Array{String, 1}) where {I<:Int, I2<:Int, R<:Real}
     N_c = length(cubs)
     println("\nStarted cooldown at: $(Dates.format(now(), "HH:MM"))")
@@ -93,14 +226,14 @@ function cooldownStates!(cubs::Array{Cuboid, 1}, N::I, M_col::I2, N_steps::I2, M
     M_pr_step = ceil(Int64, M_col/N_steps)
     M_col = M_pr_step*N_steps
     # Each step is associated with a different set of temperatures given by each row in the matrix
-    temp_mt = genGeometricTemperatureSteps(init_temps, fill(T, N_c), N_steps)
+    temp_mt = genGeometricTemperatureSteps(init_temps, Ts, N_steps)
     # Energy storage
     E_matrix = Array{Float64, 2}(undef, M_col+1, N_c);
     for (i, cub) = enumerate(cubs); E_matrix[1,i] = energy(cub); end
     # Acceptance rate storage
     accepts_matrix = Array{Int64, 2}(undef, M_col, N_c);
 
-    println("Cooling down from T=$(init_temps) to T=$(T) using $(N_steps) steps with $(M_pr_step) MCS pr. step.")
+    println("Cooling down from \nT=$(init_temps) to \nT=$(Ts) using $(N_steps) steps with $(M_pr_step) MCS pr. step.")
     flush(stdout)
 
     t_col = @elapsed for step = 1:N_steps
@@ -132,11 +265,15 @@ function cooldownStates!(cubs::Array{Cuboid, 1}, N::I, M_col::I2, N_steps::I2, M
 
     M_col, t_col
 end
+function cooldownStates!(cubs::Array{Cuboid, 1}, N::I, M_col::I2, N_steps::I2, M_est::I2, init_temps::Array{R, 1}, T::R,
+                         out_folders::Array{String, 1}) where {I<:Int, I2<:Int, R<:Real}
+    cooldownStates!(cubs, N, M_col, N_steps, M_est, init_temps, fill(T, length(cubs)), out_folders)
+end
 
 function thermalizeStates!(cubs::Array{Cuboid, 1}, M_th::I, M_est::I, M_col::I, out_folders::Array{String, 1}) where I<:Int
     N_c = length(cubs)
     println("Thermalizing at target temperatures for additional $(M_th) MCS")
-    println("\nStarted thermalization at: $(Dates.format(now(), "HH:MM"))")
+    println("\nStarted thermalization at: $(Dates.format(now(), "HH:MM")) on $(Dates.format(now(), "d/m"))")
     flush(stdout)
 
     E_therm = Array{Float64, 2}(undef, M_th, N_c);
@@ -153,11 +290,11 @@ function thermalizeStates!(cubs::Array{Cuboid, 1}, M_th::I, M_est::I, M_col::I, 
     # Update time-estimation
     t_MCS1 = t_th/(M_th*N_c)
 
-    therm_lattices = [getLattice(cub) for cub in cubs]
+#    therm_lattices = [getLattice(cub) for cub in cubs]
 
     # Saving thermalization
     for k = 1:N_c
-        JLD.save(out_folders[k]*"/thermalization.jld", "e_thm", E_therm[:,k], "syst", systs[k], "lattice", therm_lattices[k], "M_th", M_th, "M_est", M_est, "M_col", M_col)
+        JLD.save(out_folders[k]*"/thermalization.jld", "e_thm", E_therm[:,k], "syst", systs[k], "M_th", M_th, "M_est", M_est, "M_col", M_col)
     end
     println("Thermalization used $(round(t_th/3600; digits=1)) h, i.e. $(round(t_MCS1/(N_c*N)*1e6; digits=2)) μs pr. lattice site. Energies and states saved to file.")
 
@@ -185,6 +322,8 @@ function measureStates(cubs::Array{Cuboid, 1}; full_amplitude_lattice=false)
     u⁺_avg = Array{Float64, 1}(undef, N_c)
     u⁻_avg = Array{Float64, 1}(undef, N_c)
     δu² = Array{Float64, 1}(undef, N_c)
+    Bz_proj = Array{Array{Float64, 2}, 1}(undef, N_c)
+    Δθ_proj = Array{Array{Float64, 2}, 1}(undef, N_c)
 
     for k = 1:N_c
         # Measure vortices and structure function
@@ -205,6 +344,10 @@ function measureStates(cubs::Array{Cuboid, 1}; full_amplitude_lattice=false)
             u⁻_lattices[k] = u⁻_lattice
         end
         δu²[k] = mean(u⁺_lattice.^2 .- u⁻_lattice.^2)
+        
+        # Measure B-field
+        Bz_proj[k] = avgZ(zfluxDensity(cubs[k]))
+        Δθ_proj[k] = avgZ(phaseDiffSnapshot(cubs[k]))
     end
     
     # Measure phase twist derivatives
@@ -216,10 +359,10 @@ function measureStates(cubs::Array{Cuboid, 1}; full_amplitude_lattice=false)
     #d²H_11s = secondDerivativeTwist(cubs, 1, 1)
 
     if full_amplitude_lattice
-        return (proj_V⁺, proj_V⁻, S⁺, S⁻, proj_Vx, proj_Vy, Sx, Sy, u⁺_lattices, u⁻_lattices, u⁺_avg_z, u⁻_avg_z, u⁺_avg, u⁻_avg, δu²)
+        return (proj_V⁺, proj_V⁻, S⁺, S⁻, proj_Vx, proj_Vy, Sx, Sy, u⁺_lattices, u⁻_lattices, u⁺_avg_z, u⁻_avg_z, u⁺_avg, u⁻_avg, δu², Bz_proj, Δθ_proj)
      #       dH_01s, dH_10s, dH_11s, d²H_01s, d²H_10s, d²H_11s)
     else
-        return (proj_V⁺, proj_V⁻, S⁺, S⁻, proj_Vx, proj_Vy, Sx, Sy, u⁺_avg_z, u⁻_avg_z, u⁺_avg, u⁻_avg, δu²)
+        return (proj_V⁺, proj_V⁻, S⁺, S⁻, proj_Vx, proj_Vy, Sx, Sy, u⁺_avg_z, u⁻_avg_z, u⁺_avg, u⁻_avg, δu², Bz_proj, Δθ_proj)
 #            dH_01s, dH_10s, dH_11s, d²H_01s, d²H_10s, d²H_11s)
     end
 end

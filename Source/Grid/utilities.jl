@@ -261,24 +261,4 @@ function removeMiddle(A::Array{T, 2}) where {T}
     A′
 end
 
-# --------------------------------------------------------------------------------------------------
-# Construct a state from file path and check that it has the inserted system constants.
-function constructStateFromJLD(file_path::AbstractString, control_syst::SystConstants, split::Tuple{Int64,Int64,Int64}, pid_start::Int64)
-    println("Constructing file from $(file_path)")
-    flush(stdout)
-    # Reading the first initial file.
-    init_file_di = JLD.load(file_path)
-    init_lattice = init_file_di["lattice"]
-    init_syst = init_file_di["syst"]
-    init_T = init_file_di["T"]
-    init_controls = init_file_di["controls"]
 
-    if init_syst != control_syst
-        println("ERROR: Parameters in initial-states file does not match target parameters in script.")
-        exit(-1)
-    end
-
-    # Construct first initial state
-    cub = Cuboid(init_lattice, init_syst, init_controls, split, 1/init_T; pid_start=pid_start)
-    cub, init_syst, init_T
-end

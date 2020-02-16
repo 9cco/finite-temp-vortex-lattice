@@ -48,8 +48,8 @@ function updateLatticeSite!(ϕ::LatticeSite, nb::NearestNeighbors, nnb::NextNeig
     else
         return false
     end
-    #set!(ϕ,ϕ′)
-    #return (true, 1.0)
+#    set!(ϕ,ϕ′)
+#    return true
 end
 function updateLatticeSiteRetEn!(ϕ::LatticeSite, nb::NearestNeighbors, nnb::NextNeighbors,
         syst::SystConstants, sim::Controls, β::R) where R<:Real
@@ -66,8 +66,8 @@ function updateLatticeSiteRetEn!(ϕ::LatticeSite, nb::NearestNeighbors, nnb::Nex
     else
         return false, 0.0
     end
-    #set!(ϕ,ϕ′)
-    #return (true, 1.0)
+#    set!(ϕ,ϕ′)
+#    return (true, δE)
 end
 
 

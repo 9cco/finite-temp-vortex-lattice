@@ -2,9 +2,9 @@ module CuboidModule
 
 export SystConstants, Cuboid, mcSweep!, mcSweepEnUp!, energy, two_pi
 export latticeMap, latticeSiteNeighborMap, latticeSiteMap
-export shellSize, getLattice, fluxDensity, setTemp!, tuneUpdates!, printControls, estimateAR!
+export shellSize, getLattice, fluxDensity, zfluxDensity, setTemp!, tuneUpdates!, printControls, estimateAR!
 export getBeta, copy, avgZ, getTemp
-export specificHeat, xyVortexSnapshot, vortexSnapshot, getSyst, getControls, chiralAmplitudeSnapshot
+export specificHeat, xyVortexSnapshot, vortexSnapshot, getSyst, getControls, chiralAmplitudeSnapshot, phaseDiffSnapshot
 export retuneUpdates!, setUpdates!
 export nMCS!, nMCSEnUp!, xyVortexSnapshotXYBasis
 export twoCompHelMod, helMod, firstDerivativeTwist, secondDerivativeTwist
@@ -361,8 +361,8 @@ function nMCS!(cubs::Array{Cuboid, 1}, n::Int)
     avail = findAvailProc(cubs)
 #    start_pid = cubs[1].grid[1].where-length(cubs)
     for (i, cub) = enumerate(cubs)
-        futures[i] = @spawnat cub.grid[end].where nMCS!(cub, n)
-#        futures[i] = @spawnat avail[i] nMCS!(cub, n)
+#        futures[i] = @spawnat cub.grid[end].where nMCS!(cub, n)
+        futures[i] = @spawnat avail[i] nMCS!(cub, n)
     end
     for fut in futures; wait(fut); end
     nothing
@@ -470,8 +470,8 @@ function nMCSEnUp!(cubs::Array{Cuboid, 1}, n::Int)
 #    start_pid = cubs[1].grid[1].where-length(cubs)
     for (i, cub) = enumerate(cubs)
 #        futures[i] = @spawnat (mod(start_pid+i-2,nprocs())+1) nMCSEnUp!(cub, n)
-#        futures[i] = @spawnat avail[i] nMCSEnUp!(cub, n)
-        futures[i] = @spawnat cub.grid[end].where nMCSEnUp!(cub, n)
+        futures[i] = @spawnat avail[i] nMCSEnUp!(cub, n)
+#        futures[i] = @spawnat cub.grid[end].where nMCSEnUp!(cub, n) # This might be the cause of the script just stopping as if it's waiting for another process to finish.
     end
     for (i, fut) = enumerate(futures)
         dE_lists[i], updates_lists[i] = fetch(fut)
@@ -572,6 +572,44 @@ function fluxDensity(cub::Cuboid)
     
     ret_lattice
 end
+
+# -----------------------------------------------------------------------------------------------------------
+# Exactly the same as above, but ony calculates the z-component of the flux density
+function zfluxDensity(ϕ::LatticeSite, nb::CuboidModule.NearestNeighbors, s::SystConstants)
+    ϕᵣ₊₁ = nb.ϕᵣ₊₁
+    ϕᵣ₊₂ = nb.ϕᵣ₊₂
+    ϕᵣ₊₃ = nb.ϕᵣ₊₃
+
+    A₁, A₂, A₃ = linkVariables(ϕ, s)
+    Aᵣ₊₂_₁ = linkVariableX(ϕᵣ₊₂, s)
+    Aᵣ₊₁_₂ = linkVariableY(ϕᵣ₊₁, s)
+    
+    cur_A_z = (A₁ + Aᵣ₊₁_₂ - Aᵣ₊₂_₁ - A₂)
+    
+    cur_A_z
+end
+function zfluxDensity(chan::RemoteChannel{Channel{SubCuboid}})
+    sc = fetch(chan)
+    l₁ = sc.consts.l₁; l₂ = sc.consts.l₂; l₃ = sc.consts.l₃
+    [zfluxDensity(sc.lattice[x,y,z], sc.nb[x,y,z], sc.syst) for x = 1:l₁, y = 1:l₂, z = 1:l₃]
+end
+function zfluxDensity(cub::Cuboid)
+    L₁ = cub.syst.L₁; L₂ = cub.syst.L₂; L₃ = cub.syst.L₃
+    
+    ret_lattice = Array{Float64,3}(undef, L₁, L₂, L₃)
+    futures = [Future() for i = 1:length(cub.grid)]
+    
+    for (i, chan) = enumerate(cub.grid)
+        futures[i] = @spawnat chan.where zfluxDensity(chan)
+    end
+    
+    for (i, ranges) = enumerate(cub.range_grid)
+        ret_lattice[ranges...] = fetch(futures[i])
+    end
+    
+    ret_lattice
+end
+
 
 
 # Planar vorticity
@@ -756,6 +794,13 @@ function chiralAmplitudeSnapshot(cub::Cuboid; T = Float64)
     u⁺_lattice, u⁻_lattice
 end
 
+# Phase measurements
+# -----------------------------------------------------------------------------------------------------------
+# Returns a 3D lattice of the phase-differences on each lattice site drawn back to the [-π, π] interval.
+function phaseDiffSnapshot(cub::Cuboid; T = Float64)
+    findPhaseDiff(ϕ::LatticeSite) = drawback(findθ⁺(ϕ) - findθ⁻(ϕ))
+    latticeSiteMap(findPhaseDiff, cub, T)
+end
 
 ############################################################################################################################
 #                               Utility functions
