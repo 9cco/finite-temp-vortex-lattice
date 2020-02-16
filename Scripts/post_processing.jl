@@ -1,3 +1,5 @@
+# Script assumed to be called from the folder collecting all the data folders.
+
 using Distributed
 # Script for investigating amplitude dependence of potential
 @everywhere using Distributions
@@ -36,20 +38,24 @@ pyplot()
 
 using JLD
 
-gs = [0.3]
-nus = [0.3]
-Ts = [4.0, 2.5, 2.0, 1.9, 1.8, 1.7, 1.6, 1.5, 1.4, 1.3, 1.2]
-κs = [1.0]
-clim_max_meas = 0.02
-clim_max_col = 0.02
+gs = [0.3]#[0.316227766]
+nus = [0.3]#[-0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7] #[0.25] #[-0.5, -0.3, 0.0, 0.1, 0.3, 0.4, 0.5, 0.7] #
+Ts = [1.805, 1.801, 1.795, 1.79, 1.785, 1.781, 1.775, 1.77, 1.765, 1.761]
+κs = [1.0] #[0.0, 0.5, 1.0, 2.0]
+clim_max_meas = 0.01
+clim_max_col = 0.01
+home_folder = pwd()
 folders = Array{AbstractString, 1}(undef, 0)
 for ν in nus
     for κ in κs
         for T in Ts
-            push!(folders, "full_model_L=32_T=$(T)_g=0.316_nu=$(ν)_kap=$(κ)_n=1_m=0_mult_kap")
+            push!(folders, "C4_model_L=42_T=$(round(T; digits=3))_g=0.3_nu=$(ν)_kap=1.0_n=1_m=0_mult_kap")#"T=$(T)/C4_model_L=64_T=$(round(T; digits=2))_g=0.3_nu=$(ν)_kap=$(κ)_n=1_m=0_lowField")#"T=$(T)/C4_model_L=64_T=$(T)_g=0.3_nu=$(ν)_kap=$(κ)_n=1_m=0_lowField")# "C4_model_L=32_T=$(T)_g=0.316_nu=$(ν)_kap=$(κ)_n=1_m=0_mult_kap")# "kap=$(κ)/nu=$(ν)/C4_model_L=32_T=$(T)_g=0.316_nu=$(ν)_kap=$(κ)_n=1_m=0_mult_kap")# 
         end
     end
 end
+
+# Needed for old storage of Bz
+nu_dic = Dict([("$(ν)", mod(i-1,3)+1) for (i, ν) = enumerate(nus)])
 
 for folder in folders
     if isdir(folder)
@@ -113,45 +119,43 @@ for folder in folders
     # Structure factor
 
     vo_di = JLD.load("vorticity.jld")
-    S⁺s = vo_di["sp"];
+    S⁺_avg = vo_di["sp_avg"]
+#    S⁺s = vo_di["sp"];
     println("S⁺ measurements")
-    println("Measures $(length(S⁺s))")
-    println("Maximum: $(maximum(S⁺s[rand(1:M)])/(L₁*L₂*f*two_pi)^2)")
+#    println("Measures $(length(S⁺s))")
+#    println("Maximum: $(maximum(S⁺s[rand(1:M)])/(L₁*L₂*f*two_pi)^2)")
     # Measured k-vector components3
     kx = [two_pi/L₁*(x-1-L₁/2) for x = 1:L₁]
     ky = [two_pi/L₂*(y-1-L₂/2) for y = 1:L₂];
     # Normalizing structure function
     normalization = (L₁*L₂*f*two_pi)^2#(L^2*f*two_pi)^2
-    S⁺s /= normalization;
+    S⁺_avg /= normalization;
     
     # Finding if there is correct normalization
-    S⁺_avg = mean(S⁺s);
     println("Maximum in average S⁺: $(maximum(S⁺_avg))")
 
-    mkcd("S+")
+    mkcd("S+"); cd("../")
     T_round = round(T; digits=2)
     plt = heatmap(kx, ky, S⁺_avg; aspect_ratio=1.0, title="S⁺, T = $(T_round), L=$(L₁)", clims=(0, clim_max_meas))
-    savefig(plt, "S+_avg_T=$(T_round)")
-    cd("../")
+    savefig(plt, "S+/S+_avg_T=$(T_round)")
 
-    S⁻s = vo_di["sm"];
+    S⁻_avg = vo_di["sm_avg"]
+#    S⁻s = vo_di["sm"];
     println("S⁻ measurements")
-    println("Measures $(length(S⁻s))")
-    println("Maximum: $(maximum(S⁻s[rand(1:M)])/(L₁*L₂*f*two_pi)^2)")
+#    println("Measures $(length(S⁻s))")
+#    println("Maximum: $(maximum(S⁻s[rand(1:M)])/(L₁*L₂*f*two_pi)^2)")
     # Normalizing structure function
     normalization = (L₁*L₂*f*two_pi)^2
-    S⁻s /= normalization
+    S⁻_avg /= normalization
 
-    S⁻_avg = mean(S⁻s)
     println("Maximum in average S⁻: $(maximum(S⁻_avg))")
     #heatmap(kx, ky, removeMiddle(S⁻_avg); aspect_ratio=1.0)
 
-    mkcd("S-")
+    mkcd("S-"); cd("../")
     plt = heatmap(kx, ky, S⁻_avg; aspect_ratio=1.0, title="S⁻, T = $(T_round), L₁=$(L₁)", clims=(0, clim_max_meas))
-    savefig(plt, "S-_avg_T=$(T_round)")
-    cd("../")
+    savefig(plt, "S-/S-_avg_T=$(T_round)")
 
-    # Vorticity
+    # Vorticity snapshots
     
     vortices = vo_di["vortexes"];
 
@@ -191,19 +195,38 @@ for folder in folders
     savefig(plt⁺, "V+/V+_avg_T=$(T_round)_layers=$(n_layers).png")
     savefig(plt⁻, "V-/V-_avg_T=$(T_round)_layers=$(n_layers).png")
 
-    # Real vorticity long average
-    if isfile("real_vorticity.jld")
-        real_vo_di = JLD.load("real_vorticity.jld")
-        V⁺_avg  = real_vo_di["vp_avg"]; V⁻_avg = real_vo_di["vm_avg"];
+    # Long average
 
-        # Setting color limits of average vorticity plots.
-        clims_v⁺_max = maximum(V⁺_avg); clims_v⁺_min = minimum(V⁺_avg)
-        clims_v⁻_max = maximum(V⁺_avg); clims_v⁻_min = minimum(V⁺_avg)
-        plt⁺ = heatmap(V⁺_avg; aspect_ratio=1.0, clims=(clims_v⁺_min, clims_v⁺_max), title="V⁺_avg, z averaged, T=$(T_round), M=$(M)")
-        plt⁻ = heatmap(V⁻_avg; aspect_ratio=1.0, clims=(clims_v⁻_min, clims_v⁻_max), title="V⁻_avg, z averaged, T=$(T_round), M=$(M)")
-        savefig(plt⁺, "V+/V+_long_avg_T=$(T_round).png")
-        savefig(plt⁻, "V-/V-_long_avg_T=$(T_round).png")
+    V⁺_projs = vo_di["vp"]; V⁻_projs = vo_di["vm"]
+    println("Found $(length(V⁺_projs)) z-averaged vorticity measurements.")
+    V⁺_avg = mean(V⁺_projs); V⁻_avg = mean(V⁻_projs)
+    clims_v⁺_max = maximum(V⁺_avg); clims_v⁺_min = minimum(V⁺_avg)
+    clims_v⁻_max = maximum(V⁺_avg); clims_v⁻_min = minimum(V⁺_avg)
+    plt⁺ = heatmap(V⁺_avg; aspect_ratio=1.0, clims=(clims_v⁺_min, clims_v⁺_max), title="V⁺_avg, z averaged, T=$(T_round), M=$(M)")
+    plt⁻ = heatmap(V⁻_avg; aspect_ratio=1.0, clims=(clims_v⁻_min, clims_v⁻_max), title="V⁻_avg, z averaged, T=$(T_round), M=$(M)")
+    savefig(plt⁺, "V+/V+_long_avg_T=$(T_round).png")
+    savefig(plt⁻, "V-/V-_long_avg_T=$(T_round).png")
+
+    # Bz-field and phase difference
+
+    if isfile("vortex_consequences.jld")
+        voco_di = JLD.load("vortex_consequences.jld")
+        # B-field projection
+        Bz_avg = voco_di["Bz_avg"] # Gives 2D matrix of average b-field
+        i_ν = nu_dic["$(ν)"]
+#        Bz_avg = Bz_avgs[i_ν] # TODO: Becomes redundant with future update.
+        clims_Bz_max = maximum(Bz_avg); clims_Bz_min = minimum(Bz_avg)
+        println("B = ∇×A ∈ [$(clims_Bz_min), $(clims_Bz_max)]")
+        plt = heatmap(Bz_avg; aspect_ratio=1.0, clims=(clims_Bz_min, clims_Bz_max), title="<B_z>, M=$(M)")
+        savefig(plt, "B_z_avg.png")
+        # Phase difference projection
+        Δθ_avg = voco_di["phaseDiff_avg"]
+        clims_Δθ_max = maximum(Δθ_avg); clims_Δθ_min = minimum(Δθ_avg)
+#        Δθ_avg = Δθ_avgs[i_ν] # TODO: Becomes redundant with future update together with the key changing to phaseDiff_avg
+        plt = heatmap(Δθ_avg; aspect_ratio=1.0, clims=(clims_Δθ_min, clims_Δθ_max), title="<θ⁺-θ⁻>, M=$(M)")
+        savefig(plt, "phaseDiff_avg.png")
     end
+
 
     # XY Vorticity
 
@@ -237,53 +260,55 @@ for folder in folders
     
     # Amplitude measurements
 
-    amplitude_di = JLD.load("amplitudes.jld");
-    u⁻_lattices = amplitude_di["um_lattices"];
-    u⁺_lattices = amplitude_di["up_lattices"];
-    u⁻_avg_lattice = amplitude_di["um_xy"];
-    u⁺_avg_lattice = amplitude_di["up_xy"];
-    amp_path = "Amplitudes"
-    mkcd(amp_path);
-    cd("../")
+    if isfile("amplitudes.jld")
+        amplitude_di = JLD.load("amplitudes.jld");
+        u⁻_lattices = amplitude_di["um_lattices"];
+        u⁺_lattices = amplitude_di["up_lattices"];
+        u⁻_avg_lattice = amplitude_di["um_xy"];
+        u⁺_avg_lattice = amplitude_di["up_xy"];
+        amp_path = "Amplitudes"
+        mkcd(amp_path);
+        cd("../")
 
-    u⁺_avg = u⁺_avg_lattice./M
-    u⁻_avg = u⁻_avg_lattice./M
-    plt = heatmap(u⁺_avg; aspect_ratio=1.0, clims=(0, 1), title="u⁺ thermal and z average ($(M) samples)")
-    savefig(plt, amp_path*"/u⁺_average.png")
-    plt = heatmap(u⁻_avg; aspect_ratio=1.0, clims=(0, 1), title="u⁻ thermal and z average ($(M) samples)")
-    savefig(plt, amp_path*"/u⁻_average.png")
+        u⁺_avg = u⁺_avg_lattice./M
+        u⁻_avg = u⁻_avg_lattice./M
+        plt = heatmap(u⁺_avg; aspect_ratio=1.0, clims=(0, 1), title="u⁺ thermal and z average ($(M) samples)")
+        savefig(plt, amp_path*"/u⁺_average.png")
+        plt = heatmap(u⁻_avg; aspect_ratio=1.0, clims=(0, 1), title="u⁻ thermal and z average ($(M) samples)")
+        savefig(plt, amp_path*"/u⁻_average.png")
 
-    # Plotting amplitude snapshot for layer z = 1
-    u⁻_xy_snapshot = u⁻_lattices[end][:,:,1]
-    u⁺_xy_snapshot = u⁺_lattices[end][:,:,1]
-    plt = heatmap(u⁻_xy_snapshot; aspect_ratio=1.0, clims=(0, 1), title="u⁻ snapshot of layer z=1")
-    savefig(plt, amp_path*"/u⁻_snapshot.png")
-    plt = heatmap(u⁺_xy_snapshot; aspect_ratio=1.0, clims=(0, 1), title="u⁺ snapshot of layer z=1")
-    savefig(plt, amp_path*"/u⁺_snapshot.png")
+        # Plotting amplitude snapshot for layer z = 1
+        u⁻_xy_snapshot = u⁻_lattices[end][:,:,1]
+        u⁺_xy_snapshot = u⁺_lattices[end][:,:,1]
+        plt = heatmap(u⁻_xy_snapshot; aspect_ratio=1.0, clims=(0, 1), title="u⁻ snapshot of layer z=1")
+        savefig(plt, amp_path*"/u⁻_snapshot.png")
+        plt = heatmap(u⁺_xy_snapshot; aspect_ratio=1.0, clims=(0, 1), title="u⁺ snapshot of layer z=1")
+        savefig(plt, amp_path*"/u⁺_snapshot.png")
 
-    u⁺_layer_avg = u⁺_lattices[1][:,:,1]
-    u⁻_layer_avg = u⁻_lattices[1][:,:,1]
-    u⁺_small_avg = avgZ(u⁺_lattices[1])
-    u⁻_small_avg = avgZ(u⁻_lattices[1]);
+        u⁺_layer_avg = u⁺_lattices[1][:,:,1]
+        u⁻_layer_avg = u⁻_lattices[1][:,:,1]
+        u⁺_small_avg = avgZ(u⁺_lattices[1])
+        u⁻_small_avg = avgZ(u⁻_lattices[1]);
 
-    for m = 2:M_amp
-        u⁺_layer_avg .+= u⁺_lattices[m][:,:,1]
-        u⁻_layer_avg .+= u⁻_lattices[m][:,:,1]
-        u⁺_small_avg .+= avgZ(u⁺_lattices[m])
-        #mean([u⁺_lattice_meas[m][:,:,l] for l = 1:size(u⁺_lattice_meas[1],3)])
-        u⁻_small_avg .+= avgZ(u⁻_lattices[m])
-        #mean([u⁻_lattice_meas[m][:,:,l] for l = 1:size(u⁻_lattice_meas[1],3)])
+        for m = 2:M_amp
+            u⁺_layer_avg .+= u⁺_lattices[m][:,:,1]
+            u⁻_layer_avg .+= u⁻_lattices[m][:,:,1]
+            u⁺_small_avg .+= avgZ(u⁺_lattices[m])
+            #mean([u⁺_lattice_meas[m][:,:,l] for l = 1:size(u⁺_lattice_meas[1],3)])
+            u⁻_small_avg .+= avgZ(u⁻_lattices[m])
+            #mean([u⁻_lattice_meas[m][:,:,l] for l = 1:size(u⁻_lattice_meas[1],3)])
+        end
+        u⁺_layer_avg ./= M_amp; u⁻_layer_avg ./= M_amp
+        u⁺_small_avg ./= M_amp; u⁻_small_avg ./= M_amp
+        plt = heatmap(u⁺_layer_avg; aspect_ratio=1.0, clims=(0,1), title="Layer z = 1 avg of u⁺")
+        savefig(plt, amp_path*"/u⁺_avg_layer_z=1.png")
+        plt = heatmap(u⁻_layer_avg; aspect_ratio=1.0, clims=(0,1), title="Layer z = 1 avg of u⁻")
+        savefig(plt, amp_path*"/u⁻_avg_layer_z=1.png")
+        plt = heatmap(u⁺_small_avg; aspect_ratio=1.0, clims=(0,1), title="u⁺ thermal and z average ($(M_amp) samples)")
+        savefig(plt, amp_path*"/u⁺_small_avg.png")
+        plt = heatmap(u⁻_small_avg; aspect_ratio=1.0, clims=(0,1), title="u⁻ thermal and z average ($(M_amp) samples)")
+        savefig(plt, amp_path*"/u⁻_small_avg.png")
     end
-    u⁺_layer_avg ./= M_amp; u⁻_layer_avg ./= M_amp
-    u⁺_small_avg ./= M_amp; u⁻_small_avg ./= M_amp
-    plt = heatmap(u⁺_layer_avg; aspect_ratio=1.0, clims=(0,1), title="Layer z = 1 avg of u⁺")
-    savefig(plt, amp_path*"/u⁺_avg_layer_z=1.png")
-    plt = heatmap(u⁻_layer_avg; aspect_ratio=1.0, clims=(0,1), title="Layer z = 1 avg of u⁻")
-    savefig(plt, amp_path*"/u⁻_avg_layer_z=1.png")
-    plt = heatmap(u⁺_small_avg; aspect_ratio=1.0, clims=(0,1), title="u⁺ thermal and z average ($(M_amp) samples)")
-    savefig(plt, amp_path*"/u⁺_small_avg.png")
-    plt = heatmap(u⁻_small_avg; aspect_ratio=1.0, clims=(0,1), title="u⁻ thermal and z average ($(M_amp) samples)")
-    savefig(plt, amp_path*"/u⁻_small_avg.png")
 
 
     # Cooldown
@@ -343,5 +368,5 @@ for folder in folders
 #    end
 
     # Exiting back to call folder
-    cd("../")
+    cd(home_folder)
 end
